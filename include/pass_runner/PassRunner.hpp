@@ -35,6 +35,9 @@ using llvm::orc::ThreadSafeModule;
  */
 const std::string QIS_START = "__quantum__qis_";
 
+void invokeTargetAgnosticPasses(ThreadSafeModule &TSM,
+                                const std::vector<std::string> &passes);
+
 void invokeTargetSpecificPasses(ThreadSafeModule &TSM,
                                 const std::vector<std::string> &passes,
                                 QDMI_Device device);

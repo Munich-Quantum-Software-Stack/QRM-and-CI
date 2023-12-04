@@ -1,10 +1,10 @@
 /**
- * @file SelectorRunner.hpp
+ * @file GeneratorRunner.hpp
  * @brief TODO
  */
 
-#ifndef SELECTORRUNNER_HPP
-#define SELECTORRUNNER_HPP
+#ifndef GENERATORRUNNER_HPP
+#define GENERATORRUNNER_HPP
 
 #include <algorithm>
 #include <csignal>
@@ -20,13 +20,12 @@
 #include <unistd.h>
 #include <vector>
 
-#include <llvm/ExecutionEngine/Orc/ThreadSafeModule.h>
-#include <llvm/IR/Module.h>
+#include "PassRunner.hpp"
 
 using namespace llvm;
 using llvm::orc::ThreadSafeModule;
 
-std::vector<std::string> invokeSelector(const std::string &nameSelector,
-                                        ThreadSafeModule &TSM);
+std::vector<ThreadSafeModule> invokeGenerator(const std::string circuit,
+                                              const std::string &nameGenerator);
 
-#endif // SELECTORRUNNER_HPP
+#endif // GENERATORRUNNER_HPP

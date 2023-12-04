@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "llvm.hpp"
+
 #include <QuantumResourceManager.hpp>
 #include <qdmi.h>
 #include <qinfo.h>

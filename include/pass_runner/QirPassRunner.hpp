@@ -179,6 +179,21 @@ class QirPassRunner
      * @param dev The QDMI device.
      */
     void run(Module &module, ModuleAnalysisManager &MAM, QDMI_Device dev);
+    
+    /**
+     * @brief Invokes each of the passes listed in the private vector
+     * 'passes_'. Use example:
+     *
+     *     QirPassRunner &QPR = QirPassRunner::getInstance();
+     *     QPR.append("libName1Pass.so");
+     *     QPR.append("libName2Pass.so");
+     *     QPR.append("libName3Pass.so");
+     *     QPR.run(*module, MAM);
+     *
+     * @param module The module of the submitted QIR.
+     * @param MAM The module analysis manager.
+     */
+    void target_agnostic_run(Module &module, ModuleAnalysisManager &MAM);
 
     /**
      * @brief Returns the private metadata of 'QirPassRunner', that is,

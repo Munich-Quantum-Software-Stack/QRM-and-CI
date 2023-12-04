@@ -1,5 +1,30 @@
+add_library(nsga2 SHARED nsga2.cpp
+                         allocate.cpp
+                         crossover.cpp
+                         crowddist.cpp
+                         dominance.cpp
+                         eval.cpp
+                         fillnds.cpp
+                         initialize.cpp
+                         list.cpp
+                         merge.cpp
+                         mutation.cpp
+                         rand.cpp
+                         rank.cpp
+                         report.cpp
+                         sort.cpp
+                         tourselect.cpp)
+
+#set(CUSTOM_NSGA2_LIBRARY_PATH "${INSTALL_PATH}/lib/selector_runner/selectors")
+target_include_directories(nsga2 PRIVATE ${CMAKE_INSTALL_PREFIX}/include)
+
+install(TARGETS nsga2
+        DESTINATION "${INSTALL_PATH}/lib")
+
 # Include all new selectors here
-set(SELECTORS_SOURCE_FILES selector_all.cpp selector_manual.cpp)
+set(SELECTORS_SOURCE_FILES selector_all.cpp
+                           selector_manual.cpp
+                           selector_ga.cpp)
 
 # Set RPATH for the shared libraries in this directory
 set(CMAKE_INSTALL_RPATH "${INSTALL_PATH}/lib")
@@ -10,7 +35,8 @@ foreach(src_file ${SELECTORS_SOURCE_FILES})
   get_filename_component(src_name ${src_file} NAME_WE)
   add_library(${src_name} MODULE ${src_file})
   target_link_libraries(${src_name} PRIVATE
-    QirPassRunner qdmi qinfo fomac)
+    QirPassRunner qdmi qinfo fomac
+    ${INSTALL_PATH}/lib/libnsga2.so)
 
   set_target_properties(${src_name} PROPERTIES
       INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib"
@@ -24,3 +50,5 @@ foreach(src_file ${SELECTORS_SOURCE_FILES})
           DESTINATION "${INSTALL_PATH}/lib")
 
 endforeach()
+
+#target_link_libraries(selector_ga PRIVATE nsga2)

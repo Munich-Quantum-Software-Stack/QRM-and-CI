@@ -34,6 +34,15 @@ class PassModule
                                   QDMI_Device dev) = 0;
 
     /**
+     * @brief Applies a set of passes to a QIR's LLVM module without device.
+     *
+     * @param module The module of the submitted QIR.
+     * @param MAM The module analysis manager.
+     * @return PreservedAnalyses
+     */
+    virtual PreservedAnalyses target_agnostic_run(Module &module, ModuleAnalysisManager &MAM) = 0;
+    
+    /**
      * @brief Destructor for PassModule.
      *
      * Destroys this abstract class
