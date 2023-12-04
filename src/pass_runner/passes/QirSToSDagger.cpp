@@ -17,7 +17,8 @@ using namespace llvm;
  * @return PreservedAnalyses
  */
 PreservedAnalyses QirSToSDaggerPass::run(Module &module,
-                                         ModuleAnalysisManager & /*MAM*/)
+                                         ModuleAnalysisManager & /*MAM*/,
+                                         bool fVerbose)
 {
     auto &Context = module.getContext();
     std::unordered_set<std::string> pauliGates = {"__quantum__qis__x__body",
@@ -68,8 +69,11 @@ PreservedAnalyses QirSToSDaggerPass::run(Module &module,
                                         "__quantum__qis__z__body")
                                         gatesToRemove.push_back(
                                             current_instruction);
-                                    errs() << "              Replacing S with "
-                                              "S dagger.\n";
+
+                                    if (fVerbose)
+                                        errs()
+                                            << "              Replacing S with "
+                                               "S dagger.\n";
                                 }
                             }
                         }

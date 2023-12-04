@@ -19,9 +19,8 @@ using namespace llvm;
  * @param MAM The module analysis manager.
  * @return PreservedAnalyses
  */
-PreservedAnalyses
-QirSwapAndCnotReplacementPass::run(Module &module,
-                                   ModuleAnalysisManager & /*MAM*/)
+PreservedAnalyses QirSwapAndCnotReplacementPass::run(
+    Module &module, ModuleAnalysisManager & /*MAM*/, bool fVerbose)
 {
     auto &Context = module.getContext();
 
@@ -91,10 +90,13 @@ QirSwapAndCnotReplacementPass::run(Module &module,
                                                 gatesToLeave.push_back(
                                                     current_instruction);
 
-                                                errs()
-                                                    << "[Pass]..............."
-                                                       "Replacing sequential"
-                                                       "SWAP and CNOT\n";
+                                                if (fVerbose)
+                                                    errs() << "   "
+                                                              "[Pass].........."
+                                                              "......"
+                                                              "Replacing "
+                                                              "sequential"
+                                                              "SWAP and CNOT\n";
                                             }
                                         }
                                     }

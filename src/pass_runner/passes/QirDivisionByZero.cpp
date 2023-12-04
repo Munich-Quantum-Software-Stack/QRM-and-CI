@@ -33,7 +33,8 @@ int64_t const QirDivisionByZeroPass::EC_QIR_DIVISION_BY_ZERO = 1100;
  * @return PreservedAnalyses
  */
 PreservedAnalyses QirDivisionByZeroPass::run(Module &module,
-                                             ModuleAnalysisManager &MAM)
+                                             ModuleAnalysisManager &MAM,
+                                             bool /*fVerbose*/)
 {
     IRBuilder<> builder(module.getContext());
 

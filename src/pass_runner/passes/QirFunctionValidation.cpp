@@ -19,15 +19,15 @@ using namespace llvm;
  * @param FAM The function analysis manager.
  * @return PreservedAnalyses
  */
-PreservedAnalyses
-QirFunctionValidationPass::run(Function &function,
-                               FunctionAnalysisManager & /*FAM*/)
+PreservedAnalyses QirFunctionValidationPass::run(Function &function,
+                                                 FunctionAnalysisManager &FAM,
+                                                 bool fVerbose)
 {
     FunctionValidation result;
 
     QirAllocationAnalysisPass QAAP;
-    FunctionAnalysisManager FAM;
-    QAAP.run(function, FAM);
+    // FunctionAnalysisManager FAM;
+    QAAP.run(function, FAM, fVerbose);
     auto stats = QAAP.AnalysisResult;
 
     result.qubits_present = stats.usage_qubit_counts > 0 ? true : false;

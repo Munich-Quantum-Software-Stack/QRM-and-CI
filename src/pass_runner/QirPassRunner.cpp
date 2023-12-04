@@ -66,8 +66,8 @@ void QirPassRunner::append(std::string pass) { passes_.push_back(pass); }
  * @param module The module of the submitted QIR.
  * @param MAM The module analysis manager.
  */
-void /*PreservedAnalyses*/ QirPassRunner::run(Module &module,
-                                              ModuleAnalysisManager &MAM)
+void /*PreservedAnalyses*/
+QirPassRunner::run(Module &module, ModuleAnalysisManager &MAM, bool fVerbose)
 {
     // TODO HOW DO WE HANDLE 'PreservedAnalyses'?
     // PreservedAnalyses PA;
@@ -82,9 +82,10 @@ void /*PreservedAnalyses*/ QirPassRunner::run(Module &module,
 
         if (!lib_handle)
         {
-            std::cout << "   [Pass Runner].........Warning: Could not load "
-                         "shared library: "
-                      << pass << dlerror() << std::endl;
+            if (fVerbose)
+                std::cout << "   [Pass Runner].........Warning: Could not load "
+                             "shared library: "
+                          << pass << dlerror() << std::endl;
 
             passes_.pop_back();
             continue;
@@ -96,8 +97,9 @@ void /*PreservedAnalyses*/ QirPassRunner::run(Module &module,
         size_t lastDot = passName.find_last_of('.');
         std::string passNameWithoutExt = passName.substr(0, lastDot);
 
-        std::cout << "   [Pass Runner].........Applying pass: "
-                  << passNameWithoutExt << std::endl;
+        if (fVerbose)
+            std::cout << "   [Pass Runner].........Applying pass: "
+                      << passNameWithoutExt << std::endl;
 
         // Pointer to 'loadQirPass' function returning a pointer to the
         // 'PassModule' object
@@ -109,10 +111,11 @@ void /*PreservedAnalyses*/ QirPassRunner::run(Module &module,
 
         if (!loadQirPass)
         {
-            std::cout << "   [Pass Runner].........Warning: Could not get "
-                         "factory function "
-                         "of pass: "
-                      << pass << std::endl;
+            if (fVerbose)
+                std::cout << "   [Pass Runner].........Warning: Could not get "
+                             "factory function "
+                             "of pass: "
+                          << pass << std::endl;
 
             passes_.pop_back();
             dlclose(lib_handle);
@@ -122,7 +125,7 @@ void /*PreservedAnalyses*/ QirPassRunner::run(Module &module,
         PassModule *QirPass = loadQirPass();
 
         // Apply the pass to the LLVM module 'module'
-        /*PA =*/QirPass->run(module, MAM);
+        /*PA =*/QirPass->run(module, MAM, fVerbose);
 
         // Free memory
         delete QirPass;

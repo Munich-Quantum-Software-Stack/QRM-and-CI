@@ -48,7 +48,8 @@ class QirFunctionValidationPass
      * @param FAM The function analysis manager.
      * @return PreservedAnalyses
      */
-    PreservedAnalyses run(Function &function, FunctionAnalysisManager &FAM);
+    PreservedAnalyses run(Function &function, FunctionAnalysisManager &FAM,
+                          bool fVerbose);
 };
 
 } // namespace llvm

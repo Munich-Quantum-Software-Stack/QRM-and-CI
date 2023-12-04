@@ -29,8 +29,8 @@ class PassModule
      * @param MAM The module analysis manager.
      * @return PreservedAnalyses
      */
-    virtual PreservedAnalyses run(Module &module,
-                                  ModuleAnalysisManager &MAM) = 0;
+    virtual PreservedAnalyses run(Module &module, ModuleAnalysisManager &MAM,
+                                  bool fVerbose) = 0;
 
     /**
      * @brief Destructor for PassModule.

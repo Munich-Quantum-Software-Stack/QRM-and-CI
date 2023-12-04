@@ -18,7 +18,8 @@ using namespace llvm;
  * @return PreservedAnalyses
  */
 PreservedAnalyses
-QirU3ToRzRyRzDecompositionPass::run(Module &module, ModuleAnalysisManager &MAM)
+QirU3ToRzRyRzDecompositionPass::run(Module &module, ModuleAnalysisManager &MAM,
+                                    bool /*fVerbose*/)
 {
     auto &Context = module.getContext();
 

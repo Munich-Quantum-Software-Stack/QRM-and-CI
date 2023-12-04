@@ -17,9 +17,8 @@ using namespace llvm;
  * @param MAM The module analysis manager.
  * @return PreservedAnalyses
  */
-PreservedAnalyses
-QirDoubleCnotCancellationPass::run(Module &module,
-                                   ModuleAnalysisManager & /*MAM*/)
+PreservedAnalyses QirDoubleCnotCancellationPass::run(
+    Module &module, ModuleAnalysisManager & /*MAM*/, bool fVerbose)
 {
     for (auto &function : module)
     {
@@ -75,11 +74,13 @@ QirDoubleCnotCancellationPass::run(Module &module,
                                                 gatesToRemove.push_back(
                                                     current_instruction);
 
-                                                errs()
-                                                    << "   "
-                                                       "[Pass]..............A "
-                                                       "pair of Cnot gates "
-                                                       "found\n";
+                                                if (fVerbose)
+                                                    errs()
+                                                        << "   "
+                                                           "[Pass]............."
+                                                           ".A "
+                                                           "pair of Cnot gates "
+                                                           "found\n";
                                             }
                                         }
                                     }

@@ -20,9 +20,8 @@ using namespace llvm;
  * @param MAM The module analysis manager.
  * @return PreservedAnalyses
  */
-PreservedAnalyses
-QirBarrierBeforeFinalMeasurementsPass::run(Module &module,
-                                           ModuleAnalysisManager & /*MAM*/)
+PreservedAnalyses QirBarrierBeforeFinalMeasurementsPass::run(
+    Module &module, ModuleAnalysisManager & /*MAM*/, bool /*fVerbose*/)
 {
     std::vector<Instruction *> mz_instructions;
     bool barrier_found = false;

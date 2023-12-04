@@ -19,13 +19,14 @@ using namespace llvm;
  * @return PreservedAnalyses
  */
 PreservedAnalyses QirQubitRemapPass::run(Module &module,
-                                         ModuleAnalysisManager & /*MAM*/)
+                                         ModuleAnalysisManager & /*MAM*/,
+                                         bool fVerbose)
 {
     for (auto &function : module)
     {
         QirAllocationAnalysisPass QAAP;
         FunctionAnalysisManager FAM;
-        QAAP.run(function, FAM);
+        QAAP.run(function, FAM, fVerbose);
         AllocationAnalysis function_details = QAAP.AnalysisResult;
 
         IRBuilder<> builder{function.getContext()};

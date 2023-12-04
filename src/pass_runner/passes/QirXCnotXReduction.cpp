@@ -18,7 +18,8 @@ using namespace llvm;
  * @return PreservedAnalyses
  */
 PreservedAnalyses QirXCnotXReductionPass::run(Module &module,
-                                              ModuleAnalysisManager & /*MAM*/)
+                                              ModuleAnalysisManager & /*MAM*/,
+                                              bool /*fVerbose*/)
 {
     for (auto &function : module)
     {

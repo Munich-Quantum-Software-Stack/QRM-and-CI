@@ -32,6 +32,6 @@
 const std::string QIS_START = "__quantum__qis_";
 
 void invokePasses(std::unique_ptr<Module> &module,
-                  std::vector<std::string> passes);
+                  std::vector<std::string> passes, bool fVerbose);
 
 #endif // PASSRUNNER_HPP

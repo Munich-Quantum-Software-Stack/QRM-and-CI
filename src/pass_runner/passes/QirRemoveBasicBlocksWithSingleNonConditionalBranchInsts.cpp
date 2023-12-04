@@ -20,7 +20,7 @@ using namespace llvm;
  */
 PreservedAnalyses
 QirRemoveBasicBlocksWithSingleNonConditionalBranchInstsPass::run(
-    Module &module, ModuleAnalysisManager &MAM)
+    Module &module, ModuleAnalysisManager &MAM, bool /*fVerbose*/)
 {
     for (auto &function : module)
     {

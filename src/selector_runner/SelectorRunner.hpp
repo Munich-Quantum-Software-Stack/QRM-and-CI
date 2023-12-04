@@ -12,6 +12,7 @@
 #include <dlfcn.h>
 #include <iostream>
 #include <libgen.h>
+#include <llvm/IR/Module.h>
 #include <netinet/in.h>
 #include <string>
 #include <sys/ioctl.h>
@@ -20,6 +21,9 @@
 #include <unistd.h>
 #include <vector>
 
-std::vector<std::string> invokeSelector(const std::string &nameSelector);
+using namespace llvm;
+
+std::vector<std::string> invokeSelector(std::unique_ptr<Module> &module,
+                                        const std::string &nameSelector);
 
 #endif // SELECTORRUNNER_HPP

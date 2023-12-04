@@ -105,6 +105,23 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
 void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                          const QuantumTask &quantumTask)
 {
+    // Parse generic QIR into an LLVM module
+    LLVMContext Context;
+    SMDiagnostic error;
+
+    auto memoryBuffer = MemoryBuffer::getMemBuffer(quantumTask.circuit_qiskit,
+                                                   "QIR (LRZ)", false);
+    MemoryBufferRef QIRRef = *memoryBuffer;
+    std::unique_ptr<Module> module = parseIR(QIRRef, error, Context);
+    if (!module)
+    {
+        std::cout << "   [qresourcemanager_d]..Warning: There was an error "
+                     "parsing the "
+                     "generic QIR"
+                  << std::endl;
+        return;
+    }
+
     // Invoke the scheduler
     std::string scheduler = quantumTask.change_scheduler == ""
                                 ? "libscheduler_round_robin.so"
@@ -123,7 +140,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
     std::string selector = quantumTask.change_selector == ""
                                ? "libselector_all.so"
                                : quantumTask.change_selector;
-    std::vector<std::string> passes = invokeSelector(selector);
+    std::vector<std::string> passes = invokeSelector(module, selector);
 
     if (passes.empty())
     {
@@ -134,28 +151,8 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         return;
     }
 
-    // Parse generic QIR into an LLVM module
-    LLVMContext Context;
-    SMDiagnostic error;
-
-    auto memoryBuffer =
-        // MemoryBuffer::getMemBuffer(receivedQirModule.get(), "QIR (LRZ)",
-        // false);
-        MemoryBuffer::getMemBuffer(quantumTask.circuit_qiskit, "QIR (LRZ)",
-                                   false);
-    MemoryBufferRef QIRRef = *memoryBuffer;
-    std::unique_ptr<Module> module = parseIR(QIRRef, error, Context);
-    if (!module)
-    {
-        std::cout << "   [qresourcemanager_d]..Warning: There was an error "
-                     "parsing the "
-                     "generic QIR"
-                  << std::endl;
-        return;
-    }
-
     // Invoke the passes
-    invokePasses(module, passes);
+    invokePasses(module, passes, true);
 
     // Fetch the target architecture from the metadata
     QirPassRunner &QPR = QirPassRunner::getInstance();

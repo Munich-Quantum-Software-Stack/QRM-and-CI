@@ -18,9 +18,8 @@ using namespace llvm;
  * @param MAM The module analysis manager.
  * @return PreservedAnalyses
  */
-PreservedAnalyses
-QirReplaceConstantBranchesPass::run(Module &module,
-                                    ModuleAnalysisManager & /*MAM*/)
+PreservedAnalyses QirReplaceConstantBranchesPass::run(
+    Module &module, ModuleAnalysisManager & /*MAM*/, bool /*fVerbose*/)
 {
     // XXX THIS IS OUR CUSTOM PASS:
 

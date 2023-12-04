@@ -80,7 +80,8 @@ class QirAllocationAnalysisPass
      * @param FAM The function analysis manager.
      * @return PreservedAnalyses
      */
-    PreservedAnalyses run(Function &function, FunctionAnalysisManager &FAM);
+    PreservedAnalyses run(Function &function, FunctionAnalysisManager &FAM,
+                          bool fVerbose);
 
   private:
     bool extractResourceId(Value *value, uint64_t &return_value,

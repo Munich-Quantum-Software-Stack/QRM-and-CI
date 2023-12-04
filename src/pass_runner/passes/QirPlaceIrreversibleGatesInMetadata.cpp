@@ -27,9 +27,8 @@ std::string const QirPlaceIrreversibleGatesInMetadataPass::QIS_START =
  * @param MAM The module analysis manager.
  * @return PreservedAnalyses
  */
-PreservedAnalyses
-QirPlaceIrreversibleGatesInMetadataPass::run(Module &module,
-                                             ModuleAnalysisManager &MAM)
+PreservedAnalyses QirPlaceIrreversibleGatesInMetadataPass::run(
+    Module &module, ModuleAnalysisManager &MAM, bool fVerbose)
 {
     QirPassRunner &QPR = QirPassRunner::getInstance();
     QirMetadata &qirMetadata = QPR.getMetadata();
@@ -46,14 +45,19 @@ QirPlaceIrreversibleGatesInMetadataPass::run(Module &module,
             if (!function.hasFnAttribute("irreversible"))
             {
                 qirMetadata.append(REVERSIBLE_GATE, name);
-                errs() << "   [Pass]................Reversible gate found: "
-                       << name << '\n';
+
+                if (fVerbose)
+                    errs() << "   [Pass]................Reversible gate found: "
+                           << name << '\n';
             }
             else
             {
                 qirMetadata.append(IRREVERSIBLE_GATE, name);
-                errs() << "   [Pass]................Irreversible gate found: "
-                       << name << '\n';
+
+                if (fVerbose)
+                    errs()
+                        << "   [Pass]................Irreversible gate found: "
+                        << name << '\n';
             }
         }
     }

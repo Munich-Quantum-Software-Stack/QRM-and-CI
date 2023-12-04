@@ -47,7 +47,8 @@ class QirFunctionReplacementPass : public PassModule
      * @param MAM The module analysis manager.
      * @return PreservedAnalyses
      */
-    PreservedAnalyses run(Module &module, ModuleAnalysisManager &MAM);
+    PreservedAnalyses run(Module &module, ModuleAnalysisManager &MAM,
+                          bool fVerbose);
 
     /**
      * @brief Applies a function replacement analysis pass to the
@@ -56,7 +57,7 @@ class QirFunctionReplacementPass : public PassModule
      * @param module The module of the submitted QIR.
      * @return Result
      */
-    Result runFunctionReplacementAnalysis(Module &module);
+    Result runFunctionReplacementAnalysis(Module &module, bool fVerbose);
 };
 
 } // namespace llvm

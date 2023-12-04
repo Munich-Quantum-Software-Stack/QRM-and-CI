@@ -172,12 +172,12 @@ class QirPassRunner
      *     QPR.append("libName1Pass.so");
      *     QPR.append("libName2Pass.so");
      *     QPR.append("libName3Pass.so");
-     *     QPR.run(*module, MAM);
+     *     QPR.run(*module, MAM, true);
      *
      * @param module The module of the submitted QIR.
      * @param MAM The module analysis manager.
      */
-    void run(Module &module, ModuleAnalysisManager &MAM);
+    void run(Module &module, ModuleAnalysisManager &MAM, bool fVerbose);
 
     /**
      * @brief Returns the private metadata of 'QirPassRunner', that is,

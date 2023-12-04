@@ -14,7 +14,8 @@
  * @param pathSelector Path to the selector to be invoked
  * @return std::vector<std::string>
  */
-std::vector<std::string> invokeSelector(const std::string &nameSelector)
+std::vector<std::string> invokeSelector(std::unique_ptr<Module> &module,
+                                        const std::string &nameSelector)
 {
     std::string pathSelector;
     char buffer[PATH_MAX];
@@ -46,7 +47,8 @@ std::vector<std::string> invokeSelector(const std::string &nameSelector)
     }
 
     // Dynamic loading and linking of the shared library
-    typedef std::vector<std::string> (*SelectorFunction)();
+    typedef std::vector<std::string> (*SelectorFunction)(
+        std::unique_ptr<Module> &);
     SelectorFunction selector =
         reinterpret_cast<SelectorFunction>(dlsym(lib_handle, "selector"));
 
@@ -61,5 +63,5 @@ std::vector<std::string> invokeSelector(const std::string &nameSelector)
     }
 
     // Call the selector function
-    return selector();
+    return selector(module);
 }

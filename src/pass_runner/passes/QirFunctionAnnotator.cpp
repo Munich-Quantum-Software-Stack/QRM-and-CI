@@ -19,7 +19,8 @@ using namespace llvm;
  * @return PreservedAnalyses
  */
 PreservedAnalyses QirFunctionAnnotatorPass::run(Module &module,
-                                                ModuleAnalysisManager & /*MAM*/)
+                                                ModuleAnalysisManager & /*MAM*/,
+                                                bool /*fVerbose*/)
 {
     QirPassRunner &QPR = QirPassRunner::getInstance();
     QirMetadata &qirMetadata = QPR.getMetadata();

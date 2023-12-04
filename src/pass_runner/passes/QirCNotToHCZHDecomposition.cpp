@@ -17,9 +17,8 @@ using namespace llvm;
  * @param MAM The module analysis manager.
  * @return PreservedAnalyses
  */
-PreservedAnalyses
-QirCNotToHCZHDecompositionPass::run(Module &module,
-                                    ModuleAnalysisManager & /*MAM*/)
+PreservedAnalyses QirCNotToHCZHDecompositionPass::run(
+    Module &module, ModuleAnalysisManager & /*MAM*/, bool /*fVerbose*/)
 {
     auto &Context = module.getContext();
 

@@ -38,7 +38,8 @@ QirDeferMeasurementPass::QirDeferMeasurementPass()
  * @return PreservedAnalyses
  */
 PreservedAnalyses QirDeferMeasurementPass::run(Module &module,
-                                               ModuleAnalysisManager &MAM)
+                                               ModuleAnalysisManager &MAM,
+                                               bool fVerbose)
 {
     for (auto &function : module)
     {
@@ -85,11 +86,13 @@ PreservedAnalyses QirDeferMeasurementPass::run(Module &module,
 
                     if (!instr->use_empty())
                     {
-                        errs() << "   [Pass]..............Error: unexpected "
-                                  "uses of "
-                                  "instruction "
-                                  "while moving records to the bottom of the "
-                                  "block\n";
+                        if (fVerbose)
+                            errs()
+                                << "   [Pass]..............Error: unexpected "
+                                   "uses of "
+                                   "instruction "
+                                   "while moving records to the bottom of the "
+                                   "block\n";
                         return PreservedAnalyses::none();
                     }
 

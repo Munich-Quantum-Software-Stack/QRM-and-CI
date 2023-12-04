@@ -16,9 +16,8 @@ using namespace llvm;
  * @param MAM The module analysis manager.
  * @return PreservedAnalyses
  */
-PreservedAnalyses
-QirHadamardAndPauliGateSwitchPass::run(Module &module,
-                                       ModuleAnalysisManager & /*MAM*/)
+PreservedAnalyses QirHadamardAndPauliGateSwitchPass::run(
+    Module &module, ModuleAnalysisManager & /*MAM*/, bool fVerbose)
 {
     auto &Context = module.getContext();
     std::unordered_set<std::string> pauliGates = {"__quantum__qis__x__body",
@@ -72,9 +71,11 @@ QirHadamardAndPauliGateSwitchPass::run(Module &module,
                                     previousGates.push_back(prev_instruction);
                                     gatesToReplace.push_back(
                                         current_instruction);
-                                    errs() << "              Switching: "
-                                           << previous_name << " and "
-                                           << current_name << '\n';
+
+                                    if (fVerbose)
+                                        errs() << "              Switching: "
+                                               << previous_name << " and "
+                                               << current_name << '\n';
                                 }
                             }
                         }

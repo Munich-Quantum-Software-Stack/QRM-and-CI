@@ -18,9 +18,8 @@ using namespace llvm;
  * @param MAM The module analysis manager.
  * @return PreservedAnalyses
  */
-PreservedAnalyses
-QirRemoveNonEntrypointFunctionsPass::run(Module &module,
-                                         ModuleAnalysisManager &MAM)
+PreservedAnalyses QirRemoveNonEntrypointFunctionsPass::run(
+    Module &module, ModuleAnalysisManager &MAM, bool /*fVerbose*/)
 {
     std::vector<Function *> functions_to_delete;
 

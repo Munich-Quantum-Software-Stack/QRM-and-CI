@@ -18,7 +18,8 @@ using namespace llvm;
  * @return PreservedAnalyses
  */
 PreservedAnalyses QirMergeRotationsPass::run(Module &module,
-                                             ModuleAnalysisManager & /*MAM*/)
+                                             ModuleAnalysisManager & /*MAM*/,
+                                             bool fVerbose)
 {
     auto &Context = module.getContext();
 
@@ -94,9 +95,12 @@ PreservedAnalyses QirMergeRotationsPass::run(Module &module,
                                 gatesToRemove.push_back(instruction);
                             }
                         }
-                        errs() << "   [Pass]................Rotation gates can "
-                                  "be merged: "
-                               << gateTypeToMerge << '\n';
+
+                        if (fVerbose)
+                            errs() << "   [Pass]................Rotation gates "
+                                      "can "
+                                      "be merged: "
+                                   << gateTypeToMerge << '\n';
                     }
 
                     gatesToMerge.clear();

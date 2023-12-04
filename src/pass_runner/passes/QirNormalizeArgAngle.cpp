@@ -17,7 +17,8 @@ using namespace llvm;
  * @return PreservedAnalyses
  */
 PreservedAnalyses QirNormalizeArgAnglePass::run(Module &module,
-                                                ModuleAnalysisManager & /*MAM*/)
+                                                ModuleAnalysisManager & /*MAM*/,
+                                                bool fVerbose)
 {
     auto &Context = module.getContext();
 

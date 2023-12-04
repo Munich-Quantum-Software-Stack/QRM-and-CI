@@ -32,7 +32,8 @@ class QirDeferMeasurementPass : public PassModule
      * @param MAM The module analysis manager.
      * @return PreservedAnalyses
      */
-    PreservedAnalyses run(Module &module, ModuleAnalysisManager &MAM);
+    PreservedAnalyses run(Module &module, ModuleAnalysisManager &MAM,
+                          bool fVerbose);
 
   private:
     std::unordered_set<std::string> readout_names_{};

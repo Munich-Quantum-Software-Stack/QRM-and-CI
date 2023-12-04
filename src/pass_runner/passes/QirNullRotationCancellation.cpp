@@ -31,9 +31,8 @@ bool checkDoublePiMultiplies(double angle)
  * @param MAM The module analysis manager.
  * @return PreservedAnalyses
  */
-PreservedAnalyses
-QirNullRotationCancellationPass::run(Module &module,
-                                     ModuleAnalysisManager & /*MAM*/)
+PreservedAnalyses QirNullRotationCancellationPass::run(
+    Module &module, ModuleAnalysisManager & /*MAM*/, bool fVerbose)
 {
     std::unordered_set<std::string> rotationGates = {
         "__quantum__qis__rx__body", "__quantum__qis__ry__body",
@@ -88,9 +87,11 @@ QirNullRotationCancellationPass::run(Module &module,
                         {
                             rotationGatesToRemove.push_back(
                                 current_instruction);
-                            errs() << "   [Pass]................Redundant "
-                                      "rotation found: "
-                                   << current_name << '\n';
+
+                            if (fVerbose)
+                                errs() << "   [Pass]................Redundant "
+                                          "rotation found: "
+                                       << current_name << '\n';
                         }
                     }
                 }

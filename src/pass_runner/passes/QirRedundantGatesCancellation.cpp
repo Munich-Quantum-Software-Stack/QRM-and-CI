@@ -18,9 +18,8 @@ using namespace llvm;
  * @param MAM The module analysis manager.
  * @return PreservedAnalyses
  */
-PreservedAnalyses
-QirRedundantGatesCancellationPass::run(Module &module,
-                                       ModuleAnalysisManager & /*MAM*/)
+PreservedAnalyses QirRedundantGatesCancellationPass::run(
+    Module &module, ModuleAnalysisManager & /*MAM*/, bool fVerbose)
 {
     QirPassRunner &QPR = QirPassRunner::getInstance();
     QirMetadata &qirMetadata = QPR.getMetadata();
@@ -64,9 +63,11 @@ QirRedundantGatesCancellationPass::run(Module &module,
                             gatesToRemove.push_back(last_instruction);
                             gatesToRemove.push_back(current_instruction);
 
-                            errs() << "   [Pass]................Redundant gate "
-                                      "pair found: "
-                                   << reversibleGate << '\n';
+                            if (fVerbose)
+                                errs() << "   [Pass]................Redundant "
+                                          "gate "
+                                          "pair found: "
+                                       << reversibleGate << '\n';
                         }
                         singletonContainer.clear();
                     }

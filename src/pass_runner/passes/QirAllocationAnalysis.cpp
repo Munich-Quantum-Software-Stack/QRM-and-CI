@@ -79,9 +79,8 @@ bool QirAllocationAnalysisPass::extractResourceId(Value *value,
  * @param FAM The function analysis manager.
  * @return PreservedAnalyses
  */
-PreservedAnalyses
-QirAllocationAnalysisPass::run(Function &function,
-                               FunctionAnalysisManager & /*FAM*/)
+PreservedAnalyses QirAllocationAnalysisPass::run(
+    Function &function, FunctionAnalysisManager & /*FAM*/, bool /*fVerbose*/)
 {
     AllocationAnalysis result;
 

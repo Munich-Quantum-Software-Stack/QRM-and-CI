@@ -16,9 +16,8 @@ using namespace llvm;
  * @param MAM The module analysis manager.
  * @return PreservedAnalyses
  */
-PreservedAnalyses
-QirHadamardAndYGateSwitchPass::run(Module &module,
-                                   ModuleAnalysisManager & /*MAM*/)
+PreservedAnalyses QirHadamardAndYGateSwitchPass::run(
+    Module &module, ModuleAnalysisManager & /*MAM*/, bool fVerbose)
 {
     auto &Context = module.getContext();
 
@@ -63,9 +62,11 @@ QirHadamardAndYGateSwitchPass::run(Module &module,
                                 {
                                     previousGates.push_back(prev_instruction);
                                     currentGates.push_back(current_instruction);
-                                    errs() << "              Switching: "
-                                           << previous_name << " and "
-                                           << current_name << '\n';
+
+                                    if (fVerbose)
+                                        errs() << "              Switching: "
+                                               << previous_name << " and "
+                                               << current_name << '\n';
                                 }
                             }
                         }

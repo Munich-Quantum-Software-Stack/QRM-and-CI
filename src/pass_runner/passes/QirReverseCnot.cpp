@@ -20,7 +20,8 @@ using namespace llvm;
  * @return PreservedAnalyses
  */
 PreservedAnalyses QirReverseCnotPass::run(Module &module,
-                                          ModuleAnalysisManager & /*MAM*/)
+                                          ModuleAnalysisManager & /*MAM*/,
+                                          bool fVerbose)
 {
     auto &Context = module.getContext();
 
@@ -48,7 +49,8 @@ PreservedAnalyses QirReverseCnotPass::run(Module &module,
                     if (current_name == "__quantum__qis__cnot__body")
                     {
                         cnotsToReverse.push_back(current_instruction);
-                        errs() << "                Reversing Cnot\n";
+                        if (fVerbose)
+                            errs() << "                Reversing Cnot\n";
                     }
                 }
             }

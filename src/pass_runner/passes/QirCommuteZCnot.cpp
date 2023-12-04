@@ -17,7 +17,8 @@ using namespace llvm;
  * @return PreservedAnalyses
  */
 PreservedAnalyses QirCommuteZCnotPass::run(Module &module,
-                                           ModuleAnalysisManager & /*MAM*/)
+                                           ModuleAnalysisManager & /*MAM*/,
+                                           bool fVerbose)
 {
     for (auto &function : module)
     {
@@ -69,12 +70,16 @@ PreservedAnalyses QirCommuteZCnotPass::run(Module &module,
                                             {
                                                 current_instruction->moveBefore(
                                                     prev_instruction);
-                                                errs()
-                                                    << "   "
-                                                       "[Pass]................"
-                                                       "Commuting: "
-                                                    << previous_name << " and "
-                                                    << current_name << '\n';
+
+                                                if (fVerbose)
+                                                    errs()
+                                                        << "   "
+                                                           "[Pass]............."
+                                                           "..."
+                                                           "Commuting: "
+                                                        << previous_name
+                                                        << " and "
+                                                        << current_name << '\n';
                                             }
                                         }
                                     }

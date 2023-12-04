@@ -666,7 +666,8 @@ QirGroupingPass::Result QirGroupingPass::runGroupingAnalysis(Module &module)
  * @return PreservedAnalyses
  */
 PreservedAnalyses QirGroupingPass::run(Module &module,
-                                       ModuleAnalysisManager &MAM)
+                                       ModuleAnalysisManager &MAM,
+                                       bool /*fVerbose*/)
 {
 
     auto result = runGroupingAnalysis(module);

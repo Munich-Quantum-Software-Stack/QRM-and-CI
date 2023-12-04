@@ -10,7 +10,7 @@
  * @param TODO
  */
 void invokePasses(std::unique_ptr<Module> &module,
-                  std::vector<std::string> passes)
+                  std::vector<std::string> passes, bool fVerbose)
 {
     if (!module)
     {
@@ -39,9 +39,11 @@ void invokePasses(std::unique_ptr<Module> &module,
                 dyn_cast<ConstantAsMetadata>(metadataSupport))
             if (ConstantInt *boolConstant =
                     dyn_cast<ConstantInt>(boolMetadata->getValue()))
-                errs() << "   [Pass Runner].........Flag inserted: "
-                          "\"lrz_supports_qir\" = "
-                       << (boolConstant->isOne() ? "true" : "false") << '\n';
+                if (fVerbose)
+                    errs() << "   [Pass Runner].........Flag inserted: "
+                              "\"lrz_supports_qir\" = "
+                           << (boolConstant->isOne() ? "true" : "false")
+                           << '\n';
 
     // Create an instance of the QirPassRunner and append to it all the received
     // passes
@@ -69,7 +71,7 @@ void invokePasses(std::unique_ptr<Module> &module,
     }
 
     // Run QIR passes
-    QPR.run(*module, MAM);
+    QPR.run(*module, MAM, fVerbose);
 
     // Free memory
     QPR.clearMetadata();
