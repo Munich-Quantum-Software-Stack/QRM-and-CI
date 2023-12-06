@@ -71,7 +71,6 @@ extern "C" std::vector<std::string> selector(std::unique_ptr<Module> &module)
     assert(home != nullptr);
     std::string results_path = std::string(home) + "/logs/results_";
     const char *GA_path = results_path.c_str();
-    std::cout << "GA_path: " << GA_path << std::endl;
     InitNSGA2(&nsga2Params, module, GA_path, false, passes);
     NSGA2(&nsga2Params, module, false, passes);
     std::cout << "   [Selector]............Finished the DSE" << std::endl;
