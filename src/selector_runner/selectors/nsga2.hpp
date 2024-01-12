@@ -30,6 +30,7 @@ typedef struct
     int rank;
     double constr_violation;
     double *xreal;
+    int *xint;
     int **gene;
     double *xbin;
     double *obj;
@@ -53,25 +54,32 @@ typedef struct NSGA2Type
 {
     double seed;
     int nreal;
+    int nint;
     int nbin;
     int nsim;
     int nobj;
     int ncon;
     int popsize;
     double pcross_real;
+    double pcross_int;
     double pcross_bin;
     double pmut_real;
+    double pmut_int;
     double *pmut_bin;
     double eta_c;
     double eta_m;
     int ngen;
     int nbinmut;
+    int nintmut;
     int nrealmut;
     int nbincross;
+    int nintcross;
     int nrealcross;
     int *nbits;
     double *min_realvar;
     double *max_realvar;
+    int *min_intvar;
+    int *max_intvar;
     double *min_binvar;
     double *max_binvar;
     int bitlength;
@@ -109,6 +117,8 @@ void crossover(NSGA2Type *nsga2Params, individual *parent1, individual *parent2,
                individual *child1, individual *child2);
 void realcross(NSGA2Type *nsga2Params, individual *parent1, individual *parent2,
                individual *child1, individual *child2);
+void intcross(NSGA2Type *nsga2Params, individual *parent1, individual *parent2,
+              individual *child1, individual *child2);
 void bincross(NSGA2Type *nsga2Params, individual *parent1, individual *parent2,
               individual *child1, individual *child2);
 
@@ -152,6 +162,7 @@ void copy_ind(NSGA2Type *nsga2Params, individual *ind1, individual *ind2);
 void mutation_pop(NSGA2Type *nsga2Params, population *pop);
 void mutation_ind(NSGA2Type *nsga2Params, individual *ind);
 void bin_mutate_ind(NSGA2Type *nsga2Params, individual *ind);
+void int_mutate_ind(NSGA2Type *nsga2Params, individual *ind);
 void real_mutate_ind(NSGA2Type *nsga2Params, individual *ind);
 
 void test_problem(double *xreal, double *xbin, int **gene, double *obj,

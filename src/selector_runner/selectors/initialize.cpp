@@ -20,12 +20,24 @@ void initialize_pop(NSGA2Type *nsga2Params, population *pop)
 void initialize_ind(NSGA2Type *nsga2Params, individual *ind)
 {
     int j, k;
+
+    if (nsga2Params->nint != 0)
+    {
+        std::cout << "[DEBUG] checking loop in initialize ind: "
+                  << *(nsga2Params->max_intvar) << std::endl;
+        for (j = 0; j <= *(nsga2Params->max_intvar); j++)
+        {
+            ind->xint[j] =
+                rnd(*(nsga2Params->min_intvar), *(nsga2Params->max_intvar));
+        }
+    }
     if (nsga2Params->nreal != 0)
     {
         for (j = 0; j < nsga2Params->nreal; j++)
         {
             ind->xreal[j] = rndreal(nsga2Params->min_realvar[j],
                                     nsga2Params->max_realvar[j]);
+            std::cout << ind->xreal[j] << std::endl;
         }
     }
     if (nsga2Params->nbin != 0)

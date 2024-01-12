@@ -27,6 +27,10 @@ void allocate_memory_ind(NSGA2Type *nsga2Params, individual *ind)
     {
         ind->xreal = (double *)malloc(nsga2Params->nreal * sizeof(double));
     }
+    if (nsga2Params->nint != 0)
+    {
+        ind->xint = (int *)malloc(nsga2Params->nint * sizeof(int));
+    }
     if (nsga2Params->nbin != 0)
     {
         ind->xbin = (double *)malloc(nsga2Params->nbin * sizeof(double));

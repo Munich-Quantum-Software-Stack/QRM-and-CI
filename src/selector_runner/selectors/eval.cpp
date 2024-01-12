@@ -118,22 +118,27 @@ void evaluate_ind(NSGA2Type *nsga2Params, individual *ind,
                   std::unique_ptr<Module> &module,
                   const std::vector<std::string> designSpace, bool fVerbose)
 {
+    std::cout << "[DEBUG] START EVALUATE IND\n";
     // Apply passes here
-    std::vector<std::string> passes;
+    std::vector<std::string> passes(*(nsga2Params->max_intvar));
 
     int i, j;
 
-    // for (i = 0; i < nsga2Params.nbin; i++)
-    for (j = 0; j < nsga2Params->nbits[0 /*i*/]; j++)
-        if (ind->gene[0 /*i*/][j] == 1)
-            passes.push_back(designSpace[j]);
-
+    for (j = 0; j <= *(nsga2Params->max_intvar); j++)
+    {
+        passes.insert(passes.begin() + ind->xint[j], designSpace[ind->xint[j]]);
+    }
+    std::cout << "[DEBUG] after loop\n";
     std::unique_ptr<Module> adapted_module(llvm::CloneModule(*module));
+    std::cout << "[DEBUG] after module\n";
 
     invokePasses(adapted_module, passes, fVerbose);
+    std::cout << "[DEBUG] after invoke\n";
 
     ind->obj[0] = evaluate_gates(adapted_module);
+    std::cout << "[DEBUG] after gates\n";
     ind->obj[1] = evaluate_depth(adapted_module);
+    std::cout << "[DEBUG] after depth\n";
 
     ind->constr_violation = 0.0;
 
@@ -141,4 +146,5 @@ void evaluate_ind(NSGA2Type *nsga2Params, individual *ind,
         for (j = 0; j < nsga2Params->ncon; j++)
             if (ind->constr[j] < 0.0)
                 ind->constr_violation += ind->constr[j];
+    std::cout << "[DEBUG] end\n";
 }

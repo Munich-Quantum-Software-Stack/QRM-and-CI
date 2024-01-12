@@ -67,11 +67,14 @@ extern "C" std::vector<std::string> selector(std::unique_ptr<Module> &module)
     // Perform the DSE
     std::cout << "   [Selector]............Starting the DSE" << std::endl;
     NSGA2Type nsga2Params = ReadParameters(passes.size(), 2);
+    std::cout << "   [Selector]............nsga2Params set" << std::endl;
     char *home = std::getenv("HOME");
     assert(home != nullptr);
     std::string results_path = std::string(home) + "/logs/results_";
     const char *GA_path = results_path.c_str();
+    std::cout << "   [Selector]............Init NSGA2" << std::endl;
     InitNSGA2(&nsga2Params, module, GA_path, false, passes);
+    std::cout << "   [Selector]............NSGA2" << std::endl;
     NSGA2(&nsga2Params, module, false, passes);
     std::cout << "   [Selector]............Finished the DSE" << std::endl;
 
