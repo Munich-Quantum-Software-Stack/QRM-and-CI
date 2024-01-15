@@ -1,38 +1,32 @@
 INSTALL_PATH  ?= $(HOME)
 EXEC_PATH     := $(INSTALL_PATH)/bin/lib
 BUILD_DIR     ?= build
-FOMAC_PATH    ?= $(CURDIR)/fomac
-BACKENDS_PATH ?= $(CURDIR)/backends
-
-FOMAC        := $(wildcard $(FOMAC_PATH)/build/libFoMaC.so)
-BACKENDS     := $(wildcard $(BACKENDS_PATH)/build/libBackends.so)
-RABBITMQ     := $(wildcard /usr/local/lib/librabbitmq.so)
-DOXYGEN      := $(shell command -v doxygen 2> /dev/null)
+RABBITMQ      := $(wildcard /usr/local/lib/librabbitmq.so)
+DOXYGEN       := $(shell command -v doxygen 2> /dev/null)
 
 .PHONY: install clean uninstall docs test
 
 all: install docs clean
 
-ifdef FOMAC
-build_fomac:
-	@echo "FoMaC is already installed. Skipping installation."
+ifndef BACKENDS_INCLUDE_PATH
+analyze_backends:
+	$(error BACKENDS_INCLUDE_PATH is not set.)
 else
-build_fomac:
-	@echo "Installing FoMaC"
-	CMAKE_PREFIX_PATH=$$(llvm-config --libdir)/cmake/llvm cmake -B $(FOMAC_PATH)/build -S $(FOMAC_PATH) -DCMAKE_INSTALL_PREFIX=$(INSTALL_PATH)
-	cmake --build $(FOMAC_PATH)/build
-	cmake --install $(FOMAC_PATH)/build
+analyze_backends:
 endif
 
-ifdef BACKENDS
-build_backends:
-	@echo "All backends are already installed. Skipping installation."
+ifndef QDMI_INCLUDE_PATH
+analyze_qdmi:
+	$(error QDMI_INCLUDE_PATH is not set.)
 else
-build_backends:
-	@echo "Installing Backends"
-	CMAKE_PREFIX_PATH=$$(llvm-config --libdir)/cmake/llvm cmake -B $(BACKENDS_PATH)/build -S $(BACKENDS_PATH) -DCMAKE_INSTALL_PREFIX=$(INSTALL_PATH)
-	cmake --build $(BACKENDS_PATH)/build
-	cmake --install $(BACKENDS_PATH)/build
+analyze_qdmi:
+endif
+
+ifndef FOMAC_INCLUDE_PATH
+analyze_fomac:
+	$(error FOMAC_INCLUDE_PATH is not set.)
+else
+analyze_fomac:
 endif
 
 ifdef RABBITMQ
@@ -73,23 +67,29 @@ configure_rabbitmq:
 	@echo "Using rabbitmq as a service."
 endif
 
-dependencies_qrm: build_fomac build_backends build_rabbitmq configure_rabbitmq
+dependencies_qrm: analyze_qdmi analyze_fomac analyze_backends build_rabbitmq configure_rabbitmq
 
-qrm: dependencies_qrm
-	export LD_LIBRARY_PATH="$(EXEC_PATH)/fomac:\
-        $(EXEC_PATH)/backends:\
-		$(EXEC_PATH)/pass_runner:\
-		$(EXEC_PATH)/pass_runner/passes:\
-		$(EXEC_PATH)/selector_runner:\
-		$(EXEC_PATH)/selector_runner/selectors:\
+install: dependencies_qrm
+	export LD_LIBRARY_PATH="\
+		$(BACKENDS_LIBRARY_PATH):\
+		$(QDMI_LIBRARY_PATH):\
+		$(FOMAC_LIBRARY_PATH):\
+		$(EXEC_PATH)/generator_runner:\
+		$(EXEC_PATH)/generator_runner/generators:\
 		$(EXEC_PATH)/scheduler_runner:\
 		$(EXEC_PATH)/scheduler_runner/schedulers:\
-		$(EXEC_PATH)/qdmi:$$LD_LIBRARY_PATH" && \
+		$(EXEC_PATH)/selector_runner:\
+		$(EXEC_PATH)/selector_runner/selectors:\
+		$(EXEC_PATH)/pass_runner:$$LD_LIBRARY_PATH" && \
 	CMAKE_PREFIX_PATH=$$(llvm-config --libdir)/cmake/llvm cmake -B$(BUILD_DIR) \
 		-DBUILD_WITH_DOCS=OFF \
 		-DCMAKE_INSTALL_PREFIX=$(INSTALL_PATH) \
-		-DCUSTOM_BACKENDS_PATH=$(BACKENDS_PATH) \
-		-DCUSTOM_FOMAC_PATH=$(FOMAC_PATH) && \
+		-DCUSTOM_BACKENDS_INCLUDE_PATH=$(BACKENDS_INCLUDE_PATH) \
+		-DCUSTOM_BACKENDS_LIBRARY_PATH=$(BACKENDS_LIBRARY_PATH) \
+		-DCUSTOM_QDMI_INCLUDE_PATH=$(QDMI_INCLUDE_PATH) \
+		-DCUSTOM_QDMI_LIBRARY_PATH=$(QDMI_LIBRARY_PATH) \
+		-DCUSTOM_FOMAC_INCLUDE_PATH=$(FOMAC_INCLUDE_PATH) \
+		-DCUSTOM_FOMAC_LIBRARY_PATH=$(FOMAC_LIBRARY_PATH) && \
 	cmake --build $(BUILD_DIR) --target install --config Release && \
 	if [ -n "$$CI" ]; then \
 		ldconfig; \
@@ -97,9 +97,9 @@ qrm: dependencies_qrm
 		sudo ldconfig; \
 	fi
 
-install: qrm
 	@echo ""
-	@echo "Please add $(INSTALL_PATH)/bin to your PATH variable."
+	@echo "Please add $(INSTALL_PATH)/bin to the PATH environment variable:"
+	@echo "export PATH=\$$PATH:$(INSTALL_PATH)/bin"
 	@echo ""
 
 clean:
@@ -125,20 +125,26 @@ build_docs:
 endif
 
 docs: dependencies_qrm build_docs
-	export LD_LIBRARY_PATH="$(EXEC_PATH)/fomac:\
-        $(EXEC_PATH)/backends:\
-		$(EXEC_PATH)/pass_runner:\
-		$(EXEC_PATH)/pass_runner/passes:\
-		$(EXEC_PATH)/selector_runner:\
-		$(EXEC_PATH)/selector_runner/selectors:\
+	export LD_LIBRARY_PATH="\
+		$(BACKENDS_LIBRARY_PATH):\
+		$(QDMI_LIBRARY_PATH):\
+		$(FOMAC_LIBRARY_PATH):\
+		$(EXEC_PATH)/generator_runner:\
+		$(EXEC_PATH)/generator_runner/generators:\
 		$(EXEC_PATH)/scheduler_runner:\
 		$(EXEC_PATH)/scheduler_runner/schedulers:\
-		$(EXEC_PATH)/qdmi:$$LD_LIBRARY_PATH" && \
+		$(EXEC_PATH)/selector_runner:\
+		$(EXEC_PATH)/selector_runner/selectors:\
+		$(EXEC_PATH)/pass_runner:$$LD_LIBRARY_PATH" && \
 	CMAKE_PREFIX_PATH=$$(llvm-config --libdir)/cmake/llvm cmake -B$(BUILD_DIR) \
 		-DBUILD_WITH_DOCS=ON \
 		-DCMAKE_INSTALL_PREFIX=$(INSTALL_PATH) \
-		-DCUSTOM_BACKENDS_PATH=$(BACKENDS_PATH) \
-		-DCUSTOM_FOMAC_PATH=$(FOMAC_PATH) && \
+		-DCUSTOM_BACKENDS_INCLUDE_PATH=$(BACKENDS_INCLUDE_PATH) \
+		-DCUSTOM_BACKENDS_LIBRARY_PATH=$(BACKENDS_LIBRARY_PATH) \
+		-DCUSTOM_QDMI_INCLUDE_PATH=$(QDMI_INCLUDE_PATH) \
+		-DCUSTOM_QDMI_LIBRARY_PATH=$(QDMI_LIBRARY_PATH) \
+		-DCUSTOM_FOMAC_INCLUDE_PATH=$(FOMAC_INCLUDE_PATH) \
+		-DCUSTOM_FOMAC_LIBRARY_PATH=$(FOMAC_LIBRARY_PATH) && \
 	cmake --build $(BUILD_DIR) --target install --config Release && \
 	if [ -n "$$CI" ]; then \
 		ldconfig; \
@@ -147,12 +153,11 @@ docs: dependencies_qrm build_docs
 	fi
 
 	@echo ""
-	@echo "Please add $(INSTALL_PATH)/bin to your PATH variable."
+	@echo "Please add $(INSTALL_PATH)/bin to the PATH environment variable:"
+	@echo "export PATH=\$$PATH:$(INSTALL_PATH)/bin"
 	@echo ""
 
-build_qrm: qrm
-
-run: build_qrm
+run: install
 	@if [ "$$(echo $$PATH | tr ':' '\n' | grep -c "$(INSTALL_PATH)/bin")" -eq 0 ]; then \
     	export PATH=$$PATH:$(INSTALL_PATH)/bin; \
 	fi; \

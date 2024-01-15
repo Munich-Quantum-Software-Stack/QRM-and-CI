@@ -4,20 +4,21 @@
 #include <ctime>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <nlohmann/json.hpp>
 #include <string>
-#include <unordered_map>
+#include <vector>
 
 using json = nlohmann::json;
 
 struct QuantumResult
 {
     int task_id;
-    std::unordered_map<std::string, int> results;
+    std::map<std::string, int> results;
     std::string destination;
     bool execution_status;
-    std::string executed_qpu;
-    std::string executed_circuit;
+    std::vector<std::string> executed_qpu;
+    std::vector<std::string> executed_circuit;
     std::string additional_information;
     double execution_time;
 };
@@ -32,8 +33,10 @@ QuantumResult JSONToQuantumResult(const char *QuantumResult_str)
     result.results = QuantumResult_json["results"];
     result.destination = QuantumResult_json["destination"];
     result.execution_status = QuantumResult_json["execution_status"];
-    result.executed_qpu = QuantumResult_json["executed_qpu"];
-    result.executed_circuit = QuantumResult_json["executed_circuit"];
+    result.executed_qpu =
+        QuantumResult_json["executed_qpu"].get<std::vector<std::string>>();
+    result.executed_circuit =
+        QuantumResult_json["executed_circuit"].get<std::vector<std::string>>();
     result.additional_information =
         QuantumResult_json["additional_information"];
     result.execution_time = QuantumResult_json["execution_time"];
@@ -97,7 +100,7 @@ int main(int argc, char *argv[])
         {"submit_time", submit_time},
         {"circuit_qiskit", genericQir},
         {"additional_information", ""},
-        {"change_selector", "libselector_ga.so"}, //"libselector_all.so"},
+        {"change_selector", "libselector_ga.so"},
         {"change_scheduler", "libscheduler_round_robin.so"},
     };
 
@@ -124,15 +127,22 @@ int main(int argc, char *argv[])
                   << quantumResult.destination << std::endl;
         std::cout << "                      L ...execution_status: "
                   << quantumResult.execution_status << std::endl;
-        std::cout << "                      L ...executed_qpu: "
-                  << quantumResult.executed_qpu << std::endl;
+        std::cout << "                      L ...executed_qpu(s): {";
+        for (const auto &qpu : quantumResult.executed_qpu)
+            std::cout << " " << qpu;
+        std::cout << " }" << std::endl;
         std::cout << "                      L ...additional_information: "
                   << quantumResult.additional_information << std::endl;
         std::cout << "                      L ...execution_time: "
                   << quantumResult.execution_time << " s." << std::endl;
-        std::cout << "                      L ...executed_circuit: "
-                  << std::endl
-                  << quantumResult.executed_circuit << std::endl;
+        std::cout << "                      L ...executed_circuit(s): ";
+        for (const auto &qir : quantumResult.executed_circuit)
+            std::cout << std::endl << qir;
+        std::cout << std::endl << "Results: " << std::endl;
+        for (const auto &result : quantumResult.results)
+            std::cout << "\t" << result.first << ": " << result.second
+                      << std::endl;
+        std::cout << std::endl;
     }
     else
     {

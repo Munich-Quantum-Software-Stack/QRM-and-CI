@@ -14,10 +14,12 @@
 #include <unistd.h>
 #include <vector>
 
+#include <llvm/ExecutionEngine/Orc/ThreadSafeModule.h>
 #include <llvm/IR/InstrTypes.h>
 #include <llvm/IR/Module.h>
 
 using namespace llvm;
+using llvm::orc::ThreadSafeModule;
 
 #define INF 1.0e14
 #define EPS 1.0e-14
@@ -138,10 +140,10 @@ void onthefly_display(NSGA2Type *nsga2Params, population *pop, FILE *gp, int ii,
 int check_dominance(NSGA2Type *nsga2Params, individual *a, individual *b);
 
 void evaluate_pop(NSGA2Type *nsga2Params, population *pop,
-                  std::unique_ptr<Module> &module,
+                  ThreadSafeModule &TSM,
                   const std::vector<std::string> designSpace, bool fVerbose);
 void evaluate_ind(NSGA2Type *nsga2Params, individual *ind,
-                  std::unique_ptr<Module> &module,
+                  ThreadSafeModule &TSM,
                   const std::vector<std::string> designSpace, bool fVerbose);
 
 void fill_nondominated_sort(NSGA2Type *nsga2Params, population *mixed_pop,
@@ -168,7 +170,7 @@ void real_mutate_ind(NSGA2Type *nsga2Params, individual *ind);
 void test_problem(double *xreal, double *xbin, int **gene, double *obj,
                   double *constr);
 void test_qir(NSGA2Type *nsga2Params, int **gene, double *obj,
-              std::unique_ptr<Module> &module, int fVerbose);
+              ThreadSafeModule &TSM, int fVerbose);
 void assign_rank_and_crowding_distance(NSGA2Type *nsga2Params,
                                        population *new_pop);
 
@@ -194,11 +196,11 @@ individual *tournament(NSGA2Type *nsga2Params, individual *ind1,
  * nsga2.c
  */
 NSGA2Type ReadParameters(int sizeChrom, int nobj);
-int InitNSGA2(NSGA2Type *nsga2Params, std::unique_ptr<Module> &module,
+int InitNSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
               const char *local_path, bool fVerbose,
               const std::vector<std::string> designSpace);
-int NSGA2(NSGA2Type *nsga2Params, std::unique_ptr<Module> &module,
-          bool fVerbose, const std::vector<std::string> designSpace);
+int NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM, bool fVerbose,
+          const std::vector<std::string> designSpace);
 void print_nsga2Params(NSGA2Type *nsga2Params);
 
 #endif // NSGA2_HPP

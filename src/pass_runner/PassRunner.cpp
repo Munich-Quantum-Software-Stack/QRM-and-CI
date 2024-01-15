@@ -5,12 +5,58 @@
 
 #include "PassRunner.hpp"
 
+using llvm::orc::ThreadSafeModule;
+
+/**
+ * @brief TODO
+ * @param TODO
+ */
+void invokePasses(ThreadSafeModule &TSM, const std::vector<std::string> &passes)
+{
+    TSM.withModuleDo(
+        [&](Module &module)
+        {
+            // Attach metadata to the IR
+            Metadata *metadata = ConstantAsMetadata::get(
+                ConstantInt::get(module.getContext(), APInt(1, true)));
+
+            module.addModuleFlag(Module::Warning, "lrz_supports_qir", metadata);
+            module.setSourceFileName("");
+
+            Metadata *metadataSupport =
+                module.getModuleFlag("lrz_supports_qir");
+            if (metadataSupport)
+                if (ConstantAsMetadata *boolMetadata =
+                        dyn_cast<ConstantAsMetadata>(metadataSupport))
+                    if (ConstantInt *boolConstant =
+                            dyn_cast<ConstantInt>(boolMetadata->getValue()))
+                        errs() << "   [Pass Runner].........Flag inserted: "
+                                  "\"lrz_supports_qir\" = "
+                               << (boolConstant->isOne() ? "true" : "false")
+                               << '\n';
+
+            // Create an instance of the QirPassRunner and append to it all the
+            // received passes
+            QirPassRunner &QPR = QirPassRunner::getInstance();
+            ModuleAnalysisManager MAM;
+
+            for (std::string libPass : passes)
+                QPR.append(libPass);
+
+            // Run QIR passes
+            QPR.run(module, MAM);
+
+            // Free memory
+            QPR.clearMetadata();
+        });
+}
+
 /**
  * @brief TODO
  * @param TODO
  */
 void invokePasses(std::unique_ptr<Module> &module,
-                  std::vector<std::string> passes, bool fVerbose)
+                  const std::vector<std::string> &passes)
 {
     if (!module)
     {
@@ -39,39 +85,20 @@ void invokePasses(std::unique_ptr<Module> &module,
                 dyn_cast<ConstantAsMetadata>(metadataSupport))
             if (ConstantInt *boolConstant =
                     dyn_cast<ConstantInt>(boolMetadata->getValue()))
-                if (fVerbose)
-                    errs() << "   [Pass Runner].........Flag inserted: "
-                              "\"lrz_supports_qir\" = "
-                           << (boolConstant->isOne() ? "true" : "false")
-                           << '\n';
+                errs() << "   [Pass Runner].........Flag inserted: "
+                          "\"lrz_supports_qir\" = "
+                       << (boolConstant->isOne() ? "true" : "false") << '\n';
 
-    // Create an instance of the QirPassRunner and append to it all the received
-    // passes
+    // Create an instance of the QirPassRunner and append to it all the
+    // received passes
     QirPassRunner &QPR = QirPassRunner::getInstance();
     ModuleAnalysisManager MAM;
 
-    char buffer[PATH_MAX];
-    ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
-    if (len == -1)
-    {
-        errs() << "   [Pass Runner].........Error: Erroneous path to pass\n";
-        QPR.clearMetadata();
-        return;
-    }
-
-    buffer[len] = '\0';
-
-    std::string pathPass = std::string(buffer);
-    size_t lastSlash = pathPass.find_last_of("/\\");
-    pathPass = pathPass.substr(0, lastSlash) + "/lib/pass_runner/passes/";
-    for (std::string pass : passes)
-    {
-        std::string libPass = pathPass + pass;
+    for (std::string libPass : passes)
         QPR.append(libPass);
-    }
 
     // Run QIR passes
-    QPR.run(*module, MAM, fVerbose);
+    QPR.run(*module, MAM);
 
     // Free memory
     QPR.clearMetadata();

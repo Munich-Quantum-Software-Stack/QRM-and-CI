@@ -1,8 +1,6 @@
 /**
  * @file QirPassRunner.cpp
- * @brief Implementation of the 'QirPassRunner' class. <a
- * href="https://gitlab-int.srv.lrz.de/lrz-qct-qis/quantum_intermediate_representation/qir_passes/-/blob/Plugins/src/QirPassRunner.cpp?ref_type=heads">Go
- * to the source code of this file.</a>
+ * @brief Implementation of the 'QirPassRunner' class.
  */
 
 #include "QirPassRunner.hpp"
@@ -66,8 +64,8 @@ void QirPassRunner::append(std::string pass) { passes_.push_back(pass); }
  * @param module The module of the submitted QIR.
  * @param MAM The module analysis manager.
  */
-void /*PreservedAnalyses*/
-QirPassRunner::run(Module &module, ModuleAnalysisManager &MAM, bool fVerbose)
+void /*PreservedAnalyses*/ QirPassRunner::run(Module &module,
+                                              ModuleAnalysisManager &MAM)
 {
     // TODO HOW DO WE HANDLE 'PreservedAnalyses'?
     // PreservedAnalyses PA;
@@ -82,10 +80,9 @@ QirPassRunner::run(Module &module, ModuleAnalysisManager &MAM, bool fVerbose)
 
         if (!lib_handle)
         {
-            if (fVerbose)
-                std::cout << "   [Pass Runner].........Warning: Could not load "
-                             "shared library: "
-                          << pass << dlerror() << std::endl;
+            std::cout << "   [Pass Runner].........Warning: Could not load "
+                         "shared library: "
+                      << pass << dlerror() << std::endl;
 
             passes_.pop_back();
             continue;
@@ -97,9 +94,8 @@ QirPassRunner::run(Module &module, ModuleAnalysisManager &MAM, bool fVerbose)
         size_t lastDot = passName.find_last_of('.');
         std::string passNameWithoutExt = passName.substr(0, lastDot);
 
-        if (fVerbose)
-            std::cout << "   [Pass Runner].........Applying pass: "
-                      << passNameWithoutExt << std::endl;
+        std::cout << "   [Pass Runner].........Applying pass: "
+                  << passNameWithoutExt << std::endl;
 
         // Pointer to 'loadQirPass' function returning a pointer to the
         // 'PassModule' object
@@ -111,11 +107,10 @@ QirPassRunner::run(Module &module, ModuleAnalysisManager &MAM, bool fVerbose)
 
         if (!loadQirPass)
         {
-            if (fVerbose)
-                std::cout << "   [Pass Runner].........Warning: Could not get "
-                             "factory function "
-                             "of pass: "
-                          << pass << std::endl;
+            std::cout << "   [Pass Runner].........Warning: Could not get "
+                         "factory function "
+                         "of pass: "
+                      << pass << std::endl;
 
             passes_.pop_back();
             dlclose(lib_handle);
@@ -125,7 +120,7 @@ QirPassRunner::run(Module &module, ModuleAnalysisManager &MAM, bool fVerbose)
         PassModule *QirPass = loadQirPass();
 
         // Apply the pass to the LLVM module 'module'
-        /*PA =*/QirPass->run(module, MAM, fVerbose);
+        /*PA =*/QirPass->run(module, MAM);
 
         // Free memory
         delete QirPass;

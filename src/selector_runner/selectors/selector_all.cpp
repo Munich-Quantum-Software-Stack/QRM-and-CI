@@ -4,9 +4,50 @@
  */
 
 #include <algorithm>
+#include <cstdlib>
+#include <filesystem>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
+
+/**
+ * @brief TODO
+ * @param TODO
+ */
+std::vector<std::string> separatePaths(const std::string &passesPaths)
+{
+    std::vector<std::string> paths;
+    std::istringstream ss(passesPaths);
+    std::string path;
+
+    while (std::getline(ss, path, ':'))
+        if (path != "")
+            paths.push_back(path);
+
+    return paths;
+}
+
+/**
+ * @brief TODO
+ * @param TODO
+ */
+std::vector<std::string> findSOPasses(const std::vector<std::string> &paths)
+{
+    std::vector<std::string> soPasses;
+
+    for (const std::string &path : paths)
+        for (const auto &entry : std::filesystem::directory_iterator(path))
+            if (entry.is_regular_file() && entry.path().extension() == ".so")
+            {
+                std::string filename = entry.path().filename().string();
+                if (filename.substr(0, 6) == "libQir" &&
+                    filename.find("Analysis") == std::string::npos)
+                    soPasses.push_back(entry.path().string());
+            }
+
+    return soPasses;
+}
 
 /**
  * @brief The main entry point of the program.
@@ -17,54 +58,26 @@
  */
 extern "C" std::vector<std::string> selector(void)
 {
-    // Append the desired passes
-    std::vector<std::string> passes{
-        "libQirDivisionByZeroPass.so",
-        "libQirNormalizeArgAnglePass.so",
-        "libQirXCnotXReductionPass.so",
-        "libQirCommuteCnotRxPass.so",
-        "libQirCommuteRxCnotPass.so",
-        "libQirCommuteCnotXPass.so",
-        "libQirCommuteXCnotPass.so",
-        "libQirCommuteCnotZPass.so",
-        "libQirCommuteZCnotPass.so",
-        "libQirPlaceIrreversibleGatesInMetadataPass.so",
-        "libQirAnnotateUnsupportedGatesPass.so",
-        "libQirU3ToRzRyRzDecompositionPass.so",
-        "libQirRzToRxRyRxDecompositionPass.so",
-        "libQirCNotToHCZHDecompositionPass.so",
-        "libQirSwapToCnotsDecompositionPass.so",
-        "libQirCZToHCnotHDecompositionPass.so",
-        "libQirFunctionAnnotatorPass.so",
-        "libQirRedundantGatesCancellationPass.so",
-        "libQirFunctionReplacementPass.so",
-        "libQirReplaceConstantBranchesPass.so",
-        "libQirGroupingPass.so",
-        "libQirRemoveNonEntrypointFunctionsPass.so",
-        "libQirDeferMeasurementPass.so",
-        "libQirBarrierBeforeFinalMeasurementsPass.so",
-        "libQirRemoveBasicBlocksWithSingleNonConditionalBranchInstsPass.so",
-        "libQirQubitRemapPass.so",
-        "libQirResourceAnnotationPass.so",
-        "libQirNullRotationCancellationPass.so",
-        "libQirMergeRotationsPass.so",
-        "libQirDoubleCnotCancellationPass.so",
-        "libQirHadamardAndXGateSwitchPass.so",
-        "libQirHadamardAndYGateSwitchPass.so",
-        "libQirHadamardAndZGateSwitchPass.so",
-        "libQirXGateAndHadamardSwitchPass.so",
-        "libQirYGateAndHadamardSwitchPass.so",
-        "libQirZGateAndHadamardSwitchPass.so",
-        "libQirSToSDaggerPass.so",
-        "libQirSDaggerToSPass.so",
-        "libQirReverseCnotPass.so",
-        "libQirSwapAndCnotReplacementPass.so",
-    };
+    char *passesEnv = std::getenv("PASSES");
+
+    if (passesEnv == nullptr)
+    {
+        std::cout << "   [Selector]............Warning: Environment variable "
+                     "$PASSES not found"
+                  << std::endl;
+
+        return std::vector<std::string>{};
+    }
+
+    std::string passes = passesEnv;
+    std::vector<std::string> soPaths = separatePaths(passes);
+    std::vector<std::string> soPasses = findSOPasses(soPaths);
+
+    // PERFORM PASS SELECTION
 
     std::cout << "   [Selector]............Returning list of passes to the "
                  "Selector Runner"
               << std::endl;
 
-    std::reverse(passes.begin(), passes.end());
-    return passes;
+    return soPasses;
 }

@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <netinet/in.h>
 #include <nlohmann/json.hpp>
 #include <signal.h>
@@ -21,16 +22,19 @@
 #include <sys/types.h>
 #include <thread>
 #include <unistd.h>
-#include <unordered_map>
 #include <vector>
 
 #include "connection_handling.hpp"
+
+#include "generator_runner/GeneratorRunner.hpp"
 #include "pass_runner/PassRunner.hpp"
-#include "pass_runner/QirPassRunner.hpp"
 #include "scheduler_runner/SchedulerRunner.hpp"
 #include "selector_runner/SelectorRunner.hpp"
 
+#include <qdmi.hpp>
+
 using json = nlohmann::json;
+using llvm::orc::ThreadSafeModule;
 
 /**
  * @todo Comment this
@@ -53,6 +57,7 @@ struct QuantumTask
     std::string submit_time;
     std::string circuit_qiskit;
     std::string additional_information;
+    std::string change_generator;
     std::string change_selector;
     std::string change_scheduler;
 };
@@ -105,85 +110,102 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
 void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                          const QuantumTask &quantumTask)
 {
-    // Parse generic QIR into an LLVM module
-    LLVMContext Context;
-    SMDiagnostic error;
+    // Invoke the generator
+    std::string generator = quantumTask.change_generator == ""
+                                ? "libgenerator_cutter.so"
+                                : quantumTask.change_generator;
 
-    auto memoryBuffer = MemoryBuffer::getMemBuffer(quantumTask.circuit_qiskit,
-                                                   "QIR (LRZ)", false);
-    MemoryBufferRef QIRRef = *memoryBuffer;
-    std::unique_ptr<Module> module = parseIR(QIRRef, error, Context);
-    if (!module)
-    {
-        std::cout << "   [qresourcemanager_d]..Warning: There was an error "
-                     "parsing the "
-                     "generic QIR"
-                  << std::endl;
-        return;
-    }
+    std::vector<ThreadSafeModule> TSMs =
+        invokeGenerator(quantumTask.circuit_qiskit, generator);
 
-    // Invoke the scheduler
-    std::string scheduler = quantumTask.change_scheduler == ""
-                                ? "libscheduler_round_robin.so"
-                                : quantumTask.change_scheduler;
-
-    if (invokeScheduler(scheduler) > 0)
+    if (TSMs.size() == 0)
     {
         std::cout
-            << "   [qresourcemanager_d]..Warning: There was an error obtaining "
-               "the target architecture"
+            << "   [qresourcemanager_d]..Warning: There was an error splitting "
+               "the quantum circuit"
             << std::endl;
         return;
     }
 
-    // Invoke the selector
-    std::string selector = quantumTask.change_selector == ""
-                               ? "libselector_all.so"
-                               : quantumTask.change_selector;
-    std::vector<std::string> passes = invokeSelector(module, selector);
-
-    if (passes.empty())
-    {
-        std::cout
-            << "   [qresourcemanager_d]..Warning: There was an error obtaining "
-               "the passes"
-            << std::endl;
-        return;
-    }
-
-    // Invoke the passes
-    invokePasses(module, passes, true);
-
-    // Fetch the target architecture from the metadata
-    QirPassRunner &QPR = QirPassRunner::getInstance();
-    QirMetadata &qirMetadata = QPR.getMetadata();
-    auto targetArchitecture = qirMetadata.targetPlatform;
-
-    // Obtain handle of the target architecture
-    std::shared_ptr<JobRunner> backend = qdmi_get_backend(targetArchitecture);
-
-    if (!backend)
-    {
-        std::cout << "   [qresourcemanager_d]..Warning: Unavailable target "
-                     "architecture: "
-                  << targetArchitecture << std::endl;
-        return;
-    }
-
-    // Submit the adapted QIR to the target platform
-    int n_shots = quantumTask.n_shots;
+    // Compile and execute each generated sub-circuit
+    std::vector<std::string /*const char **/> modules;
+    std::vector<std::string> targets;
+    std::map<std::string, int> results;
     auto start = std::chrono::steady_clock::now();
-    std::unordered_map<std::string, int> results =
-        qdmi_launch_qir(backend, module, n_shots);
+    for (auto &TSM : TSMs)
+    {
+        std::cout << std::endl;
+
+        // Invoke the scheduler
+        std::string scheduler = quantumTask.change_scheduler == ""
+                                    ? "libscheduler_round_robin.so"
+                                    : quantumTask.change_scheduler;
+
+        if (invokeScheduler(scheduler) > 0)
+        {
+            std::cout << "   [qresourcemanager_d]..Warning: There was an error "
+                         "obtaining the target architecture"
+                      << std::endl;
+            return;
+        }
+
+        // Invoke the selector
+        std::string selector = quantumTask.change_selector == ""
+                                   ? "libselector_all.so"
+                                   : quantumTask.change_selector;
+        std::vector<std::string> passes = invokeSelector(TSM, selector);
+
+        if (passes.empty())
+        {
+            std::cout << "   [qresourcemanager_d]..Warning: There was an error "
+                         "obtaining the passes"
+                      << std::endl;
+            return;
+        }
+
+        // Invoke the passes
+        invokePasses(TSM, passes);
+
+        // Fetch the target architecture from the metadata
+        QirPassRunner &QPR = QirPassRunner::getInstance();
+        QirMetadata &qirMetadata = QPR.getMetadata();
+        auto targetArchitecture = qirMetadata.targetPlatform;
+
+        // Obtain handle of the target architecture
+        std::shared_ptr<JobRunner> backend =
+            qdmi_get_backend(targetArchitecture);
+
+        if (!backend)
+        {
+            std::cout << "   [qresourcemanager_d]..Warning: Unavailable target "
+                         "architecture: "
+                      << targetArchitecture << std::endl;
+            return;
+        }
+
+        targets.push_back(targetArchitecture);
+
+        // Submit the adapted QIR to the target platform
+        int n_shots = quantumTask.n_shots;
+        auto partial_result = qdmi_launch_qir(backend, TSM, n_shots);
+        for (const auto &result : partial_result)
+            results[result.first] += result.second;
+
+        // Get human-readable QIR from the adapted LLVM modules
+        TSM.withModuleDo(
+            [&](Module &module)
+            {
+                std::string str;
+                raw_string_ostream OS(str);
+                OS << module;
+                OS.flush();
+                const char *qir = str.data();
+                modules.push_back((char *)qir);
+            });
+    }
+
     auto end = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed_seconds = end - start;
-
-    // Get human-readable QIR from the adapted LLVM module
-    std::string str;
-    raw_string_ostream OS(str);
-    OS << *module;
-    OS.flush();
-    const char *qir = str.data();
 
     // Create JSON string to send back to the Quantum Daemon
     json QuantumResult_json = {
@@ -191,8 +213,8 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         {"results", results},
         {"destination", ""},
         {"execution_status", true},
-        {"executed_qpu", targetArchitecture},
-        {"executed_circuit", (char *)qir},
+        {"executed_qpu", targets},
+        {"executed_circuit", modules},
         {"additional_information", ""},
         {"execution_time", elapsed_seconds.count()},
     };
@@ -364,49 +386,14 @@ int main(int argc, char *argv[])
         {
             QuantumTask quantumTask = JSONToQuantumTask(task);
 
-            //// Receive a QIR module as a binary blob
-            // auto *qirmodule = receive_message(&conn,     // conn
-            //                                   QRMQueue); // queue
-
-            // auto receivedQirModule =
-            //     std::make_unique<char[]>(strlen(qirmodule) + 1);
-            // strcpy(receivedQirModule.get(), qirmodule);
-
-            //// Receive name of the desired scheduler
-            // auto *scheduler = receive_message(&conn,     // conn
-            //                                   QRMQueue); // queue
-
-            // auto receivedScheduler =
-            //     std::make_unique<char[]>(strlen(scheduler) + 1);
-            // strcpy(receivedScheduler.get(), scheduler);
-
-            //// Receive name of the desired selector
-            // auto *selector = receive_message(&conn,     // conn
-            //                                  QRMQueue); // queue
-
-            // auto receivedSelector = std::make_unique<char[]>(strlen(selector)
-            // + 1); strcpy(receivedSelector.get(), selector);
-
             std::cout << "   [qresourcemanager_d]..Received a QuantumTask"
                       << std::endl;
-
-            // std::cout << "   [qresourcemanager_d]..Received a QIR module"
-            //           << std::endl;
-
-            // std::cout << "   [qresourcemanager_d]..Received a scheduler: "
-            //           << receivedScheduler.get() << std::endl;
-
-            // std::cout << "   [qresourcemanager_d]..Received a selector: "
-            //           << receivedSelector.get() << std::endl;
 
             // Create a new thread that executes 'handleQuantumDaemon' to run
             // the received scheduler, and the received selector targeting
             // the received QIR
             std::thread QuantumDaemonThread(handleQuantumDaemon, std::ref(conn),
                                             QDQueue, quantumTask);
-            // std::move(receivedQirModule),
-            // std::move(receivedScheduler),
-            // std::move(receivedSelector));
 
             // Detach from this thread once done
             QuantumDaemonThread.detach();

@@ -6,6 +6,8 @@
 #include "nsga2.hpp"
 #include "rand.hpp"
 
+using llvm::orc::ThreadSafeModule;
+
 FILE *fpt1;
 FILE *fpt2;
 FILE *fpt3;
@@ -90,7 +92,7 @@ NSGA2Type ReadParameters(int sizeChrom, int nobj)
     return nsga2Params;
 }
 
-int InitNSGA2(NSGA2Type *nsga2Params, std::unique_ptr<Module> &module,
+int InitNSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
               const char *local_path, bool fVerbose,
               const std::vector<std::string> designSpace)
 {
@@ -215,14 +217,14 @@ int InitNSGA2(NSGA2Type *nsga2Params, std::unique_ptr<Module> &module,
     initialize_pop(nsga2Params, parent_pop);
 
     std::cout << "[DEBUG] before evaluate pop" << std::endl;
-    evaluate_pop(nsga2Params, parent_pop, module, designSpace, fVerbose);
+    evaluate_pop(nsga2Params, parent_pop, TSM, designSpace, fVerbose);
     std::cout << "[DEBUG] after evaluate pop" << std::endl;
     assign_rank_and_crowding_distance(nsga2Params, parent_pop);
     std::cout << "[DEBUG] before report" << std::endl;
     report_pop(nsga2Params, parent_pop, fpt1);
     report_feasible(nsga2Params, parent_pop, fpt6);
 
-    std::cout << "[DE`BUG] after population things" << std::endl;
+    std::cout << "[DEBUG] after population things" << std::endl;
     char buff[100];
     time_t now = time(0);
     strftime(buff, 100, "%Y-%m-%d %H:%M:%S.000", localtime(&now));
@@ -251,8 +253,8 @@ int InitNSGA2(NSGA2Type *nsga2Params, std::unique_ptr<Module> &module,
     return 0;
 }
 
-int NSGA2(NSGA2Type *nsga2Params, std::unique_ptr<Module> &module,
-          bool fVerbose, const std::vector<std::string> designSpace)
+int NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM, bool fVerbose,
+          const std::vector<std::string> designSpace)
 {
     int i;
     char buff[100];
@@ -262,7 +264,7 @@ int NSGA2(NSGA2Type *nsga2Params, std::unique_ptr<Module> &module,
         selection(nsga2Params, parent_pop, child_pop);
         mutation_pop(nsga2Params, child_pop);
         //    	decode_pop(nsga2Params, child_pop);
-        evaluate_pop(nsga2Params, child_pop, module, designSpace, fVerbose);
+        evaluate_pop(nsga2Params, child_pop, TSM, designSpace, fVerbose);
         merge(nsga2Params, parent_pop, child_pop, mixed_pop);
         fill_nondominated_sort(nsga2Params, mixed_pop, parent_pop);
 

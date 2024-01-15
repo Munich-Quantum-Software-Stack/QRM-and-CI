@@ -14,7 +14,7 @@
  * @param pathSelector Path to the selector to be invoked
  * @return std::vector<std::string>
  */
-std::vector<std::string> invokeSelector(std::unique_ptr<Module> &module,
+std::vector<std::string> invokeSelector(ThreadSafeModule &TSM,
                                         const std::string &nameSelector)
 {
     std::string pathSelector;
@@ -47,8 +47,7 @@ std::vector<std::string> invokeSelector(std::unique_ptr<Module> &module,
     }
 
     // Dynamic loading and linking of the shared library
-    typedef std::vector<std::string> (*SelectorFunction)(
-        std::unique_ptr<Module> &);
+    typedef std::vector<std::string> (*SelectorFunction)(ThreadSafeModule &);
     SelectorFunction selector =
         reinterpret_cast<SelectorFunction>(dlsym(lib_handle, "selector"));
 
@@ -63,5 +62,5 @@ std::vector<std::string> invokeSelector(std::unique_ptr<Module> &module,
     }
 
     // Call the selector function
-    return selector(module);
+    return selector(TSM);
 }

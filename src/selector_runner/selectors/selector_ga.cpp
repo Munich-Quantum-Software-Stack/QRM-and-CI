@@ -11,6 +11,8 @@
 
 #include "nsga2.hpp"
 
+using llvm::orc::ThreadSafeModule;
+
 /**
  * @brief The main entry point of the program.
  *
@@ -18,7 +20,7 @@
  *
  * @return std::vector<std::string>
  */
-extern "C" std::vector<std::string> selector(std::unique_ptr<Module> &module)
+extern "C" std::vector<std::string> selector(ThreadSafeModule &TSM)
 {
     // Append the existing passes
     std::vector<std::string> passes{
@@ -73,9 +75,9 @@ extern "C" std::vector<std::string> selector(std::unique_ptr<Module> &module)
     std::string results_path = std::string(home) + "/logs/results_";
     const char *GA_path = results_path.c_str();
     std::cout << "   [Selector]............Init NSGA2" << std::endl;
-    InitNSGA2(&nsga2Params, module, GA_path, false, passes);
+    InitNSGA2(&nsga2Params, TSM, GA_path, false, passes);
     std::cout << "   [Selector]............NSGA2" << std::endl;
-    NSGA2(&nsga2Params, module, false, passes);
+    NSGA2(&nsga2Params, TSM, false, passes);
     std::cout << "   [Selector]............Finished the DSE" << std::endl;
 
     // Return the list of chosen passes

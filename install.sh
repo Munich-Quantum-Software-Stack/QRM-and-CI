@@ -1,0 +1,19 @@
+export PASSRUNNER_LIBRARY_PATH="$HOME/bin/lib/pass_runner"
+export PASSRUNNER_INCLUDE_PATH="$HOME/qrm.git/src/pass_runner"
+export FOMAC_LIBRARY_PATH="$HOME/bin/lib/fomac"
+export FOMAC_INCLUDE_PATH="$HOME/fomac.git/src"
+export QDMI_LIBRARY_PATH="$HOME/bin/lib/qdmi"
+export QDMI_INCLUDE_PATH="$HOME/qdmi.git/src"
+export BACKENDS_LIBRARY_PATH="$HOME/bin/lib/backends"
+export BACKENDS_INCLUDE_PATH="$HOME/backends.git/src"
+export PASSES="$HOME/bin/lib/passes"
+
+make \
+    INSTALL_PATH=$HOME \
+    BACKENDS_INCLUDE_PATH=$BACKENDS_INCLUDE_PATH \
+    BACKENDS_LIBRARY_PATH=$BACKENDS_LIBRARY_PATH \
+    QDMI_INCLUDE_PATH=$QDMI_INCLUDE_PATH \
+    QDMI_LIBRARY_PATH=$QDMI_LIBRARY_PATH \
+    FOMAC_LIBRARY_PATH=$FOMAC_LIBRARY_PATH \
+    FOMAC_INCLUDE_PATH=$FOMAC_INCLUDE_PATH \
+    install

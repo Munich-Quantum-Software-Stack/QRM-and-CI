@@ -6,7 +6,7 @@
 #ifndef QIR_MODULE_PASS_MANAGER_H
 #define QIR_MODULE_PASS_MANAGER_H
 
-#include "headers/PassModule.hpp"
+#include "PassModule.hpp"
 
 #include <dlfcn.h>
 #include <string>
@@ -172,12 +172,12 @@ class QirPassRunner
      *     QPR.append("libName1Pass.so");
      *     QPR.append("libName2Pass.so");
      *     QPR.append("libName3Pass.so");
-     *     QPR.run(*module, MAM, true);
+     *     QPR.run(*module, MAM);
      *
      * @param module The module of the submitted QIR.
      * @param MAM The module analysis manager.
      */
-    void run(Module &module, ModuleAnalysisManager &MAM, bool fVerbose);
+    void run(Module &module, ModuleAnalysisManager &MAM);
 
     /**
      * @brief Returns the private metadata of 'QirPassRunner', that is,

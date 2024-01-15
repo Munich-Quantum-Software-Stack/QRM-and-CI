@@ -66,6 +66,7 @@
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Analysis/ConstantFolding.h>
 #include <llvm/Analysis/InlineCost.h>
+#include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/GenericValue.h>
 #include <llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h>
@@ -85,6 +86,7 @@
 #include <llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h>
 #include <llvm/ExecutionEngine/Orc/OrcABISupport.h>
 #include <llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h>
+#include <llvm/ExecutionEngine/Orc/ThreadSafeModule.h>
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
 #include <llvm/IR/Argument.h>
 #include <llvm/IR/AssemblyAnnotationWriter.h>
