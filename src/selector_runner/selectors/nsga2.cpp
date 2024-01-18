@@ -32,14 +32,14 @@ NSGA2Type ReadParameters(int sizeChrom, int nobj)
     srand(time(NULL));
 
     nsga2Params.seed = (float)rand() / (float)(RAND_MAX); // Seed value
-    nsga2Params.popsize = 8; // Population size (multiple of 4)
-    nsga2Params.ngen = 8;    // Number of generations
-    nsga2Params.nobj = nobj; // Number of objectives
-    nsga2Params.ncon = 0;    // Number of constraints
-    nsga2Params.nreal = 0;   // Number of real variables
-    nsga2Params.nint = 1;    // Number of integer variables
-    nsga2Params.nbin = 0;    // Number of binary variables
-    nsga2Params.nsim = 0;    // Number of simulations
+    nsga2Params.popsize = 8;      // Population size (multiple of 4)
+    nsga2Params.ngen = 8;         // Number of generations
+    nsga2Params.nobj = nobj;      // Number of objectives
+    nsga2Params.ncon = 0;         // Number of constraints
+    nsga2Params.nreal = 0;        // Number of real variables
+    nsga2Params.nint = sizeChrom; // Number of integer variables
+    nsga2Params.nbin = 0;         // Number of binary variables
+    nsga2Params.nsim = 0;         // Number of simulations
 
     assert(nsga2Params.seed > 0.0 && nsga2Params.seed < 1.0);
     assert(nsga2Params.popsize >= 4 && (nsga2Params.popsize % 4) == 0);
@@ -74,7 +74,7 @@ NSGA2Type ReadParameters(int sizeChrom, int nobj)
         nsga2Params.max_intvar[i] = sizeChrom - 1;
 
         // nsga2Params.nbits[i] = sizeChrom;
-        nsga2Params.pmut_int = 0.5 /*(double)1/nsga2Params.nbits[i]*/;
+        nsga2Params.pmut_int = 0.5; //(double)1/nsga2Params.nbits[i];
 
         assert(nsga2Params.pmut_int >= 0.0 && nsga2Params.pmut_int <= 1.0);
     }
@@ -88,7 +88,7 @@ NSGA2Type ReadParameters(int sizeChrom, int nobj)
         0; // Use gnuplot to display the results realtime (0 for NO) (1 for yes)
 
     // assert(nsga2Params.nreal ^ nsga2Params.nbin);
-
+    std::cout << "[DEBUG] end of nsga2" << std::endl;
     return nsga2Params;
 }
 
@@ -261,11 +261,16 @@ int NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM, bool fVerbose,
 
     for (i = 2; i <= nsga2Params->ngen; i++)
     {
+        std::cout << "[DEBUG] before selection" << std::endl;
         selection(nsga2Params, parent_pop, child_pop);
+        std::cout << "[DEBUG] before mutation" << std::endl;
         mutation_pop(nsga2Params, child_pop);
+        std::cout << "[DEBUG] before evaluation" << std::endl;
         //    	decode_pop(nsga2Params, child_pop);
         evaluate_pop(nsga2Params, child_pop, TSM, designSpace, fVerbose);
+        std::cout << "[DEBUG] before merge" << std::endl;
         merge(nsga2Params, parent_pop, child_pop, mixed_pop);
+        std::cout << "[DEBUG] before fill" << std::endl;
         fill_nondominated_sort(nsga2Params, mixed_pop, parent_pop);
 
         time_t now = time(0);
@@ -317,7 +322,7 @@ int NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM, bool fVerbose,
     {
         free(nsga2Params->min_intvar);
         free(nsga2Params->max_intvar);
-        free(nsga2Params->nbits);
+        // free(nsga2Params->nbits);
     }
 
     deallocate_memory_pop(nsga2Params, parent_pop, nsga2Params->popsize);

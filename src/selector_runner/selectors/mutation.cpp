@@ -25,6 +25,10 @@ void mutation_ind(NSGA2Type *nsga2Params, individual *ind)
     {
         real_mutate_ind(nsga2Params, ind);
     }
+    if (nsga2Params->nint != 0)
+    {
+        int_mutate_ind(nsga2Params, ind);
+    }
     if (nsga2Params->nbin != 0)
     {
         bin_mutate_ind(nsga2Params, ind);
@@ -97,6 +101,51 @@ void real_mutate_ind(NSGA2Type *nsga2Params, individual *ind)
                 y = yu;
             ind->xreal[j] = y;
             nsga2Params->nrealmut += 1;
+        }
+    }
+    return;
+}
+
+/* Routine for integer polynomial mutation of an individual */
+void int_mutate_ind(NSGA2Type *nsga2Params, individual *ind)
+{
+    int j;
+    double rnd, delta1, delta2, mut_pow, deltaq;
+    double y, yl, yu, val, xy;
+    for (j = 0; j < nsga2Params->nint; j++)
+    {
+        if (randomperc() <= nsga2Params->pmut_int)
+        {
+            y = ind->xint[j];
+            yl = nsga2Params->min_intvar[j];
+            yu = nsga2Params->max_intvar[j];
+            delta1 = (y - yl) / (yu - yl);
+            delta2 = (yu - y) / (yu - yl);
+            rnd = randomperc();
+            mut_pow = 1.0 / (nsga2Params->eta_m + 1.0);
+            if (rnd <= 0.5)
+            {
+                xy = 1.0 - delta1;
+                val = 2.0 * rnd +
+                      (1.0 - 2.0 * rnd) * (pow(xy, (nsga2Params->eta_m + 1.0)));
+                deltaq = pow(val, mut_pow) - 1.0;
+            }
+            else
+            {
+                xy = 1.0 - delta2;
+                val = 2.0 * (1.0 - rnd) +
+                      2.0 * (rnd - 0.5) * (pow(xy, (nsga2Params->eta_m + 1.0)));
+                deltaq = 1.0 - (pow(val, mut_pow));
+            }
+            y = y + deltaq * (yu - yl);
+            if (y < yl)
+                y = yl;
+            if (y > yu)
+                y = yu;
+            // TODO: temporary fix
+            y = round(y);
+            ind->xint[j] = y;
+            nsga2Params->nintmut += 1;
         }
     }
     return;

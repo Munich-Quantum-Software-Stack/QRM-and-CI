@@ -23,12 +23,10 @@ void initialize_ind(NSGA2Type *nsga2Params, individual *ind)
 
     if (nsga2Params->nint != 0)
     {
-        std::cout << "[DEBUG] checking loop in initialize ind: "
-                  << *(nsga2Params->max_intvar) << std::endl;
-        for (j = 0; j <= *(nsga2Params->max_intvar); j++)
+        for (j = 0; j < nsga2Params->nint; j++)
         {
             ind->xint[j] =
-                rnd(*(nsga2Params->min_intvar), *(nsga2Params->max_intvar));
+                rnd(nsga2Params->min_intvar[j], nsga2Params->max_intvar[j]);
         }
     }
     if (nsga2Params->nreal != 0)

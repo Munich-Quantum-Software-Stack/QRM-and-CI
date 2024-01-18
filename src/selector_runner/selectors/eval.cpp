@@ -116,10 +116,8 @@ int evaluate_gates(ThreadSafeModule &TSM)
                         {
                             if (auto f = call_instr->getCalledFunction())
                             {
-                                std::cout << "[DEBUG] before name\n";
                                 auto name =
                                     static_cast<std::string>(f->getName());
-                                std::cout << "[DEBUG] after name\n";
 
                                 bool is_quantum =
                                     (name.size() >= QIS_START.size() &&
@@ -146,17 +144,19 @@ void evaluate_ind(NSGA2Type *nsga2Params, individual *ind,
 {
     std::cout << "[DEBUG] START EVALUATE IND\n";
     // Apply passes here
-    std::vector<std::string> passes /*(*(nsga2Params->max_intvar))*/;
+    std::vector<std::string>
+        passes; //(nsga2Params->nint) /*(*(nsga2Params->max_intvar))*/;
 
     int i, j;
 
-    // for (j = 0; j <= *(nsga2Params->max_intvar); j++)
-    //{
-    //     passes.insert(passes.begin() + ind->xint[j],
-    //     designSpace[ind->xint[j]]);
-    // }
-    std::cout << "[DEBUG] after loop\n";
+    for (j = 0; j < nsga2Params->nint; j++)
+    {
+        std::cout << "[DEBUG] PASSES: " << designSpace[ind->xint[j]]
+                  << std::endl;
+        passes.push_back(designSpace[ind->xint[j]]);
+    }
 
+    std::cout << "[DEBUG] after loop\n";
     invokePasses(TSM, passes /*, fVerbose*/);
     std::cout << "[DEBUG] after invoke\n";
 

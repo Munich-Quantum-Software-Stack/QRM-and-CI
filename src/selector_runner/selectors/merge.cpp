@@ -37,6 +37,13 @@ void copy_ind(NSGA2Type *nsga2Params, individual *ind1, individual *ind2)
             ind2->xreal[i] = ind1->xreal[i];
         }
     }
+    if (nsga2Params->nint != 0)
+    {
+        for (i = 0; i < nsga2Params->nint; i++)
+        {
+            ind2->xint[i] = ind1->xint[i];
+        }
+    }
     if (nsga2Params->nbin != 0)
     {
         for (i = 0; i < nsga2Params->nbin; i++)

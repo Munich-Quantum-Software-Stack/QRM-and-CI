@@ -50,7 +50,9 @@ foreach(src_file ${SELECTORS_SOURCE_FILES})
                                                  ${CUSTOM_FOMAC_INCLUDE_PATH}
                                                  ${CUSTOM_BACKENDS_INCLUDE_PATH})
 
-  #target_link_libraries(${src_name} PRIVATE nsga2)
+  #link_directories(${CMAKE_INSTALL_PREFIX}/bin/lib/passes)
+  #file(GLOB PASSES_TO_LINK ${CMAKE_INSTALL_PREFIX}/bin/lib/passes/*.so)
+  #target_link_libraries(${src_name} PRIVATE ${PASSES_TO_LINK})
 
   install(TARGETS ${src_name}
           DESTINATION "${INSTALL_PATH}/bin/lib/selector_runner/selectors")
