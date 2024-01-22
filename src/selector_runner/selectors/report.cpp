@@ -76,6 +76,13 @@ void report_feasible(NSGA2Type *nsga2Params, population *pop, FILE *fpt)
                     fprintf(fpt, "%e\t", pop->ind[i].xreal[j]);
                 }
             }
+            if (nsga2Params->nint != 0)
+            {
+                for (j = 0; j < nsga2Params->nint; j++)
+                {
+                    fprintf(fpt, "%d\t", pop->ind[i].xint[j]);
+                }
+            }
             if (nsga2Params->nbin != 0)
             {
                 for (j = 0; j < nsga2Params->nbin; j++)

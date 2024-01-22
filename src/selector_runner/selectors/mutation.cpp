@@ -137,14 +137,12 @@ void int_mutate_ind(NSGA2Type *nsga2Params, individual *ind)
                       2.0 * (rnd - 0.5) * (pow(xy, (nsga2Params->eta_m + 1.0)));
                 deltaq = 1.0 - (pow(val, mut_pow));
             }
-            y = y + deltaq * (yu - yl);
+            y = y + (int)(deltaq * (yu - yl));
             if (y < yl)
                 y = yl;
             if (y > yu)
                 y = yu;
-            // TODO: temporary fix
-            y = round(y);
-            ind->xint[j] = y;
+            ind->xint[j] = (int)y;
             nsga2Params->nintmut += 1;
         }
     }

@@ -151,8 +151,6 @@ void evaluate_ind(NSGA2Type *nsga2Params, individual *ind,
 
     for (j = 0; j < nsga2Params->nint; j++)
     {
-        std::cout << "[DEBUG] PASSES: " << designSpace[ind->xint[j]]
-                  << std::endl;
         passes.push_back(designSpace[ind->xint[j]]);
     }
 

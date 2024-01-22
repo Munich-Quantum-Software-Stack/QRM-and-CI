@@ -70,10 +70,11 @@ extern "C" std::vector<std::string> selector(ThreadSafeModule &TSM)
         passesPath + "/libQirRemoveNonEntrypointFunctionsPass.so",
         passesPath + "/libQirDeferMeasurementPass.so",
         passesPath + "/libQirBarrierBeforeFinalMeasurementsPass.so",
-        passesPath + "/libQirRemoveBasicBlocksWithSingleNonConditionalBranchIns"
-                     "tsPass.so",
-        // passesPath + "/libQirQubitRemapPass.so", TODO BREAKS THE DEPTH'S
-        // FITNESS EVALUATION
+        // passesPath +
+        // "/libQirRemoveBasicBlocksWithSingleNonConditionalBranchIns"
+        //              "tsPass.so",
+        //  passesPath + "/libQirQubitRemapPass.so", TODO BREAKS THE DEPTH'S
+        //  FITNESS EVALUATION
         passesPath + "/libQirResourceAnnotationPass.so",
         passesPath + "/libQirNullRotationCancellationPass.so",
         passesPath + "/libQirMergeRotationsPass.so",

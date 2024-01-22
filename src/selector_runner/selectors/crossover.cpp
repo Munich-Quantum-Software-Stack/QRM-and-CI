@@ -15,6 +15,10 @@ void crossover(NSGA2Type *nsga2Params, individual *parent1, individual *parent2,
     {
         realcross(nsga2Params, parent1, parent2, child1, child2);
     }
+    if (nsga2Params->nint != 0)
+    {
+        intcross(nsga2Params, parent1, parent2, child1, child2);
+    }
     if (nsga2Params->nbin != 0)
     {
         bincross(nsga2Params, parent1, parent2, child1, child2);
@@ -117,6 +121,107 @@ void realcross(NSGA2Type *nsga2Params, individual *parent1, individual *parent2,
         {
             child1->xreal[i] = parent1->xreal[i];
             child2->xreal[i] = parent2->xreal[i];
+        }
+    }
+    return;
+}
+
+/* Routine for int variable SBX crossover */
+void intcross(NSGA2Type *nsga2Params, individual *parent1, individual *parent2,
+              individual *child1, individual *child2)
+{
+    int i;
+    double rand;
+    double y1, y2, yl, yu;
+    double c1, c2;
+    double alpha, beta, betaq;
+    if (randomperc() <= nsga2Params->pcross_int)
+    {
+        nsga2Params->nintcross++;
+        for (i = 0; i < nsga2Params->nint; i++)
+        {
+            if (randomperc() <= 0.5)
+            {
+                // if (fabs(parent1->xint[i] - parent2->xint[i]) > EPS)
+                if (parent1->xint[i] != parent2->xint[i])
+                {
+                    if (parent1->xint[i] < parent2->xint[i])
+                    {
+                        y1 = parent1->xint[i];
+                        y2 = parent2->xint[i];
+                    }
+                    else
+                    {
+                        y1 = parent2->xint[i];
+                        y2 = parent1->xint[i];
+                    }
+                    yl = nsga2Params->min_intvar[i];
+                    yu = nsga2Params->max_intvar[i];
+                    rand = randomperc();
+                    beta = 1.0 + (2.0 * (y1 - yl) / (y2 - y1));
+                    alpha = 2.0 - pow(beta, -(nsga2Params->eta_c + 1.0));
+                    if (rand <= (1.0 / alpha))
+                    {
+                        betaq = pow((rand * alpha),
+                                    (1.0 / (nsga2Params->eta_c + 1.0)));
+                    }
+                    else
+                    {
+                        betaq = pow((1.0 / (2.0 - rand * alpha)),
+                                    (1.0 / (nsga2Params->eta_c + 1.0)));
+                    }
+                    c1 = 0.5 * ((y1 + y2) - betaq * (y2 - y1));
+                    beta = 1.0 + (2.0 * (yu - y2) / (y2 - y1));
+                    alpha = 2.0 - pow(beta, -(nsga2Params->eta_c + 1.0));
+                    if (rand <= (1.0 / alpha))
+                    {
+                        betaq = pow((rand * alpha),
+                                    (1.0 / (nsga2Params->eta_c + 1.0)));
+                    }
+                    else
+                    {
+                        betaq = pow((1.0 / (2.0 - rand * alpha)),
+                                    (1.0 / (nsga2Params->eta_c + 1.0)));
+                    }
+                    c2 = 0.5 * ((y1 + y2) + betaq * (y2 - y1));
+                    if (c1 < yl)
+                        c1 = yl;
+                    if (c2 < yl)
+                        c2 = yl;
+                    if (c1 > yu)
+                        c1 = yu;
+                    if (c2 > yu)
+                        c2 = yu;
+                    if (randomperc() <= 0.5)
+                    {
+                        child1->xint[i] = (int)round(c2);
+                        child2->xint[i] = (int)round(c1);
+                    }
+                    else
+                    {
+                        child1->xint[i] = (int)round(c1);
+                        child2->xint[i] = (int)round(c2);
+                    }
+                }
+                else
+                {
+                    child1->xint[i] = parent1->xint[i];
+                    child2->xint[i] = parent2->xint[i];
+                }
+            }
+            else
+            {
+                child1->xint[i] = parent1->xint[i];
+                child2->xint[i] = parent2->xint[i];
+            }
+        }
+    }
+    else
+    {
+        for (i = 0; i < nsga2Params->nint; i++)
+        {
+            child1->xint[i] = parent1->xint[i];
+            child2->xint[i] = parent2->xint[i];
         }
     }
     return;
