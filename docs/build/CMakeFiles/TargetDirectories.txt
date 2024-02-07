@@ -1,0 +1,3 @@
+/home/ubuntu/qrm.git/docs/build/CMakeFiles/documentation.dir
+/home/ubuntu/qrm.git/docs/build/CMakeFiles/edit_cache.dir
+/home/ubuntu/qrm.git/docs/build/CMakeFiles/rebuild_cache.dir
