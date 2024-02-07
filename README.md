@@ -6,7 +6,7 @@ The entry point of the Quantum Resource Manager for selecting and applying LLVM 
 
 1. To clone this repository to your local machine, use the following command:
    ```bash
-   git clone https://gitlab-int.srv.lrz.de/lrz-qct-qis/quantum_intermediate_representation/quantum-resource-manager.git
+   git clone git@github.com:Munich-Quantum-Software-Stack/QRM.git quantum-resource-manager
    ```
 
 2. After cloning, make sure you are at the right branch:
@@ -202,7 +202,7 @@ You can run the Quantum Resource Manager daemon and a test client as follows:
 1. Install the QIR Passes project to obtain the passes:
    - Clone the project:
       ```bash
-      git clone https://gitlab-int.srv.lrz.de/lrz-qct-qis/quantum_intermediate_representation/qir_passes.git passes.git
+      git clone git@github.com:Munich-Quantum-Software-Stack/passes.git passes.git
       ```
 
    - Navigate to the `passes.git` directory (if you are not already there) and move to the right branch:
