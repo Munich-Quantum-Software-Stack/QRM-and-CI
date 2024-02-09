@@ -121,7 +121,7 @@ void /*PreservedAnalyses*/ QirPassRunner::run(Module &module,
 
         // Apply the pass to the LLVM module 'module'
         /*PA =*/QirPass->run(module, MAM);
-
+        // TODO: check if module still exists
         // Free memory
         delete QirPass;
         dlclose(lib_handle);

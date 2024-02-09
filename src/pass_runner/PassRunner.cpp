@@ -13,6 +13,7 @@ using llvm::orc::ThreadSafeModule;
  */
 void invokePasses(ThreadSafeModule &TSM, const std::vector<std::string> &passes)
 {
+    std::cout << "THIS FUNCTION\n";
     TSM.withModuleDo(
         [&](Module &module)
         {

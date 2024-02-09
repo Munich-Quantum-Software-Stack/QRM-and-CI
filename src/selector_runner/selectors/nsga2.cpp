@@ -32,7 +32,7 @@ NSGA2Type ReadParameters(int sizeChrom, int nobj)
     srand(time(NULL));
 
     nsga2Params.seed = (float)rand() / (float)(RAND_MAX); // Seed value
-    nsga2Params.popsize = 8;      // Population size (multiple of 4)
+    nsga2Params.popsize = 16;     // Population size (multiple of 4)
     nsga2Params.ngen = 8;         // Number of generations
     nsga2Params.nobj = nobj;      // Number of objectives
     nsga2Params.ncon = 0;         // Number of constraints
