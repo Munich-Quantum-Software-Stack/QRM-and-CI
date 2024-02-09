@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.11.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Figures of Merit and Constraints (FoMaC): /home/ubuntu/QRM.git/src/qresourcemanager_d.cpp File Reference</title>
+<title>Figures of Merit and Constraints (FoMaC): /home/ubuntu/qrm.git/src/qresourcemanager_d.cpp File Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -164,6 +164,9 @@ Variables</h2></td></tr>
 <tr class="memitem:a3d71ee93207c462b1690738e98283208" id="r_a3d71ee93207c462b1690738e98283208"><td class="memItemLeft" align="right" valign="top">amqp_connection_state_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#a3d71ee93207c462b1690738e98283208">conn</a></td></tr>
 <tr class="memdesc:a3d71ee93207c462b1690738e98283208"><td class="mdescLeft">&#160;</td><td class="mdescRight">TODO.  <br /></td></tr>
 <tr class="separator:a3d71ee93207c462b1690738e98283208"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa0823e1ff851f7526e7fc5487718a051" id="r_aa0823e1ff851f7526e7fc5487718a051"><td class="memItemLeft" align="right" valign="top">QDMI_Session&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="#aa0823e1ff851f7526e7fc5487718a051">session</a> = NULL</td></tr>
+<tr class="memdesc:aa0823e1ff851f7526e7fc5487718a051"><td class="mdescLeft">&#160;</td><td class="mdescRight">TODO.  <br /></td></tr>
+<tr class="separator:aa0823e1ff851f7526e7fc5487718a051"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>TODO. </p>
@@ -186,11 +189,12 @@ Variables</h2></td></tr>
         </tr>
       </table>
 </div><div class="memdoc">
-<b>Value:</b><div class="fragment"><div class="line">  {                                                                            \</div>
-<div class="line">    if (a != QDMI_SUCCESS) {                                                   \</div>
-<div class="line">      std::cout &lt;&lt; std::endl &lt;&lt; <span class="stringliteral">&quot;[Error]: &quot;</span> &lt;&lt; a &lt;&lt; <span class="stringliteral">&quot; at &quot;</span> &lt;&lt; b;               \</div>
-<div class="line">    }                                                                          \</div>
-<div class="line">  }</div>
+<b>Value:</b><div class="fragment"><div class="line">    {                                                                          \</div>
+<div class="line">        if (a != QDMI_SUCCESS)                                                 \</div>
+<div class="line">        {                                                                      \</div>
+<div class="line">            std::cout &lt;&lt; std::endl &lt;&lt; <span class="stringliteral">&quot;[Error]: &quot;</span> &lt;&lt; a &lt;&lt; <span class="stringliteral">&quot; at &quot;</span> &lt;&lt; b;         \</div>
+<div class="line">        }                                                                      \</div>
+<div class="line">    }</div>
 </div><!-- fragment -->
 </div>
 </div>
@@ -325,6 +329,22 @@ Variables</h2></td></tr>
       <table class="memname">
         <tr>
           <td class="memname">conn</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>TODO. </p>
+
+</div>
+</div>
+<a id="aa0823e1ff851f7526e7fc5487718a051" name="aa0823e1ff851f7526e7fc5487718a051"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa0823e1ff851f7526e7fc5487718a051">&#9670;&#160;</a></span>session</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">session = NULL</td>
         </tr>
       </table>
 </div><div class="memdoc">

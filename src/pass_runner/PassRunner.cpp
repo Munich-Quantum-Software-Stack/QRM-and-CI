@@ -12,37 +12,42 @@ using llvm::orc::ThreadSafeModule;
  * @param TODO
  */
 void invokePasses(ThreadSafeModule &TSM, const std::vector<std::string> &passes,
-                  QDMI_Device device) {
-  TSM.withModuleDo([&](Module &module) {
-    // Attach metadata to the IR
-    Metadata *metadata = ConstantAsMetadata::get(
-        ConstantInt::get(module.getContext(), APInt(1, true)));
+                  QDMI_Device device)
+{
+    TSM.withModuleDo(
+        [&](Module &module)
+        {
+            // Attach metadata to the IR
+            Metadata *metadata = ConstantAsMetadata::get(
+                ConstantInt::get(module.getContext(), APInt(1, true)));
 
-    module.addModuleFlag(Module::Warning, "lrz_supports_qir", metadata);
-    module.setSourceFileName("");
+            module.addModuleFlag(Module::Warning, "lrz_supports_qir", metadata);
+            module.setSourceFileName("");
 
-    Metadata *metadataSupport = module.getModuleFlag("lrz_supports_qir");
-    if (metadataSupport)
-      if (ConstantAsMetadata *boolMetadata =
-              dyn_cast<ConstantAsMetadata>(metadataSupport))
-        if (ConstantInt *boolConstant =
-                dyn_cast<ConstantInt>(boolMetadata->getValue()))
-          errs() << "   [Pass Runner].........Flag inserted: "
-                    "\"lrz_supports_qir\" = "
-                 << (boolConstant->isOne() ? "true" : "false") << '\n';
+            Metadata *metadataSupport =
+                module.getModuleFlag("lrz_supports_qir");
+            if (metadataSupport)
+                if (ConstantAsMetadata *boolMetadata =
+                        dyn_cast<ConstantAsMetadata>(metadataSupport))
+                    if (ConstantInt *boolConstant =
+                            dyn_cast<ConstantInt>(boolMetadata->getValue()))
+                        errs() << "   [Pass Runner].........Flag inserted: "
+                                  "\"lrz_supports_qir\" = "
+                               << (boolConstant->isOne() ? "true" : "false")
+                               << '\n';
 
-    // Create an instance of the QirPassRunner and append to it all the
-    // received passes
-    QirPassRunner &QPR = QirPassRunner::getInstance();
-    ModuleAnalysisManager MAM;
+            // Create an instance of the QirPassRunner and append to it all the
+            // received passes
+            QirPassRunner &QPR = QirPassRunner::getInstance();
+            ModuleAnalysisManager MAM;
 
-    for (std::string libPass : passes)
-      QPR.append(libPass);
+            for (std::string libPass : passes)
+                QPR.append(libPass);
 
-    // Run QIR passes
-    QPR.run(module, MAM, device);
+            // Run QIR passes
+            QPR.run(module, MAM, device);
 
-    // Free memory
-    QPR.clearMetadata();
-  });
+            // Free memory
+            QPR.clearMetadata();
+        });
 }

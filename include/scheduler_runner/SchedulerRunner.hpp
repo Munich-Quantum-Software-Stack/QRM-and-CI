@@ -8,7 +8,6 @@
 
 #include "llvm.hpp"
 #include <fomac.hpp>
-//#include <qdmi.hpp>
 #include <qdmi.h>
 
 #include <algorithm>
@@ -29,6 +28,6 @@
 #include <unistd.h>
 #include <vector>
 
-int invokeScheduler(const std::string &nameScheduler);
+QDMI_Device invokeScheduler(const std::string &nameScheduler);
 
 #endif // SCHEDULERRUNNER_HPP

@@ -19,9 +19,10 @@ QirPassRunner::QirPassRunner() {}
  * @brief Returns a reference to a 'QirPassRuner' object
  * @return QirPassRunner
  */
-QirPassRunner &QirPassRunner::getInstance() {
-  static QirPassRunner instance;
-  return instance;
+QirPassRunner &QirPassRunner::getInstance()
+{
+    static QirPassRunner instance;
+    return instance;
 }
 
 /**
@@ -29,18 +30,20 @@ QirPassRunner &QirPassRunner::getInstance() {
  * 'QirPassRunner' class.
  * @param metadata The metadata attached to the module.
  */
-void QirPassRunner::setMetadata(const QirMetadata &metadata) {
-  qirMetadata_ = metadata;
+void QirPassRunner::setMetadata(const QirMetadata &metadata)
+{
+    qirMetadata_ = metadata;
 }
 
 /**
  * @brief Empties all structures within the metadata.
  */
-void QirPassRunner::clearMetadata() {
-  qirMetadata_.reversibleGates.clear();
-  qirMetadata_.supportedGates.clear();
-  qirMetadata_.availablePlatforms.clear();
-  qirMetadata_.injectedAnnotations.clear();
+void QirPassRunner::clearMetadata()
+{
+    qirMetadata_.reversibleGates.clear();
+    qirMetadata_.supportedGates.clear();
+    qirMetadata_.availablePlatforms.clear();
+    qirMetadata_.injectedAnnotations.clear();
 }
 
 /**
@@ -62,67 +65,70 @@ void QirPassRunner::append(std::string pass) { passes_.push_back(pass); }
  * @param MAM The module analysis manager.
  * @param dev The QDMI device.
  */
-void /*PreservedAnalyses*/ QirPassRunner::run(Module &module,
-                                              ModuleAnalysisManager &MAM,
-                                              QDMI_Device dev) {
-  // TODO HOW DO WE HANDLE 'PreservedAnalyses'?
-  // PreservedAnalyses PA;
+void /*PreservedAnalyses*/
+QirPassRunner::run(Module &module, ModuleAnalysisManager &MAM, QDMI_Device dev)
+{
+    // TODO HOW DO WE HANDLE 'PreservedAnalyses'?
+    // PreservedAnalyses PA;
 
-  while (!passes_.empty()) {
-    // Get the name of the pass compiled as a shared library
-    auto pass = passes_.back();
+    while (!passes_.empty())
+    {
+        // Get the name of the pass compiled as a shared library
+        auto pass = passes_.back();
 
-    // Load the library
-    void *lib_handle = dlopen(pass.c_str(), RTLD_LAZY);
+        // Load the library
+        void *lib_handle = dlopen(pass.c_str(), RTLD_LAZY);
 
-    if (!lib_handle) {
-      std::cout << "   [Pass Runner].........Warning: Could not load "
-                   "shared library: "
-                << pass << dlerror() << std::endl;
+        if (!lib_handle)
+        {
+            std::cout << "   [Pass Runner].........Warning: Could not load "
+                         "shared library: "
+                      << pass << dlerror() << std::endl;
 
-      passes_.pop_back();
-      continue;
+            passes_.pop_back();
+            continue;
+        }
+
+        // Format the name of the pass and print it on screen
+        size_t lastSlash = pass.find_last_of('/');
+        std::string passName = pass.substr(lastSlash + 4);
+        size_t lastDot = passName.find_last_of('.');
+        std::string passNameWithoutExt = passName.substr(0, lastDot);
+
+        std::cout << "   [Pass Runner].........Applying pass: "
+                  << passNameWithoutExt << std::endl;
+
+        // Pointer to 'loadQirPass' function returning a pointer to the
+        // 'PassModule' object
+        using passLoader = PassModule *(*)();
+
+        // Dynamic loading and linking of the shared library
+        passLoader loadQirPass =
+            reinterpret_cast<passLoader>(dlsym(lib_handle, "loadQirPass"));
+
+        if (!loadQirPass)
+        {
+            std::cout << "   [Pass Runner].........Warning: Could not get "
+                         "factory function "
+                         "of pass: "
+                      << pass << std::endl;
+
+            passes_.pop_back();
+            dlclose(lib_handle);
+            continue;
+        }
+
+        PassModule *QirPass = loadQirPass();
+
+        // Apply the pass to the LLVM module 'module'
+        /*PA =*/QirPass->run(module, MAM, dev);
+
+        // Free memory
+        delete QirPass;
+        dlclose(lib_handle);
+
+        passes_.pop_back();
     }
 
-    // Format the name of the pass and print it on screen
-    size_t lastSlash = pass.find_last_of('/');
-    std::string passName = pass.substr(lastSlash + 4);
-    size_t lastDot = passName.find_last_of('.');
-    std::string passNameWithoutExt = passName.substr(0, lastDot);
-
-    std::cout << "   [Pass Runner].........Applying pass: "
-              << passNameWithoutExt << std::endl;
-
-    // Pointer to 'loadQirPass' function returning a pointer to the
-    // 'PassModule' object
-    using passLoader = PassModule *(*)();
-
-    // Dynamic loading and linking of the shared library
-    passLoader loadQirPass =
-        reinterpret_cast<passLoader>(dlsym(lib_handle, "loadQirPass"));
-
-    if (!loadQirPass) {
-      std::cout << "   [Pass Runner].........Warning: Could not get "
-                   "factory function "
-                   "of pass: "
-                << pass << std::endl;
-
-      passes_.pop_back();
-      dlclose(lib_handle);
-      continue;
-    }
-
-    PassModule *QirPass = loadQirPass();
-
-    // Apply the pass to the LLVM module 'module'
-    /*PA =*/QirPass->run(module, MAM, dev);
-
-    // Free memory
-    delete QirPass;
-    dlclose(lib_handle);
-
-    passes_.pop_back();
-  }
-
-  // return PA;
+    // return PA;
 }

@@ -19,17 +19,13 @@
  *
  * @return const char *
  */
-extern "C" void scheduler(void) {
-  // Query the available platforms
-  std::vector<std::string> platforms = FOMAC_available_devices();
+extern "C" QDMI_Device scheduler(void)
+{
+    // Query the available devices
+    std::vector<QDMI_Device> devices = FOMAC_available_devices();
 
-  std::cout << "   [Scheduler]...........Writing target architecture in the "
-               "metadata"
-            << std::endl;
+    std::cout << "   [Scheduler]...........Choosing target QDMI_Device"
+              << std::endl;
 
-  // Choose the target architecture
-  QirPassRunner &QPR = QirPassRunner::getInstance();
-  QirMetadata &qirMetadata = QPR.getMetadata();
-  qirMetadata.setTargetPlatform(platforms.back());
-  QPR.setMetadata(qirMetadata);
+    return devices.back();
 }

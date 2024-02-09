@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.11.0"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Quantum Resource Manager (QRM): /home/ubuntu/QRM.git/include/pass_runner/PassModule.hpp Source File</title>
+<title>Quantum Resource Manager (QRM): /home/ubuntu/qrm.git/include/pass_runner/PassModule.hpp Source File</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -104,18 +104,19 @@ $(function(){ initResizable(false); });
 <div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="keyword">using namespace </span>llvm;</div>
 <div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span> </div>
 <div class="foldopen" id="foldopen00023" data-start="{" data-end="};">
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno"><a class="line" href="classPassModule.html">   23</a></span><span class="keyword">class </span><a class="code hl_class" href="classPassModule.html">PassModule</a> {</div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span><span class="keyword">public</span>:</div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno"><a class="line" href="classPassModule.html#a368288d7c9b46632ed2686a2ac4beff3">   32</a></span>  <span class="keyword">virtual</span> PreservedAnalyses <a class="code hl_function" href="classPassModule.html#a368288d7c9b46632ed2686a2ac4beff3">run</a>(Module &amp;module, ModuleAnalysisManager &amp;MAM,</div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>                                QDMI_Device dev) = 0;</div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span> </div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno"><a class="line" href="classPassModule.html#ae9262236a5f85f466005f6dbc118b5e0">   40</a></span>  <span class="keyword">virtual</span> <a class="code hl_function" href="classPassModule.html#ae9262236a5f85f466005f6dbc118b5e0">~PassModule</a>() {}</div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>};</div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno"><a class="line" href="classPassModule.html">   23</a></span><span class="keyword">class </span><a class="code hl_class" href="classPassModule.html">PassModule</a></div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span>{</div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>  <span class="keyword">public</span>:</div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno"><a class="line" href="classPassModule.html#a368288d7c9b46632ed2686a2ac4beff3">   33</a></span>    <span class="keyword">virtual</span> PreservedAnalyses <a class="code hl_function" href="classPassModule.html#a368288d7c9b46632ed2686a2ac4beff3">run</a>(Module &amp;module, ModuleAnalysisManager &amp;MAM,</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>                                  QDMI_Device dev) = 0;</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span> </div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno"><a class="line" href="classPassModule.html#ae9262236a5f85f466005f6dbc118b5e0">   41</a></span>    <span class="keyword">virtual</span> <a class="code hl_function" href="classPassModule.html#ae9262236a5f85f466005f6dbc118b5e0">~PassModule</a>() {}</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>};</div>
 </div>
 <div class="ttc" id="aQirPassRunner_8hpp_html"><div class="ttname"><a href="QirPassRunner_8hpp.html">QirPassRunner.hpp</a></div><div class="ttdoc">Declaration of the 'QirPassRunner' class.</div></div>
-<div class="ttc" id="aclassPassModule_html"><div class="ttname"><a href="classPassModule.html">PassModule</a></div><div class="ttdoc">This class derives from 'LLVM::ModulePassManager'. The 'PassModule' class is an abstract class....</div><div class="ttdef"><b>Definition</b> PassModule.hpp:23</div></div>
+<div class="ttc" id="aclassPassModule_html"><div class="ttname"><a href="classPassModule.html">PassModule</a></div><div class="ttdoc">This class derives from 'LLVM::ModulePassManager'. The 'PassModule' class is an abstract class....</div><div class="ttdef"><b>Definition</b> PassModule.hpp:24</div></div>
 <div class="ttc" id="aclassPassModule_html_a368288d7c9b46632ed2686a2ac4beff3"><div class="ttname"><a href="classPassModule.html#a368288d7c9b46632ed2686a2ac4beff3">PassModule::run</a></div><div class="ttdeci">virtual PreservedAnalyses run(Module &amp;module, ModuleAnalysisManager &amp;MAM, QDMI_Device dev)=0</div><div class="ttdoc">Applies a set of passes to a QIR's LLVM module.</div></div>
-<div class="ttc" id="aclassPassModule_html_ae9262236a5f85f466005f6dbc118b5e0"><div class="ttname"><a href="classPassModule.html#ae9262236a5f85f466005f6dbc118b5e0">PassModule::~PassModule</a></div><div class="ttdeci">virtual ~PassModule()</div><div class="ttdoc">Destructor for PassModule.</div><div class="ttdef"><b>Definition</b> PassModule.hpp:40</div></div>
+<div class="ttc" id="aclassPassModule_html_ae9262236a5f85f466005f6dbc118b5e0"><div class="ttname"><a href="classPassModule.html#ae9262236a5f85f466005f6dbc118b5e0">PassModule::~PassModule</a></div><div class="ttdeci">virtual ~PassModule()</div><div class="ttdoc">Destructor for PassModule.</div><div class="ttdef"><b>Definition</b> PassModule.hpp:41</div></div>
 <div class="ttc" id="allvm_8hpp_html"><div class="ttname"><a href="llvm_8hpp.html">llvm.hpp</a></div><div class="ttdoc">Include directives targeting required LLVM headers.</div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->

@@ -16,49 +16,55 @@ using llvm::orc::ThreadSafeModule;
  * @param pathGenerator Path to the generator to be invoked
  * @return std::vector<std::string>
  */
-std::vector<ThreadSafeModule>
-invokeGenerator(const std::string circuit, const std::string &nameGenerator) {
-  std::string pathGenerator;
-  char buffer[PATH_MAX];
+std::vector<ThreadSafeModule> invokeGenerator(const std::string circuit,
+                                              const std::string &nameGenerator)
+{
+    std::string pathGenerator;
+    char buffer[PATH_MAX];
 
-  ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
-  if (len != -1) {
-    buffer[len] = '\0';
-    pathGenerator = std::string(buffer);
-    size_t lastSlash = pathGenerator.find_last_of("/\\");
-    pathGenerator = pathGenerator.substr(0, lastSlash) + "/lib/";
-  }
-  pathGenerator.append(nameGenerator);
+    ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
+    if (len != -1)
+    {
+        buffer[len] = '\0';
+        pathGenerator = std::string(buffer);
+        size_t lastSlash = pathGenerator.find_last_of("/\\");
+        pathGenerator = pathGenerator.substr(0, lastSlash) + "/lib/";
+    }
+    pathGenerator.append(nameGenerator);
 
-  std::cout << "   [Generator Runner]....Invoking generator: " << nameGenerator
-            << std::endl;
+    std::cout << "   [Generator Runner]....Invoking generator: "
+              << nameGenerator << std::endl;
 
-  // Load the generator as a shared library
-  void *lib_handle = dlopen(pathGenerator.c_str(), RTLD_LAZY);
+    // Load the generator as a shared library
+    void *lib_handle = dlopen(pathGenerator.c_str(), RTLD_LAZY);
 
-  if (!lib_handle) {
-    std::cerr << "   [Generator Runner]....Error loading generator as a "
-                 "shared library: "
-              << dlerror() << std::endl;
+    if (!lib_handle)
+    {
+        std::cerr << "   [Generator Runner]....Error loading generator as a "
+                     "shared library: "
+                  << dlerror() << std::endl;
 
-    return {};
-  }
+        return {};
+    }
 
-  // Dynamic loading and linking of the shared library
-  typedef std::vector<ThreadSafeModule> (*GeneratorFunction)(const std::string);
+    // Dynamic loading and linking of the shared library
+    typedef std::vector<ThreadSafeModule> (*GeneratorFunction)(
+        const std::string);
 
-  GeneratorFunction generator =
-      reinterpret_cast<GeneratorFunction>(dlsym(lib_handle, "generator"));
+    GeneratorFunction generator =
+        reinterpret_cast<GeneratorFunction>(dlsym(lib_handle, "generator"));
 
-  if (!generator) {
-    std::cerr << "   [Generator Runner]....Error finding function in shared "
-                 "library: "
-              << dlerror() << std::endl;
+    if (!generator)
+    {
+        std::cerr
+            << "   [Generator Runner]....Error finding function in shared "
+               "library: "
+            << dlerror() << std::endl;
 
-    dlclose(lib_handle);
-    return {};
-  }
+        dlclose(lib_handle);
+        return {};
+    }
 
-  // Call the generator function
-  return generator(circuit);
+    // Call the generator function
+    return generator(circuit);
 }
