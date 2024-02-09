@@ -6,6 +6,7 @@
 #ifndef QIR_MODULE_PASS_MANAGER_H
 #define QIR_MODULE_PASS_MANAGER_H
 
+#include "../../src/my_qdmi.hpp"
 #include "PassModule.hpp"
 
 #include <dlfcn.h>
@@ -44,6 +45,9 @@ struct QirMetadata {
       injectedAnnotations;         /**< Map of injected annotations. */
   bool shouldRemoveCallAttributes; /**< Boolean value for controlling the
                                         removal of call attributes. */
+  std::unordered_map<std::string, std::vector<Job>>
+      queues; /**< Map of queues: Platform name and Job */
+  std::unordered_map<int, float> task_end_times; /**< Map of task end times. */
 
   /**
    * @brief Adds entries to multiple vectors of the metadata. Use example:

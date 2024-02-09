@@ -31,6 +31,7 @@
 #include <SchedulerRunner.hpp>
 #include <SelectorRunner.hpp>
 
+#include "../../tests/test_copy.cpp"
 #include <qdmi.h>
 #include <qdmi_internal.h>
 #include <qinfo.h>
@@ -148,6 +149,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
   std::vector<std::string> targets;
   std::map<std::string, int> results;
   auto start = std::chrono::steady_clock::now();
+  int job_count = 0;
   for (auto &TSM : TSMs) {
     QDMI_Job job;
     QDMI_Library lib;
@@ -171,7 +173,14 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                                 ? "libscheduler_round_robin.so"
                                 : quantumTask.change_scheduler;
 
-    if (invokeScheduler(scheduler) > 0) {
+    // TODO: extract those values
+    int priority = 0;
+    std::map<std::string, float> preferred_qpu = {{"Q20", 0.5}, {"Q5", 0.5}};
+    float expected_execution_time = 0.25 * (job_count + 1);
+    int task_id = job_count++;
+    Job job_ = {job_count, task_id, expected_execution_time};
+
+    if (invokeScheduler(scheduler, TSM, priority, preferred_qpu, job_) > 0) {
       // Finalize the session
       QDMI_session_finalize(session);
 
@@ -418,6 +427,7 @@ int main(int argc, char *argv[]) {
     // Receive a QuantumTask
     auto *task = receive_message(&conn,     // conn
                                  QRMQueue); // queue
+    // auto *task = run_test(argc, argv)->c_str();
 
     if (task) {
       QuantumTask quantumTask = JSONToQuantumTask(task);

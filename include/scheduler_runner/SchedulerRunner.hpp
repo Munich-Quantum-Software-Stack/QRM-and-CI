@@ -11,6 +11,7 @@
 //#include <qdmi.hpp>
 #include <qdmi.h>
 
+#include "../../src/my_qdmi.hpp"
 #include <algorithm>
 #include <arpa/inet.h>
 #include <csignal>
@@ -28,7 +29,11 @@
 #include <thread>
 #include <unistd.h>
 #include <vector>
+using llvm::orc::ThreadSafeModule;
 
-int invokeScheduler(const std::string &nameScheduler);
+int invokeScheduler(const std::string &nameScheduler,
+                    const ThreadSafeModule &TSM, const int &priority,
+                    const std::map<std::string, float> &preferred_qpu,
+                    Job &job);
 
 #endif // SCHEDULERRUNNER_HPP

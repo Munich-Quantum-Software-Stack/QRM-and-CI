@@ -7,6 +7,7 @@ set(TEST_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/test.cpp")
 
 include_directories(${GTEST_INCLUDE_DIRS})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 find_library(RABBITMQ_LIBRARY rabbitmq)
 

@@ -9,8 +9,11 @@
 
 #include "PassModule.hpp"
 
+#include "../../my_qdmi.hpp"
 #include <fomac.hpp>
 #include <qdmi.h>
+
+using llvm::orc::ThreadSafeModule;
 
 /**
  * @brief The main entry point of the program.
@@ -19,7 +22,9 @@
  *
  * @return const char *
  */
-extern "C" void scheduler(void) {
+extern "C" void scheduler(const ThreadSafeModule &TSM, const int &priority,
+                          const std::map<std::string, float> &preferred_qpu,
+                          Job &job) {
   // Query the available platforms
   std::vector<std::string> platforms = FOMAC_available_devices();
 

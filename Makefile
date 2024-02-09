@@ -49,7 +49,7 @@ endif
 dependencies_qrm: build_rabbitmq configure_rabbitmq
 
 install: dependencies_qrm
-	CMAKE_PREFIX_PATH=$$(llvm-config --libdir)/cmake/llvm cmake -B$(BUILD_DIR) \
+		CMAKE_PREFIX_PATH=$$(llvm-config --libdir)/cmake/llvm cmake -B$(BUILD_DIR) \
 		-DBUILD_WITH_DOCS=OFF \
 		-DCMAKE_INSTALL_PREFIX=$(INSTALL_PATH) && \
 	cmake --build $(BUILD_DIR) --target install --config Release && \
@@ -87,7 +87,7 @@ build_docs:
 endif
 
 docs: dependencies_qrm build_docs
-	CMAKE_PREFIX_PATH=$$(llvm-config --libdir)/cmake/llvm cmake -B$(BUILD_DIR) \
+		CMAKE_PREFIX_PATH=$$(llvm-config --libdir)/cmake/llvm cmake -B$(BUILD_DIR) \
 		-DBUILD_WITH_DOCS=ON \
 		-DCMAKE_INSTALL_PREFIX=$(INSTALL_PATH) && \
 	cmake --build $(BUILD_DIR) --target install --config Release && \
@@ -102,7 +102,7 @@ docs: dependencies_qrm build_docs
 	@echo "export PATH=\$$PATH:$(INSTALL_PATH)/bin"
 	@echo ""
 
-run: #install
+run: install
 	@if [ "$$(echo $$PATH | tr ':' '\n' | grep -c "$(INSTALL_PATH)/bin")" -eq 0 ]; then \
     	export PATH=$$PATH:$(INSTALL_PATH)/bin; \
 	fi; \
@@ -116,6 +116,11 @@ kill_daemons:
 test: kill_daemons run
 	cd build/ && \
     ctest -C Release -VV run_tests
+
+debug: kill_daemons install
+	@if [ "$$(echo $$PATH | tr ':' '\n' | grep -c "$(INSTALL_PATH)/bin")" -eq 0 ]; then \
+		export PATH=$$PATH:$(INSTALL_PATH)/bin; \
+	fi; \
 
 pre-commit:
 	pre-commit run --all-files
