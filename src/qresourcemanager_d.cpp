@@ -2,38 +2,7 @@
  * @file qresourcemanager_d.cpp
  * @brief TODO
  */
-
-#include <algorithm>
-#include <chrono>
-#include <csignal>
-#include <cstdlib>
-#include <cstring>
-#include <fcntl.h>
-#include <fstream>
-#include <iostream>
-#include <map>
-#include <netinet/in.h>
-#include <nlohmann/json.hpp>
-#include <signal.h>
-#include <string>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <thread>
-#include <unistd.h>
-#include <vector>
-
-#include <connection_handling.hpp>
-
-#include <GeneratorRunner.hpp>
-#include <PassRunner.hpp>
-#include <SchedulerRunner.hpp>
-#include <SelectorRunner.hpp>
-
-#include <qdmi.h>
-#include <qdmi_internal.h>
-#include <qinfo.h>
+#include <qrm.hpp>
 
 using json = nlohmann::json;
 using llvm::orc::ThreadSafeModule;
@@ -45,32 +14,6 @@ using llvm::orc::ThreadSafeModule;
             std::cout << std::endl << "[Error]: " << a << " at " << b;         \
         }                                                                      \
     }
-
-/**
- * @todo Comment this
- */
-struct QuantumTask
-{
-    int task_id;
-    int n_qbits;
-    int n_shots;
-    std::string circuit_file;
-    std::string circuit_file_type;
-    std::string result_destination;
-    std::string preferred_qpu;
-    std::string scheduled_qpu;
-    int priority;
-    int optimisation_level;
-    bool no_modify;
-    bool transpiler_flag;
-    int result_type;
-    std::string submit_time;
-    std::string circuit_qiskit;
-    std::string additional_information;
-    std::string change_generator;
-    std::string change_selector;
-    std::string change_scheduler;
-};
 
 /**
  * @var conn
@@ -173,24 +116,18 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
             return;
         }
 
-        //// TODO Don't place the target architecture in the metadata
-        //// Fetch the target architecture from the metadata
-        // QirPassRunner &QPR = QirPassRunner::getInstance();
-        // QirMetadata &qirMetadata = QPR.getMetadata();
-        // auto targetArchitecture = qirMetadata.targetPlatform;
-        // targets.push_back(targetArchitecture);
+        FOMAC_print_coupling_mappings(device);
 
-        // char *HOME = std::getenv("HOME");
-        // std::string libpath = std::string(HOME) +
-        // "/bin/lib/libbackend_q5.so"; lib =
-        // find_library_by_name(libpath.c_str()); if (!lib)
-        //{
-        //     std::cout << "   [qresourcemanager_d]..Warning: "
-        //               << "The backend could not be found" << std::endl;
-
-        //    return;
-        //}
-        // device->library = *lib;
+        const char* lastSlash = std::strrchr(device->library.libname, '/');
+        if (lastSlash != nullptr)
+            targets.push_back(std::string(lastSlash + 1));
+        else
+        {
+            std::cout << "   [qresourcemanager_d]..Warning: "
+                      << "Could not add name of device to "
+                      << "the QuantumResult." << std::endl;
+            return;
+        }
 
         // Invoke the selector
         std::string selector = quantumTask.change_selector == ""
@@ -235,10 +172,27 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                                   device->library.info, &job);
         CHECK_ERR(err, "QDMI_control_submit");
 
-        //// Get the results back
-        // for (const auto &result : partial_result)
-        //     results[result.first] += result.second;
+        // Get the results back
+        int numbits = 0;
+        // TODO Handle err
+        QDMI_Status status;
+        err = QDMI_control_readout_size(device, &status, &numbits);
+        int *raw_numbers = (int *)malloc(((long)1 << numbits) * sizeof(int));
+        if (raw_numbers == NULL)
+        {
+            std::cout << "   [qresourcemanager_d]..Warning: "
+                      << "The results could not be fetched" << std::endl;
 
+            return;
+        }
+
+        // TODO Handle err
+        err = QDMI_control_readout_raw_num(device, &status, raw_numbers);
+
+        for (long i = 0; i < ((long)1 << numbits); i++)
+            results[std::to_string(i)] = raw_numbers[i];
+
+        free(raw_numbers);
         free(frag->QIR_bitcode);
         free(frag);
         free(device);
