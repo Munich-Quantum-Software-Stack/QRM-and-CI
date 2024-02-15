@@ -26,6 +26,19 @@ extern "C" QDMI_Device scheduler(void)
 
     std::cout << "   [Scheduler]...........Choosing target QDMI_Device"
               << std::endl;
+    
+    std::cout << "   [Scheduler]..........." << devices.size()
+              << " available device(s)"
+              << std::endl;
+
+    QDMI_Device dev = devices.back();
+
+    std::cout << "   [Scheduler]...........QDMI_Device library: "
+              << dev->library.libname
+              << std::endl;
+
+    std::cout << "   [Scheduler]...........Choosing target QDMI_Device"
+              << std::endl;
 
     return devices.back();
 }
