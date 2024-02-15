@@ -22,9 +22,7 @@ using llvm::orc::ThreadSafeModule;
  *
  * @return const char *
  */
-extern "C" void scheduler(const ThreadSafeModule &TSM, const int &priority,
-                          const std::map<std::string, float> &preferred_qpu,
-                          Job &job) {
+extern "C" void scheduler(QuantumTask &task) {
   // Query the available platforms
   std::vector<std::string> platforms = FOMAC_available_devices();
 

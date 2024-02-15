@@ -45,9 +45,7 @@ struct QirMetadata {
       injectedAnnotations;         /**< Map of injected annotations. */
   bool shouldRemoveCallAttributes; /**< Boolean value for controlling the
                                         removal of call attributes. */
-  std::unordered_map<std::string, std::vector<Job>>
-      queues; /**< Map of queues: Platform name and Job */
-  std::unordered_map<int, float> task_end_times; /**< Map of task end times. */
+  std::vector<Queue> queues;       /**< Map of queues: Platform name and Job */
 
   /**
    * @brief Adds entries to multiple vectors of the metadata. Use example:
@@ -120,6 +118,12 @@ struct QirMetadata {
    * @param TODO
    */
   void setTargetPlatform(std::string platform) { targetPlatform = platform; }
+
+  /**
+   * @brief TODO
+   * @param TODO
+   */
+  void addQueue(std::string platform) { queues.push_back(Queue(platform)); }
 };
 
 /**

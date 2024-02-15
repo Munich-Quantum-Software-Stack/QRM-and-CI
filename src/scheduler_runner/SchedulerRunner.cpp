@@ -14,10 +14,7 @@
  * @param pathScheduler TODO
  * @return std::string
  */
-int invokeScheduler(const std::string &nameScheduler,
-                    const ThreadSafeModule &TSM, const int &priority,
-                    const std::map<std::string, float> &preferred_qpu,
-                    Job &job) {
+int invokeScheduler(const std::string &nameScheduler, QuantumTask &task) {
   std::string pathScheduler;
   char buffer[PATH_MAX];
 
@@ -45,9 +42,7 @@ int invokeScheduler(const std::string &nameScheduler,
   }
 
   // Dynamic loading and linking of the shared library
-  typedef void (*SchedulerFunction)(const ThreadSafeModule &, const int &,
-                                    const std::map<std::string, float> &,
-                                    Job &);
+  typedef void (*SchedulerFunction)(QuantumTask & task);
   SchedulerFunction scheduler =
       reinterpret_cast<SchedulerFunction>(dlsym(lib_handle, "scheduler"));
 
@@ -60,7 +55,7 @@ int invokeScheduler(const std::string &nameScheduler,
   }
 
   // Call the scheduler function
-  scheduler(TSM, priority, preferred_qpu, job);
+  scheduler(task);
 
   return 0;
 }

@@ -47,31 +47,6 @@ using llvm::orc::ThreadSafeModule;
   }
 
 /**
- * @todo Comment this
- */
-struct QuantumTask {
-  int task_id;
-  int n_qbits;
-  int n_shots;
-  std::string circuit_file;
-  std::string circuit_file_type;
-  std::string result_destination;
-  std::string preferred_qpu;
-  std::string scheduled_qpu;
-  int priority;
-  int optimisation_level;
-  bool no_modify;
-  bool transpiler_flag;
-  int result_type;
-  std::string submit_time;
-  std::string circuit_qiskit;
-  std::string additional_information;
-  std::string change_generator;
-  std::string change_selector;
-  std::string change_scheduler;
-};
-
-/**
  * @var conn
  * @brief TODO
  */
@@ -91,7 +66,8 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str) {
   task.circuit_file = QuantumTask_json["circuit_file"];
   task.circuit_file_type = QuantumTask_json["circuit_file_type"];
   task.result_destination = QuantumTask_json["result_destination"];
-  task.preferred_qpu = QuantumTask_json["preferred_qpu"];
+  task.preferred_qpus =
+      QuantumTask_json["preferred_qpus"].get<std::vector<std::string>>();
   task.scheduled_qpu = QuantumTask_json["scheduled_qpu"];
   task.priority = QuantumTask_json["priority"];
   task.optimisation_level = QuantumTask_json["optimisation_level"];
@@ -149,6 +125,15 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
   std::vector<std::string> targets;
   std::map<std::string, int> results;
   auto start = std::chrono::steady_clock::now();
+
+  // TODO: queues will be handled by QDMI
+  QirMetadata &qirMetadata = QirPassRunner::getInstance().getMetadata();
+  std::vector<Queue> queues = qirMetadata.queues;
+  for (auto &qpu : quantumTask.preferred_qpus) {
+    if (qirMetadata.queues.find(qpu) == qirMetadata.queues.end()) {
+      qirMetadata.addQueue(qpu);
+    }
+  }
   int job_count = 0;
   for (auto &TSM : TSMs) {
     QDMI_Job job;
@@ -173,14 +158,14 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                                 ? "libscheduler_round_robin.so"
                                 : quantumTask.change_scheduler;
 
-    // TODO: extract those values
-    int priority = 0;
-    std::map<std::string, float> preferred_qpu = {{"Q20", 0.5}, {"Q5", 0.5}};
-    float expected_execution_time = 0.25 * (job_count + 1);
-    int task_id = job_count++;
-    Job job_ = {job_count, task_id, expected_execution_time};
+    // TODO: sub-tasks will be created by generator
+    QuantumTask subTask = quantumTask;
+    subTask.parent_id = quantumTask.task_id;
+    subTask.duration = 0.25 * (job_count + 1);
+    subTask.task_id = job_count++;
+    subTask.TSM = TSM;
 
-    if (invokeScheduler(scheduler, TSM, priority, preferred_qpu, job_) > 0) {
+    if (invokeScheduler(scheduler, subTask) > 0) {
       // Finalize the session
       QDMI_session_finalize(session);
 

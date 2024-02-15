@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
       {"circuit_file", ""},
       {"circuit_file_type", "QIR"},
       {"result_destination", ""},
-      {"preferred_qpu", "Q20"},
+      {"preferred_qpus", {"Q20", "Q5"}},
       {"scheduled_qpu", ""},
       {"priority", 0},
       {"optimisation_level", 0},

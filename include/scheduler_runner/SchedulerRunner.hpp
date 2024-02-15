@@ -31,9 +31,6 @@
 #include <vector>
 using llvm::orc::ThreadSafeModule;
 
-int invokeScheduler(const std::string &nameScheduler,
-                    const ThreadSafeModule &TSM, const int &priority,
-                    const std::map<std::string, float> &preferred_qpu,
-                    Job &job);
+int invokeScheduler(const std::string &nameScheduler, QuantumTask &task);
 
 #endif // SCHEDULERRUNNER_HPP
