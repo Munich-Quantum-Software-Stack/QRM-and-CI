@@ -208,7 +208,6 @@ You can run the Quantum Resource Manager daemon and a test client as follows:
    - Navigate to the `passes.git` directory (if you are not already there) and move to the right branch:
       ```bash
       cd passes.git
-      git checkout testing
       ```
 
   - Build the passes as shared libraries:
