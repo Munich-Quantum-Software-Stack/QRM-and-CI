@@ -4,6 +4,7 @@
  */
 
 #include "SchedulerRunner.hpp"
+#include "../my_qdmi.hpp"
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096

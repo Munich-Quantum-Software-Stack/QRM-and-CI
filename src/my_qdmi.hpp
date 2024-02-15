@@ -1,7 +1,6 @@
 #ifndef MY_QDMI_HPP
 #define MY_QDMI_HPP
 
-#include <PassModule.hpp>
 using llvm::orc::ThreadSafeModule;
 
 struct QuantumTask {
@@ -24,10 +23,23 @@ struct QuantumTask {
   std::string change_generator;
   std::string change_selector;
   std::string change_scheduler;
-  ThreadSafeModule TSM; // QIR quantum circuit
-  int parent_id;        // set by generator if the task is a sub-task
-  float end_time;       // the end time of the job
-  float duration;       // the predicted duration of the job
+  ThreadSafeModule *TSM;     // QIR quantum circuit
+  const QuantumTask *parent; // set by generator if the task is a sub-task
+  float end_time;            // the end time of the job
+  float duration;            // the predicted duration of the job
+
+  // Default constructor
+  QuantumTask() : parent(nullptr), TSM(nullptr) {}
+
+  float updateEndTime(float new_end_time) {
+    if (this->parent != nullptr) {
+      this->parent->updateEndTime(new_end_time);
+    }
+    if (new_end_time > this->end_time) {
+      this->end_time = new_end_time;
+    }
+    return this->end_time;
+  }
 };
 
 struct Queue {

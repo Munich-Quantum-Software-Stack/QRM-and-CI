@@ -130,7 +130,9 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
   QirMetadata &qirMetadata = QirPassRunner::getInstance().getMetadata();
   std::vector<Queue> queues = qirMetadata.queues;
   for (auto &qpu : quantumTask.preferred_qpus) {
-    if (qirMetadata.queues.find(qpu) == qirMetadata.queues.end()) {
+    if (std::find_if(queues.begin(), queues.end(), [&qpu](const Queue &queue) {
+          return queue.platform == qpu;
+        }) == queues.end()) {
       qirMetadata.addQueue(qpu);
     }
   }
@@ -159,11 +161,11 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                                 : quantumTask.change_scheduler;
 
     // TODO: sub-tasks will be created by generator
-    QuantumTask subTask = quantumTask;
-    subTask.parent_id = quantumTask.task_id;
+    QuantumTask subTask;
+    subTask.parent = &quantumTask;
     subTask.duration = 0.25 * (job_count + 1);
     subTask.task_id = job_count++;
-    subTask.TSM = TSM;
+    subTask.TSM = &TSM;
 
     if (invokeScheduler(scheduler, subTask) > 0) {
       // Finalize the session

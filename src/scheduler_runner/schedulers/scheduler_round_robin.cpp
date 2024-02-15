@@ -24,7 +24,7 @@ using llvm::orc::ThreadSafeModule;
  */
 extern "C" void scheduler(QuantumTask &task) {
   // Query the available platforms
-  std::vector<std::string> platforms = FOMAC_available_devices();
+  std::vector<QDMI_Device> platforms = FOMAC_available_devices();
 
   std::cout << "   [Scheduler]...........Writing target architecture in the "
                "metadata"
@@ -33,6 +33,6 @@ extern "C" void scheduler(QuantumTask &task) {
   // Choose the target architecture
   QirPassRunner &QPR = QirPassRunner::getInstance();
   QirMetadata &qirMetadata = QPR.getMetadata();
-  qirMetadata.setTargetPlatform(platforms.back());
+  qirMetadata.setTargetPlatform("q5"); // platforms.back());
   QPR.setMetadata(qirMetadata);
 }

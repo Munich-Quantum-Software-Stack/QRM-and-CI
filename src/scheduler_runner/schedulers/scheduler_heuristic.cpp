@@ -24,7 +24,7 @@ void heuristic(QuantumTask &task, const std::map<std::string, float> &scores) {
       platforms.push_back(score.first);
     } else {
       for (auto &platform : platforms) {
-        if (score.second > scores[platform]) {
+        if (score.second > scores.at(platform)) {
           platform = score.first;
           break;
         }
@@ -39,38 +39,44 @@ void heuristic(QuantumTask &task, const std::map<std::string, float> &scores) {
   // Find the queue with shortest end time among the three platforms
   auto &queues = qirMetadata.queues;
   std::string target_platform;
+  float min_end_time = std::numeric_limits<float>::max();
+
   for (auto &platform : platforms) {
-    for (auto &queue : queues) {
-      if (queue.platform == platform) {
-        if (queue.end_time == nullptr) {
-          target_platform = platform;
-          break;
-        }
-        if (queue.end_time < queues[target_platform].end_time) {
-          target_platform = platform;
-        }
+    auto it = std::find_if(
+        queues.begin(), queues.end(),
+        [&platform](const Queue &queue) { return queue.platform == platform; });
+
+    if (it != queues.end()) {
+      if (it->end_time == nullptr || *(it->end_time) < min_end_time) {
+        target_platform = platform;
+        min_end_time = it->end_time != nullptr ? *(it->end_time) : min_end_time;
       }
     }
   }
 
-  auto &queue = queues[target_platform];
+  auto &queue = *std::find_if(queues.begin(), queues.end(),
+                              [&target_platform](const Queue &queue) {
+                                return queue.platform == target_platform;
+                              });
+
   // use skipping routine
   if (queue.tasks.empty()) {
-    queue.addTask(&task);
-    task.end_time = task.duration;
+    queue.insertTask(0, &task);
+    task.updateEndTime(duration);
   } else {
     for (int i = queue.tasks.size() - 1; i >= 0; --i) {
       QuantumTask &old_task = *queue.tasks[i];
+      QuantumTask &old_parent = old_task.parent ? *old_task.parent : old_task;
       float predicted_end = old_task.end_time + task.duration;
-      float task_end = old_task.task.end_time;
-      if (predicted_end <
-          task_end) { // can skip in line (wo delaying other task)
-        if (new_task.end_time <
-            task_end) { // should skip in line (for overall speedup)
+      float old_parent_end = old_parent.end_time;
+      if (predicted_end < old_parent_end) {
+        // can skip in line (wo delaying other task)
+        QuantumTask &new_parent = task.parent ? *task.parent : task;
+        if (new_parent.end_time < old_parent_end) {
+          // should skip in line (for overall speedup)
           if (i != 0) { // have not reached the end of the line
-            old_task.end_time =
-                predicted_end; // update end time of current job in line
-            continue;          // check next job in line
+            old_task.updateEndTime(predicted_end);
+            continue; // check next job in line
           }
         }
       }
@@ -96,6 +102,7 @@ extern "C" void scheduler(QuantumTask &task) {
   // Query the available devices
   std::vector<QDMI_Device> devices = FOMAC_available_devices();
 
+  std::map<std::string, float> scores;
   // Check if the user only wants to use a single QPU
   if (task.preferred_qpus.size() == 1) {
     // Check if the QPU is available
@@ -106,6 +113,7 @@ extern "C" void scheduler(QuantumTask &task) {
                 << std::endl;
       return;
     }
+    scores = {{task.preferred_qpus[0], 1.0}};
   } else { // If choice is not forced, use the recommender system
     // TODO: Calculate ML scores
     std::vector<float> model_scores(devices.size());
@@ -114,9 +122,8 @@ extern "C" void scheduler(QuantumTask &task) {
     }
 
     // Map the model output to a std::map<std::string, float>
-    std::map<std::string, float> model_scores_map;
     for (size_t i = 0; i < devices.size(); ++i) {
-      model_scores_map[devices[i]] = model_scores[i];
+      scores[devices[i]] = model_scores[i];
     }
   }
 

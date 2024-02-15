@@ -6,9 +6,9 @@
 #ifndef QIR_MODULE_PASS_MANAGER_H
 #define QIR_MODULE_PASS_MANAGER_H
 
-#include "../../src/my_qdmi.hpp"
 #include "PassModule.hpp"
 
+#include "../../src/my_qdmi.hpp"
 #include <dlfcn.h>
 #include <string>
 #include <unordered_map>

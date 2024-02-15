@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
       {"submit_time", submit_time},
       {"circuit_qiskit", genericQir},
       {"additional_information", ""},
-      {"change_selector", "libselector_manual.so"},
+      x{"change_selector", "libselector_manual.so"},
       {"change_scheduler", "libscheduler_round_robin.so"},
   };
 
