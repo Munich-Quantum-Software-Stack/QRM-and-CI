@@ -60,6 +60,5 @@ QDMI_Device invokeScheduler(const std::string &nameScheduler)
     }
 
     // Call the scheduler function
-    std::cerr << "   [Scheduler Runner]..I will call the scheduler now" << std::endl;
     return scheduler();
 }

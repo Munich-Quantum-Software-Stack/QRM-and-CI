@@ -28,7 +28,7 @@ extern "C" QDMI_Device scheduler(void)
               << std::endl;
     
     std::cout << "   [Scheduler]..........." << devices.size()
-              << " available devices"
+              << " available device(s)"
               << std::endl;
 
     QDMI_Device dev = devices.back();
