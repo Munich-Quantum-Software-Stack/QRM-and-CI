@@ -16,8 +16,8 @@ using llvm::orc::ThreadSafeModule;
  * @param pathGenerator Path to the generator to be invoked
  * @return std::vector<std::string>
  */
-std::vector<ThreadSafeModule> invokeGenerator(const std::string circuit,
-                                              const std::string &nameGenerator)
+std::vector<QuantumTask> invokeGenerator(const QuantumTask &parentQuantumTask,
+                                         const std::string &nameGenerator)
 {
     std::string pathGenerator;
     char buffer[PATH_MAX];
@@ -48,8 +48,7 @@ std::vector<ThreadSafeModule> invokeGenerator(const std::string circuit,
     }
 
     // Dynamic loading and linking of the shared library
-    typedef std::vector<ThreadSafeModule> (*GeneratorFunction)(
-        const std::string);
+    typedef std::vector<QuantumTask> (*GeneratorFunction)(const QuantumTask &);
 
     GeneratorFunction generator =
         reinterpret_cast<GeneratorFunction>(dlsym(lib_handle, "generator"));
@@ -66,5 +65,5 @@ std::vector<ThreadSafeModule> invokeGenerator(const std::string circuit,
     }
 
     // Call the generator function
-    return generator(circuit);
+    return generator(parentQuantumTask);
 }

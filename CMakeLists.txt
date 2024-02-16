@@ -85,6 +85,7 @@ set(EXECUTABLE_NAME
 set(SOURCES src/qresourcemanager_d.cpp src/connection_handling.cpp)
 set(PUBLIC_QRM_HEADERS
     "include/connection_handling.hpp"
+    "include/QuantumResourceManager.hpp"
     "include/pass_runner/PassModule.hpp"
     "include/pass_runner/PassRunner.hpp"
     "include/pass_runner/QirPassRunner.hpp"

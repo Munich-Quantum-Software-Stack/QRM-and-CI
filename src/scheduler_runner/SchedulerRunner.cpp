@@ -12,9 +12,10 @@
 /**
  * @brief TODO
  * @param pathScheduler TODO
- * @return std::string
+ * @return QuantumTask
  */
-QDMI_Device invokeScheduler(const std::string &nameScheduler)
+QDMI_Device invokeScheduler(const std::string &nameScheduler,
+                            const QuantumTask &childQuantumTask)
 {
     std::string pathScheduler;
     char buffer[PATH_MAX];
@@ -46,7 +47,7 @@ QDMI_Device invokeScheduler(const std::string &nameScheduler)
     }
 
     // Dynamic loading and linking of the shared library
-    typedef QDMI_Device (*SchedulerFunction)();
+    typedef QDMI_Device (*SchedulerFunction)(const QuantumTask &);
     SchedulerFunction scheduler =
         reinterpret_cast<SchedulerFunction>(dlsym(lib_handle, "scheduler"));
 
@@ -60,5 +61,5 @@ QDMI_Device invokeScheduler(const std::string &nameScheduler)
     }
 
     // Call the scheduler function
-    return scheduler();
+    return scheduler(childQuantumTask);
 }

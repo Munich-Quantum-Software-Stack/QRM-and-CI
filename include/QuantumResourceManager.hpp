@@ -1,10 +1,10 @@
 /**
- * @file qrm.hpp
+ * @file QuantumResourceManager.hpp
  * @brief TODO
  */
 
-#ifndef QRM_HPP
-#define QRM_HPP
+#ifndef QUANTUMRESOURCEMANAGER_HPP
+#define QUANTUMRESOURCEMANAGER_HPP
 
 #include <algorithm>
 #include <chrono>
@@ -40,12 +40,15 @@
 #include <qdmi_internal.h>
 #include <qinfo.h>
 
+using llvm::orc::ThreadSafeModule;
+
 /**
- * @todo Comment this
+ * @todo Document this
  */
 struct QuantumTask
 {
     int task_id;
+    int parent_id;
     int n_qbits;
     int n_shots;
     std::string circuit_file;
@@ -64,6 +67,7 @@ struct QuantumTask
     std::string change_generator;
     std::string change_selector;
     std::string change_scheduler;
+    ThreadSafeModule thread_safe_module;
 };
 
 QuantumTask JSONToQuantumTask(const char *QuantumTask_str);
@@ -71,4 +75,4 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                          const QuantumTask &quantumTask);
 void signalHandler(int signum);
 
-#endif // QRM_HPP
+#endif // QUANTUMRESOURCEMANAGER_HPP

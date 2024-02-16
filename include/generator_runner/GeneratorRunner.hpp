@@ -20,12 +20,15 @@
 #include <unistd.h>
 #include <vector>
 
-#include "PassRunner.hpp"
+#include <PassRunner.hpp>
+#include <QuantumResourceManager.hpp>
 
 using namespace llvm;
 using llvm::orc::ThreadSafeModule;
 
-std::vector<ThreadSafeModule> invokeGenerator(const std::string circuit,
-                                              const std::string &nameGenerator);
+struct QuantumTask;
+
+std::vector<QuantumTask> invokeGenerator(const QuantumTask &parentQuantumTask,
+                                         const std::string &nameGenerator);
 
 #endif // GENERATORRUNNER_HPP

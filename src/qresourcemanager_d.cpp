@@ -2,7 +2,7 @@
  * @file qresourcemanager_d.cpp
  * @brief TODO
  */
-#include <qrm.hpp>
+#include <QuantumResourceManager.hpp>
 
 using json = nlohmann::json;
 using llvm::orc::ThreadSafeModule;
@@ -36,7 +36,17 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
 
     json QuantumTask_json = json::parse(QuantumTask_str);
 
+    if (!QuantumTask_json.contains("task_id"))
+    {
+        std::cout << "   [qresourcemanager_d]..Warning: task_id not defined"
+                  << std::endl;
+        return QuantumTask();
+    }
     task.task_id = QuantumTask_json["task_id"];
+    if (!QuantumTask_json.contains("parent_id"))
+        task.parent_id = -1;
+    else
+        task.parent_id = QuantumTask_json["parent_id"];
     task.n_qbits = QuantumTask_json["n_qbits"];
     task.n_shots = QuantumTask_json["n_shots"];
     task.circuit_file = QuantumTask_json["circuit_file"];
@@ -50,10 +60,18 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
     task.transpiler_flag = QuantumTask_json["transpiler_flag"];
     task.result_type = QuantumTask_json["result_type"];
     task.submit_time = QuantumTask_json["submit_time"];
+    if (!QuantumTask_json.contains("circuit_qiskit"))
+    {
+        std::cout
+            << "   [qresourcemanager_d]..Warning: circuit_qiskit not defined"
+            << std::endl;
+        return QuantumTask();
+    }
     task.circuit_qiskit = QuantumTask_json["circuit_qiskit"];
     task.additional_information = QuantumTask_json["additional_information"];
     task.change_selector = QuantumTask_json["change_selector"];
     task.change_scheduler = QuantumTask_json["change_scheduler"];
+    task.thread_safe_module = ThreadSafeModule();
 
     return task;
 }
@@ -67,17 +85,22 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
  * @param receivedSelector TODO
  */
 void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
-                         const QuantumTask &quantumTask)
+                         const QuantumTask &parentQuantumTask)
 {
+
+    // TODO THE TARGET-AGNOSTIC OPTIMZATION
+    //      BEFORE CIRCUIT CUTTING
+    // invokeTargetAgnosticPasses(parentQuantumTask.circuit_qiskit, passes);
+
     // Invoke the generator
-    std::string generator = quantumTask.change_generator == ""
+    std::string generator = parentQuantumTask.change_generator == ""
                                 ? "libgenerator_cutter.so"
-                                : quantumTask.change_generator;
+                                : parentQuantumTask.change_generator;
 
-    std::vector<ThreadSafeModule> TSMs =
-        invokeGenerator(quantumTask.circuit_qiskit, generator);
+    std::vector<QuantumTask> childQuantumTasks =
+        invokeGenerator(parentQuantumTask, generator);
 
-    if (TSMs.size() == 0)
+    if (childQuantumTasks.size() == 0)
     {
         std::cout
             << "   [qresourcemanager_d]..Warning: There was an error splitting "
@@ -92,7 +115,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
     std::vector<std::string> targets;
     std::map<std::string, int> results;
     auto start = std::chrono::steady_clock::now();
-    for (auto &TSM : TSMs)
+    for (auto &childQuantumTask : childQuantumTasks)
     {
         QDMI_Job job;
         QDMI_Library lib;
@@ -101,11 +124,13 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         std::cout << std::endl;
 
         // Invoke the scheduler
-        std::string scheduler = quantumTask.change_scheduler == ""
+        std::string scheduler = childQuantumTask.change_scheduler == ""
                                     ? "libscheduler_round_robin.so"
-                                    : quantumTask.change_scheduler;
+                                    : childQuantumTask.change_scheduler;
 
-        QDMI_Device device = invokeScheduler(scheduler);
+        QDMI_Device device = invokeScheduler(scheduler, childQuantumTask);
+
+        // childQuantumTask.setTargetDevice(device);
 
         if (device == NULL)
         {
@@ -118,7 +143,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
 
         FOMAC_print_coupling_mappings(device);
 
-        const char* lastSlash = std::strrchr(device->library.libname, '/');
+        const char *lastSlash = std::strrchr(device->library.libname, '/');
         if (lastSlash != nullptr)
             targets.push_back(std::string(lastSlash + 1));
         else
@@ -130,9 +155,9 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         }
 
         // Invoke the selector
-        std::string selector = quantumTask.change_selector == ""
+        std::string selector = childQuantumTask.change_selector == ""
                                    ? "libselector_all.so"
-                                   : quantumTask.change_selector;
+                                   : childQuantumTask.change_selector;
         std::vector<std::string> passes = invokeSelector(selector);
 
         if (passes.empty())
@@ -143,7 +168,8 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         }
 
         // Invoke the passes
-        invokePasses(TSM, passes, device);
+        invokeTargetSpecificPasses(childQuantumTask.thread_safe_module, passes,
+                                   device);
 
         // Create a fragment
         frag = (QDMI_Fragment)malloc(sizeof(struct QDMI_Fragment_d));
@@ -155,7 +181,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
             return;
         }
 
-        TSM.withModuleDo(
+        childQuantumTask.thread_safe_module.withModuleDo(
             [&](Module &module)
             {
                 std::string str;
@@ -164,11 +190,13 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                 OS.flush();
                 const char *qir = str.data();
                 modules.push_back((char *)qir);
+                // TODO QDMI_control_pack_qir
+                //      should replace this:
                 frag->QIR_bitcode = strdup((char *)qir);
             });
 
         // Submit the adapted QIR to the target platform
-        err = QDMI_control_submit(device, &frag, quantumTask.n_shots,
+        err = QDMI_control_submit(device, &frag, childQuantumTask.n_shots,
                                   device->library.info, &job);
         CHECK_ERR(err, "QDMI_control_submit");
 
@@ -195,7 +223,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         free(raw_numbers);
         free(frag->QIR_bitcode);
         free(frag);
-        free(device);
+        // free(device);
     }
 
     auto end = std::chrono::steady_clock::now();
@@ -399,7 +427,7 @@ int main(int argc, char *argv[])
 
         if (task)
         {
-            QuantumTask quantumTask = JSONToQuantumTask(task);
+            QuantumTask parentQuantumTask = JSONToQuantumTask(task);
 
             std::cout << "   [qresourcemanager_d]..Received a QuantumTask"
                       << std::endl;
@@ -409,12 +437,12 @@ int main(int argc, char *argv[])
             //// the received QIR
             // std::thread QuantumDaemonThread(handleQuantumDaemon,
             // std::ref(conn),
-            //                                 QDQueue, quantumTask);
+            //                                 QDQueue, parentQuantumTask);
 
             //// Detach from this thread once done
             // QuantumDaemonThread.detach();
 
-            handleQuantumDaemon(conn, QDQueue, quantumTask);
+            handleQuantumDaemon(conn, QDQueue, parentQuantumTask);
         }
         else
         {
