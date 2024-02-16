@@ -11,8 +11,9 @@ using llvm::orc::ThreadSafeModule;
  * @brief TODO
  * @param TODO
  */
-void invokePasses(ThreadSafeModule &TSM, const std::vector<std::string> &passes,
-                  QDMI_Device device)
+void invokeTargetSpecificPasses(ThreadSafeModule &TSM, 
+                                const std::vector<std::string> &passes,
+                                QDMI_Device device)
 {
     TSM.withModuleDo(
         [&](Module &module)
