@@ -20,8 +20,8 @@
 #include <unistd.h>
 #include <vector>
 
-#include <QuantumResourceManager.hpp>
 #include <PassRunner.hpp>
+#include <QuantumResourceManager.hpp>
 
 using namespace llvm;
 using llvm::orc::ThreadSafeModule;

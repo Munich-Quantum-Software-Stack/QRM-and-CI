@@ -62,8 +62,9 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
     task.submit_time = QuantumTask_json["submit_time"];
     if (!QuantumTask_json.contains("circuit_qiskit"))
     {
-        std::cout << "   [qresourcemanager_d]..Warning: circuit_qiskit not defined"
-                  << std::endl;
+        std::cout
+            << "   [qresourcemanager_d]..Warning: circuit_qiskit not defined"
+            << std::endl;
         return QuantumTask();
     }
     task.circuit_qiskit = QuantumTask_json["circuit_qiskit"];
@@ -89,7 +90,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
 
     // TODO THE TARGET-AGNOSTIC OPTIMZATION
     //      BEFORE CIRCUIT CUTTING
-    //invokeTargetAgnosticPasses(parentQuantumTask.circuit_qiskit, passes);
+    // invokeTargetAgnosticPasses(parentQuantumTask.circuit_qiskit, passes);
 
     // Invoke the generator
     std::string generator = parentQuantumTask.change_generator == ""
@@ -127,7 +128,9 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                                     ? "libscheduler_round_robin.so"
                                     : childQuantumTask.change_scheduler;
 
-        QDMI_Device device = invokeScheduler(scheduler);
+        QDMI_Device device = invokeScheduler(scheduler, childQuantumTask);
+
+        // childQuantumTask.setTargetDevice(device);
 
         if (device == NULL)
         {
@@ -140,7 +143,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
 
         FOMAC_print_coupling_mappings(device);
 
-        const char* lastSlash = std::strrchr(device->library.libname, '/');
+        const char *lastSlash = std::strrchr(device->library.libname, '/');
         if (lastSlash != nullptr)
             targets.push_back(std::string(lastSlash + 1));
         else
@@ -165,7 +168,8 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         }
 
         // Invoke the passes
-        invokeTargetSpecificPasses(childQuantumTask.thread_safe_module, passes, device);
+        invokeTargetSpecificPasses(childQuantumTask.thread_safe_module, passes,
+                                   device);
 
         // Create a fragment
         frag = (QDMI_Fragment)malloc(sizeof(struct QDMI_Fragment_d));
@@ -186,7 +190,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                 OS.flush();
                 const char *qir = str.data();
                 modules.push_back((char *)qir);
-                // TODO QDMI_control_pack_qir 
+                // TODO QDMI_control_pack_qir
                 //      should replace this:
                 frag->QIR_bitcode = strdup((char *)qir);
             });
@@ -219,7 +223,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         free(raw_numbers);
         free(frag->QIR_bitcode);
         free(frag);
-        free(device);
+        // free(device);
     }
 
     auto end = std::chrono::steady_clock::now();

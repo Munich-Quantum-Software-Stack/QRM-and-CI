@@ -28,6 +28,11 @@
 #include <unistd.h>
 #include <vector>
 
-QDMI_Device invokeScheduler(const std::string &nameScheduler);
+#include <QuantumResourceManager.hpp>
+
+struct QuantumTask;
+
+QDMI_Device invokeScheduler(const std::string &nameScheduler,
+                            const QuantumTask &childQuantumTask);
 
 #endif // SCHEDULERRUNNER_HPP

@@ -7,10 +7,13 @@
 #include <string>
 #include <vector>
 
-#include "PassModule.hpp"
+#include <PassModule.hpp>
+#include <QuantumResourceManager.hpp>
 
 #include <fomac.hpp>
 #include <qdmi.h>
+
+struct QuantumTask;
 
 /**
  * @brief The main entry point of the program.
@@ -19,25 +22,16 @@
  *
  * @return const char *
  */
-extern "C" QDMI_Device scheduler(void)
+extern "C" QDMI_Device scheduler(const QuantumTask &childQuantumTask)
 {
     // Query the available devices
     std::vector<QDMI_Device> devices = FOMAC_available_devices();
 
-    std::cout << "   [Scheduler]...........Choosing target QDMI_Device"
-              << std::endl;
-    
     std::cout << "   [Scheduler]..........." << devices.size()
-              << " available device(s)"
-              << std::endl;
+              << " available device(s)" << std::endl;
 
-    QDMI_Device dev = devices.back();
-
-    std::cout << "   [Scheduler]...........QDMI_Device library: "
-              << dev->library.libname
-              << std::endl;
-
-    std::cout << "   [Scheduler]...........Choosing target QDMI_Device"
+    std::cout << "   [Scheduler]...........Choosing target QDMI_Device "
+              << "for QuantumTask with ID " << childQuantumTask.task_id
               << std::endl;
 
     return devices.back();

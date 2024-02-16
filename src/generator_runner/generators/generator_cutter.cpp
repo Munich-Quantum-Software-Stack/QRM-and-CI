@@ -12,9 +12,9 @@
 #include <vector>
 
 #include "llvm.hpp"
+#include <QuantumResourceManager.hpp>
 #include <qdmi.h>
 #include <qinfo.h>
-#include <QuantumResourceManager.hpp>
 
 using namespace llvm;
 using llvm::orc::ThreadSafeContext;
@@ -37,29 +37,31 @@ QuantumTask createQuantumTask(std::unique_ptr<Module> &module,
                               const QuantumTask &parentQuantumTask,
                               const int task_id)
 {
-    ThreadSafeModule TSM = ThreadSafeModule(std::move(module), std::move(TSCtx));
+    ThreadSafeModule TSM =
+        ThreadSafeModule(std::move(module), std::move(TSCtx));
 
     QuantumTask childQuantumTask;
 
-    childQuantumTask.parent_id              = parentQuantumTask.task_id;
-    childQuantumTask.task_id                = task_id;
-    childQuantumTask.n_qbits                = parentQuantumTask.n_qbits;
-    childQuantumTask.n_shots                = parentQuantumTask.n_shots;
-    childQuantumTask.circuit_file           = parentQuantumTask.circuit_file;
-    childQuantumTask.circuit_file_type      = parentQuantumTask.circuit_file_type;
-    childQuantumTask.preferred_qpu          = parentQuantumTask.preferred_qpu;
-    childQuantumTask.scheduled_qpu          = parentQuantumTask.scheduled_qpu;
-    childQuantumTask.priority               = parentQuantumTask.priority;
-    childQuantumTask.optimisation_level     = parentQuantumTask.optimisation_level;
-    childQuantumTask.no_modify              = parentQuantumTask.no_modify;
-    childQuantumTask.transpiler_flag        = parentQuantumTask.transpiler_flag;
-    childQuantumTask.result_type            = parentQuantumTask.result_type;
-    childQuantumTask.submit_time            = parentQuantumTask.submit_time;
-    childQuantumTask.circuit_qiskit         = parentQuantumTask.circuit_qiskit;
-    childQuantumTask.additional_information = parentQuantumTask.additional_information;
-    childQuantumTask.change_selector        = parentQuantumTask.change_selector;
-    childQuantumTask.change_scheduler       = parentQuantumTask.change_scheduler;
-    childQuantumTask.thread_safe_module     = std::move(TSM);
+    childQuantumTask.parent_id = parentQuantumTask.task_id;
+    childQuantumTask.task_id = task_id;
+    childQuantumTask.n_qbits = parentQuantumTask.n_qbits;
+    childQuantumTask.n_shots = parentQuantumTask.n_shots;
+    childQuantumTask.circuit_file = parentQuantumTask.circuit_file;
+    childQuantumTask.circuit_file_type = parentQuantumTask.circuit_file_type;
+    childQuantumTask.preferred_qpu = parentQuantumTask.preferred_qpu;
+    childQuantumTask.scheduled_qpu = parentQuantumTask.scheduled_qpu;
+    childQuantumTask.priority = parentQuantumTask.priority;
+    childQuantumTask.optimisation_level = parentQuantumTask.optimisation_level;
+    childQuantumTask.no_modify = parentQuantumTask.no_modify;
+    childQuantumTask.transpiler_flag = parentQuantumTask.transpiler_flag;
+    childQuantumTask.result_type = parentQuantumTask.result_type;
+    childQuantumTask.submit_time = parentQuantumTask.submit_time;
+    childQuantumTask.circuit_qiskit = parentQuantumTask.circuit_qiskit;
+    childQuantumTask.additional_information =
+        parentQuantumTask.additional_information;
+    childQuantumTask.change_selector = parentQuantumTask.change_selector;
+    childQuantumTask.change_scheduler = parentQuantumTask.change_scheduler;
+    childQuantumTask.thread_safe_module = std::move(TSM);
 
     return childQuantumTask;
 }
@@ -72,7 +74,8 @@ QuantumTask createQuantumTask(std::unique_ptr<Module> &module,
  *
  * @return std::vector<QuantumTask>
  */
-extern "C" std::vector<QuantumTask> generator(const QuantumTask &parentQuantumTask)
+extern "C" std::vector<QuantumTask>
+generator(const QuantumTask &parentQuantumTask)
 {
     std::vector<QuantumTask> childQuantumTasks;
 
@@ -89,19 +92,14 @@ extern "C" std::vector<QuantumTask> generator(const QuantumTask &parentQuantumTa
     auto M2 = parseIR(MemoryBufferRef(circuit, "QIR (LRZ)"), error,
                       *TSCtx2.getContext());
 
-    childQuantumTasks.push_back(createQuantumTask(M1, 
-                                                  TSCtx1, 
-                                                  parentQuantumTask, 
-                                                  0));
+    childQuantumTasks.push_back(
+        createQuantumTask(M1, TSCtx1, parentQuantumTask, 0));
 
-    childQuantumTasks.push_back(createQuantumTask(M2, 
-                                                  TSCtx2, 
-                                                  parentQuantumTask, 
-                                                  1));
+    childQuantumTasks.push_back(
+        createQuantumTask(M2, TSCtx2, parentQuantumTask, 1));
 
     std::cout << "   [Generator]...........Returning generated "
-              << "sub-circuits to the Generator Runner"
-              << std::endl;
+              << "sub-circuits to the Generator Runner" << std::endl;
 
     return childQuantumTasks;
 }

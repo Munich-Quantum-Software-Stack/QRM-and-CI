@@ -48,7 +48,7 @@ std::vector<QuantumTask> invokeGenerator(const QuantumTask &parentQuantumTask,
     }
 
     // Dynamic loading and linking of the shared library
-    typedef std::vector<QuantumTask> (*GeneratorFunction)(const QuantumTask&);
+    typedef std::vector<QuantumTask> (*GeneratorFunction)(const QuantumTask &);
 
     GeneratorFunction generator =
         reinterpret_cast<GeneratorFunction>(dlsym(lib_handle, "generator"));
