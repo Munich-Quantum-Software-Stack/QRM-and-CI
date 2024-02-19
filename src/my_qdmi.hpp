@@ -3,32 +3,33 @@
 
 using llvm::orc::ThreadSafeModule;
 
-struct QuantumTask {
-  int task_id;
-  int n_qbits;
-  int n_shots;
-  std::string circuit_file;
-  std::string circuit_file_type;
-  std::string result_destination;
-  std::vector<std::string> preferred_qpus;
-  std::string scheduled_qpu;
-  int priority;
-  int optimisation_level;
-  bool no_modify;
-  bool transpiler_flag;
-  int result_type;
-  std::string submit_time;
-  std::string circuit_qiskit;
-  std::string additional_information;
-  std::string change_generator;
-  std::string change_selector;
-  std::string change_scheduler;
-  ThreadSafeModule *TSM;     // QIR quantum circuit
-  const QuantumTask *parent; // set by generator if the task is a sub-task
-  float duration;            // the predicted duration of the job
-
-  // Default constructor
-  QuantumTask() : parent(nullptr), TSM(nullptr) {}
+/**
+ * @todo Document this
+ */
+struct QuantumTask
+{
+    int task_id;
+    int parent_id;
+    int n_qbits;
+    int n_shots;
+    std::string circuit_file;
+    std::string circuit_file_type;
+    std::string result_destination;
+    std::vector<std::string> preferred_qpus;
+    std::string scheduled_qpu;
+    int priority;
+    int optimisation_level;
+    bool no_modify;
+    bool transpiler_flag;
+    int result_type;
+    std::string submit_time;
+    std::string circuit_qiskit;
+    std::string additional_information;
+    std::string change_generator;
+    std::string change_selector;
+    std::string change_scheduler;
+    ThreadSafeModule thread_safe_module;
+    float duration;
 };
 
 struct Queue {

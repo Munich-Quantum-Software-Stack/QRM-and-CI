@@ -1,3 +1,3 @@
 export PASSES="$HOME/bin/lib/passes"
-export QDMI_CONFIG_FILE="$HOME/qrm.git/.qdmi-config"
+export QDMI_CONFIG_FILE="$HOME/mqss/qrm.git/.qdmi-config"
 make INSTALL_PATH=$HOME test
