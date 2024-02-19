@@ -15,7 +15,7 @@
 
 using llvm::orc::ThreadSafeModule;
 
-void heuristic(QuantumTask &task, const std::map<std::string, float> &scores) {
+QDMI_Device heuristic(QuantumTask &task, const std::map<std::string, float> &scores) {
 
   // Find the platforms with the three highest final scores
   std::vector<std::string> platforms;
@@ -97,7 +97,7 @@ void heuristic(QuantumTask &task, const std::map<std::string, float> &scores) {
  *
  * @return const char *
  */
-extern "C" void scheduler(QuantumTask &task) {
+extern "C" QDMI_Device scheduler(QuantumTask &task) {
   std::cout << "   [Scheduler]..............Invoking the heuristic scheduler"
             << std::endl;
 
@@ -130,6 +130,6 @@ extern "C" void scheduler(QuantumTask &task) {
   }
 
   // TODO: scheduling strategy
-  heuristic(task, scores);
-  return;
+  QDMI_Device dev = heuristic(task, scores);
+  return dev;
 }
