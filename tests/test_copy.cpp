@@ -45,13 +45,12 @@ std::string *run_test(int argc, char *argv[]) {
   setbuf(stdout, NULL);
 
   // Open the QIR file
-  const char *filename = "/home/ubuntu/qrm.git/benchmarks/test.ll";
+  const char *filename = "/home/ubuntu/mqss/qrm.git/benchmarks/test.ll";
   std::ifstream file(filename, std::ios::binary);
   if (!file.is_open()) {
     std::cerr << "[Quantum Daemon]......Failed to open file with QIR: "
               << filename << std::endl;
-    std::string message = "Failed to open file with QIR: ";
-    return new std::string(message);
+    return nullptr;
   }
 
   // Read the file with the generic QIR

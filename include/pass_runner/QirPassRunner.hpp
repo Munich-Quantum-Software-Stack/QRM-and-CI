@@ -46,7 +46,12 @@ struct QirMetadata {
   bool shouldRemoveCallAttributes; /**< Boolean value for controlling the
                                         removal of call attributes. */
   std::vector<Queue> queues;       /**< Map of queues: Platform name and Job */
+  std::unordered_map<int, float> end_times;
 
+  void updateEndTime(int task_id, float new_end_time) {
+    if (new_end_time > end_times[task_id])
+      end_times[task_id] = new_end_time;
+  }
   /**
    * @brief Adds entries to multiple vectors of the metadata. Use example:
    *

@@ -25,36 +25,23 @@ struct QuantumTask {
   std::string change_scheduler;
   ThreadSafeModule *TSM;     // QIR quantum circuit
   const QuantumTask *parent; // set by generator if the task is a sub-task
-  float end_time;            // the end time of the job
   float duration;            // the predicted duration of the job
 
   // Default constructor
   QuantumTask() : parent(nullptr), TSM(nullptr) {}
-
-  float updateEndTime(float new_end_time) {
-    if (this->parent != nullptr) {
-      this->parent->updateEndTime(new_end_time);
-    }
-    if (new_end_time > this->end_time) {
-      this->end_time = new_end_time;
-    }
-    return this->end_time;
-  }
 };
 
 struct Queue {
   std::string platform;             // Name of the platform
   std::vector<QuantumTask *> tasks; // List of tasks in the queue
-  float *end_time;                  // Pointer to the end_time of the last task
+  float end_time;                   // end_time of the full queue
 
-  Queue(std::string platform) : platform(platform), end_time(nullptr) {}
+  Queue(std::string platform) : platform(platform), end_time(0.) {}
 
   void insertTask(int position, QuantumTask *task) {
     if (position >= 0 && position <= tasks.size()) {
       tasks.insert(tasks.begin() + position, task);
-      if (position == tasks.size() - 1) {
-        end_time = &(task->end_time); // Update end_time pointer
-      }
+      end_time = end_time + task->duration;
     } else {
       // Handle error: position out of range
     }
