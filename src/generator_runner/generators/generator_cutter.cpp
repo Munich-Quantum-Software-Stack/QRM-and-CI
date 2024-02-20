@@ -48,7 +48,7 @@ QuantumTask createQuantumTask(std::unique_ptr<Module> &module,
     childQuantumTask.n_shots = parentQuantumTask.n_shots;
     childQuantumTask.circuit_file = parentQuantumTask.circuit_file;
     childQuantumTask.circuit_file_type = parentQuantumTask.circuit_file_type;
-    childQuantumTask.preferred_qpu = parentQuantumTask.preferred_qpu;
+    childQuantumTask.preferred_qpus = parentQuantumTask.preferred_qpus;
     childQuantumTask.scheduled_qpu = parentQuantumTask.scheduled_qpu;
     childQuantumTask.priority = parentQuantumTask.priority;
     childQuantumTask.optimisation_level = parentQuantumTask.optimisation_level;
