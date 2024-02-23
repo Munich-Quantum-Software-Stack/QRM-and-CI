@@ -141,8 +141,8 @@ int main(int argc, char *argv[])
         std::cout << "                      L ...execution_time: "
                   << quantumResult.execution_time << " s." << std::endl;
         std::cout << "                      L ...executed_circuit(s): ";
-        // for (const auto &qir : quantumResult.executed_circuit)
-        //     std::cout << std::endl << qir;
+        for (const auto &qir : quantumResult.executed_circuit)
+            std::cout << std::endl << qir;
         std::cout << std::endl << "Results: " << std::endl;
         //for (const auto &result : quantumResult.results)
         //    std::cout << "\t" << result.first << ": " << result.second
