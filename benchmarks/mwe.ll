@@ -20,24 +20,17 @@ entry:
   ; calls to initialize the execution environment
   call void @__quantum__rt__initialize(i8* null)
   ; calls to QIS functions
-  call void @__quantum__qis__rz__body(double 0.5, %Qubit* null)
   call void @__quantum__qis__h__body(%Qubit* null)
   call void @__quantum__qis__cnot__body(%Qubit* null, %Qubit* inttoptr (i64 1 to %Qubit*))
   call void @__quantum__qis__x__body(%Qubit* inttoptr (i64 1 to %Qubit*))
   call void @__quantum__qis__cnot__body(%Qubit* null, %Qubit* inttoptr (i64 5 to %Qubit*))
   call void @__quantum__qis__x__body(%Qubit* inttoptr (i64 1 to %Qubit*))
   call void @__quantum__qis__cnot__body(%Qubit* null, %Qubit* inttoptr (i64 1 to %Qubit*))
-  call void @__quantum__qis__rx__body(double 0.0, %Qubit* inttoptr (i64 1 to %Qubit*))
   call void @__quantum__qis__mz__body(%Qubit* null, %Result* writeonly null)
   call void @__quantum__qis__mz__body(%Qubit* inttoptr (i64 1 to %Qubit*), %Result* writeonly inttoptr (i64 1 to %Result*))
   call void @__quantum__qis__cnot__body(%Qubit* null, %Qubit* inttoptr (i64 1 to %Qubit*))
   call void @__quantum__qis__cnot__body(%Qubit* null, %Qubit* inttoptr (i64 4 to %Qubit*))
   call void @__quantum__qis__cnot__body(%Qubit* null, %Qubit* inttoptr (i64 1 to %Qubit*))
-  call void @__quantum__qis__ry__body(double 0.0, %Qubit* null)
-  call void @__quantum__qis__rz__body(double 0.123125, %Qubit* null)
-  call void @__quantum__qis__rx__body(double 17.2787595947, %Qubit* null)
-  call void @__quantum__qis__rx__body(double 2.1245, %Qubit* inttoptr (i64 3 to %Qubit*))
-  call void @__quantum__qis__rx__body(double 9.234123, %Qubit* null)
   call void @__quantum__qis__cnot__body(%Qubit* null, %Qubit* inttoptr (i64 1 to %Qubit*))
   call void @__quantum__qis__x__body(%Qubit* inttoptr (i64 1 to %Qubit*))
   call void @__quantum__qis__cnot__body(%Qubit* null, %Qubit* inttoptr (i64 3 to %Qubit*))
@@ -72,12 +65,6 @@ entry:
 ; declarations of QIS functions
 
 declare void @__quantum__qis__h__body(%Qubit*)
-
-declare void @__quantum__qis__rz__body(double, %Qubit*)
-
-declare void @__quantum__qis__ry__body(double, %Qubit*)
-
-declare void @__quantum__qis__rx__body(double, %Qubit*)
 
 declare void @__quantum__qis__x__body(%Qubit*)
 
