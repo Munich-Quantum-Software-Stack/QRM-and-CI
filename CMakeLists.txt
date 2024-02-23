@@ -8,9 +8,9 @@ project(
 set(CMAKE_CXX_STANDARD 17)
 
 # Set the installation directory for the daemon
-#if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 set(CMAKE_INSTALL_PREFIX $ENV{HOME}/bin CACHE PATH "..." FORCE)
-#endif()
+endif()
 set(INSTALL_PATH "${CMAKE_INSTALL_PREFIX}")
 
 # Create the qresourcemanager_d.log file
