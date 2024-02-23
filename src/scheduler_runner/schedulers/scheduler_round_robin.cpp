@@ -27,12 +27,22 @@ extern "C" QDMI_Device scheduler(const QuantumTask &childQuantumTask)
     // Query the available devices
     std::vector<QDMI_Device> devices = FOMAC_available_devices();
 
-    std::cout << "   [Scheduler]..........." << devices.size()
-              << " available device(s)" << std::endl;
+    if (devices.size() == 0)
+        std::cout << "   [Scheduler]...........Error"
+                  << " no available devices found" << std::endl;
+    else
+    {
+        std::cout << "   [Scheduler]..........." << devices.size()
+                  << " available device(s)" << std::endl;
 
-    std::cout << "   [Scheduler]...........Choosing target QDMI_Device "
-              << "for QuantumTask with ID " << childQuantumTask.task_id
-              << std::endl;
+        QDMI_Device device = devices.back();
+        QDMI_Library_impl_t lib = device->library;
+
+        std::cout << "   [Scheduler]...........Choosing target QDMI_Device "
+                  << lib.libname
+                  << " for QuantumTask with ID " << childQuantumTask.task_id
+                  << std::endl;
+    }
 
     return devices.back();
 }

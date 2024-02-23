@@ -129,6 +129,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                                     : childQuantumTask.change_scheduler;
 
         QDMI_Device device = invokeScheduler(scheduler, childQuantumTask);
+        std::cout << "\n\n\tMADE IT HERE" << std::endl;
 
         // childQuantumTask.setTargetDevice(device);
 
