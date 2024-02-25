@@ -1,8 +1,4 @@
-/home/ubuntu/bin/lib/libbackend_wmi.so
-param1=01234
-param2=0.0
-param3=zero
-/home/ubuntu/bin/lib/libbackend_q7.so
+/home/diogenes/bin/lib/libbackend_ibm.so
 param1=01234
 param2=0.0
 param3=zero
