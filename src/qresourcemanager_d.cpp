@@ -192,7 +192,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                 modules.push_back((char *)qir);
                 // TODO QDMI_control_pack_qir
                 //      should replace this:
-                frag->QIR_bitcode = strdup((char *)qir);
+                frag->qirmod = strdup((char *)qir);
             });
 
         // Submit the adapted QIR to the target platform
@@ -221,7 +221,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
             results[std::to_string(i)] = raw_numbers[i];
 
         free(raw_numbers);
-        free(frag->QIR_bitcode);
+        free(frag->qirmod);
         free(frag);
         // free(device);
     }
