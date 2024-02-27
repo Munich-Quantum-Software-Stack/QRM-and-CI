@@ -113,7 +113,7 @@ kill_daemons:
 	#	bash scripts/kill_daemons.sh; \
 	#fi
 
-test: kill_daemons run
+test: #kill_daemons run
 	cd build/ && \
     ctest -C Release -VV run_tests
 

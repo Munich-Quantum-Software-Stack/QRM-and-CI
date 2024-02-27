@@ -8,6 +8,9 @@
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
+#include <stdio.h>
+#include <thread>
+#include <chrono>
 
 using json = nlohmann::json;
 
@@ -49,16 +52,15 @@ int main(int argc, char *argv[])
     setbuf(stdout, NULL);
 
     // Establish a connection to the RabbitMQ server
-    const char *QDQueue = "qd_queue";
-    const char *QRMQueue = "qrm_queue";
+    const char *QDQueue = "queue_daemon";
+    const char *QRMQueue = "queue_manager";
 
     amqp_connection_state_t conn;
     amqp_socket_t *socket = NULL;
     rabbitmq_new_connection(&conn, &socket);
 
     // Open the QIR file
-    const char *filename = "../../benchmarks/mwe.ll";
-    //const char *filename = "../../benchmarks/test.ll";
+    const char *filename = "../../benchmarks/ibm.ll";
     std::ifstream file(filename, std::ios::binary);
     if (!file.is_open())
     {
@@ -93,7 +95,7 @@ int main(int argc, char *argv[])
         {"circuit_file", ""},
         {"circuit_file_type", "QIR"},
         {"result_destination", ""},
-        {"preferred_qpu", "Q20"},
+        {"preferred_qpu", "Q7"},
         {"scheduled_qpu", ""},
         {"priority", 0},
         {"optimisation_level", 0},
@@ -119,10 +121,14 @@ int main(int argc, char *argv[])
 
     // Receive the response from the daemon
     const char *results = receive_message(&conn, QDQueue);
-
+    // TODO Why do we need such a delay for the output
+    //      stream to work
+    //std::this_thread::sleep_for(std::chrono::milliseconds(150));
+    //std::cout << std::flush;
     if (results)
     {
         QuantumResult quantumResult = JSONToQuantumResult(results);
+        int count = 0;
 
         std::cout << "[Quantum Daemon]......Received QuantumResult"
                   << std::endl;
@@ -142,11 +148,12 @@ int main(int argc, char *argv[])
                   << quantumResult.execution_time << " s." << std::endl;
         std::cout << "                      L ...executed_circuit(s): ";
         for (const auto &qir : quantumResult.executed_circuit)
-            std::cout << std::endl << qir;
+            std::cout << std::endl << "Circuit " << ++count << ":"  
+                      << std::endl << qir;
         std::cout << std::endl << "Results: " << std::endl;
-        //for (const auto &result : quantumResult.results)
-        //    std::cout << "\t" << result.first << ": " << result.second
-        //              << std::endl;
+        for (const auto &result : quantumResult.results)
+            std::cout << "\t" << result.first << ": " << result.second
+                      << std::endl;
         std::cout << std::endl;
     }
     else

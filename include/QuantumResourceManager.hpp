@@ -35,7 +35,6 @@
 #include <SelectorRunner.hpp>
 
 #include <fomac.hpp>
-#include <fomac_q7.hpp>
 #include <qdmi.h>
 #include <qdmi_internal.h>
 #include <qinfo.h>

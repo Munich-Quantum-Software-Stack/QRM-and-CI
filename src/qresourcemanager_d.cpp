@@ -170,7 +170,6 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         // Invoke the passes
         invokeTargetSpecificPasses(childQuantumTask.thread_safe_module, passes,
                                    device);
-
         // Create a fragment
         frag = (QDMI_Fragment)malloc(sizeof(struct QDMI_Fragment_d));
         if (frag == NULL)
@@ -186,7 +185,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
             {
                 std::string str;
                 raw_string_ostream OS(str);
-                OS << module;
+                OS << module; 
                 OS.flush();
                 const char *qir = str.data();
                 modules.push_back((char *)qir);
@@ -291,9 +290,9 @@ void signalHandler(int signum)
  */
 int main(int argc, char *argv[])
 {
-    setbuf(stdout, NULL);
+    //setbuf(stdout, NULL);
 
-    if (argc != 2 && argc != 3)
+    if (argc != 1 && argc != 2 && argc != 3)
     {
         std::cerr << "   [qresourcemanager_d]..aemon_d [screen|log PATH]"
                   << std::endl;
@@ -302,7 +301,9 @@ int main(int argc, char *argv[])
 
     std::string stream;
 
-    if (argc == 2)
+    if (argc == 1)
+        stream = "screen";
+    else if (argc == 2)
     {
         stream = argv[1];
         if (stream != "screen")
@@ -312,8 +313,7 @@ int main(int argc, char *argv[])
             return 1;
         }
     }
-
-    if (argc == 3)
+    else if (argc == 3)
     {
         stream = argv[1];
         if (stream != "log")
@@ -325,40 +325,40 @@ int main(int argc, char *argv[])
     }
 
     // Fork the process to create a daemon
-    pid_t pid = fork();
+    //pid_t pid = fork();
 
-    if (pid < 0)
-    {
-        std::cerr << "   [qresourcemanager_d]..Failed to fork" << std::endl;
-        return 1;
-    }
+    //if (pid < 0)
+    //{
+    //    std::cerr << "   [qresourcemanager_d]..Failed to fork" << std::endl;
+    //    return 1;
+    //}
 
     std::string filePath;
 
     if (stream == "log")
         filePath = std::string(argv[2]) + "/logs/qresourcemanager_d.log";
 
-    if (pid > 0)
-    {
-        std::cout
-            << "   [qresourcemanager_d]..To stop this daemon type: kill -15 "
-            << pid << std::endl;
-        if (stream == "log")
-            std::cout << "   [qresourcemanager_d]..The log can be found in "
-                      << filePath << std::endl;
+    //if (pid > 0)
+    //{
+    //    std::cout
+    //        << "   [qresourcemanager_d]..To stop this daemon type: kill -15 "
+    //        << pid << std::endl;
+    //    if (stream == "log")
+    //        std::cout << "   [qresourcemanager_d]..The log can be found in "
+    //                  << filePath << std::endl;
 
-        return 0;
-    }
+    //    return 0;
+    //}
 
-    // Create a new session and become the session leader
-    setsid();
+    //// Create a new session and become the session leader
+    //setsid();
 
-    // Change the working directory to root to avoid locking the current
-    // directory
-    chdir("/");
+    //// Change the working directory to root to avoid locking the current
+    //// directory
+    //chdir("/");
 
-    // Set up a signal handler for graceful termination
-    signal(SIGTERM, signalHandler);
+    //// Set up a signal handler for graceful termination
+    //signal(SIGTERM, signalHandler);
 
     // Set the output stream
     if (stream == "log")
@@ -382,8 +382,8 @@ int main(int argc, char *argv[])
     }
 
     // Establish a connection to the RabbitMQ server
-    const char *QDQueue = "qd_queue";
-    const char *QRMQueue = "qrm_queue";
+    const char *QDQueue = "queue_daemon";
+    const char *QRMQueue = "queue_manager";
     amqp_socket_t *socket = NULL;
 
     rabbitmq_new_connection(&conn, &socket);
@@ -435,12 +435,14 @@ int main(int argc, char *argv[])
             //// Create a new thread that executes 'handleQuantumDaemon' to run
             //// the received scheduler, and the received selector targeting
             //// the received QIR
-            // std::thread QuantumDaemonThread(handleQuantumDaemon,
-            // std::ref(conn),
-            //                                 QDQueue, parentQuantumTask);
+            //std::thread QuantumDaemonThread(handleQuantumDaemon,
+            //    std::ref(conn),
+            //    QDQueue, 
+            //    parentQuantumTask
+            //);
 
             //// Detach from this thread once done
-            // QuantumDaemonThread.detach();
+            //QuantumDaemonThread.detach();
 
             handleQuantumDaemon(conn, QDQueue, parentQuantumTask);
         }
