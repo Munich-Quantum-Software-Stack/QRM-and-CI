@@ -18,6 +18,7 @@ void crossover(NSGA2Type *nsga2Params, individual *parent1, individual *parent2,
     if (nsga2Params->nint != 0)
     {
         intcross(nsga2Params, parent1, parent2, child1, child2);
+        // intInterleafCross(nsga2Params, parent1, parent2, child1, child2);
     }
     if (nsga2Params->nbin != 0)
     {
@@ -213,6 +214,40 @@ void intcross(NSGA2Type *nsga2Params, individual *parent1, individual *parent2,
             {
                 child1->xint[i] = parent1->xint[i];
                 child2->xint[i] = parent2->xint[i];
+            }
+        }
+    }
+    else
+    {
+        for (i = 0; i < nsga2Params->nint; i++)
+        {
+            child1->xint[i] = parent1->xint[i];
+            child2->xint[i] = parent2->xint[i];
+        }
+    }
+    return;
+}
+
+/* Routine for int variable interleaf crossover */
+void intInterleafCross(NSGA2Type *nsga2Params, individual *parent1,
+                       individual *parent2, individual *child1,
+                       individual *child2)
+{
+    int i;
+    if (randomperc() <= nsga2Params->pcross_int)
+    {
+        nsga2Params->nintcross++;
+        for (i = 0; i < nsga2Params->nint; i++)
+        {
+            if (i % 2 == 0)
+            {
+                child1->xint[i] = parent1->xint[i];
+                child2->xint[i] = parent2->xint[i];
+            }
+            else
+            {
+                child1->xint[i] = parent2->xint[i];
+                child2->xint[i] = parent1->xint[i];
             }
         }
     }
