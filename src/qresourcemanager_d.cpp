@@ -180,6 +180,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
             return;
         }
 
+        SmallVector<char, 0> buffer;
         childQuantumTask.thread_safe_module.withModuleDo(
             [&](Module &module)
             {
@@ -189,9 +190,21 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                 OS.flush();
                 const char *qir = str.data();
                 modules.push_back((char *)qir);
-                // TODO QDMI_control_pack_qir
-                //      should replace this:
-                frag->qirmod = strdup((char *)qir);
+
+                raw_svector_ostream ostream(buffer);
+                WriteBitcodeToFile(module, ostream);
+
+                if (buffer.empty())
+                {
+                    std::cout << "   [qresourcemanager_d]..Warning: "
+                              << "Could not create bitcode" << std::endl;
+
+                    return;
+                }
+
+                void* qirmod = static_cast<void*>(buffer.data());
+                frag->sizebuffer = buffer.size();
+                err = QDMI_control_pack_qir(device, qirmod, &frag);
             });
 
         // Submit the adapted QIR to the target platform
@@ -225,7 +238,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
             results[std::to_string(i)] = raw_numbers[i];
 
         free(raw_numbers);
-        free(frag->qirmod);
+        //free(frag->qirmod);
         free(frag);
         // free(device);
     }
