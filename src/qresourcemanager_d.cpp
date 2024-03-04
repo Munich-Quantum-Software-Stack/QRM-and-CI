@@ -208,6 +208,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
             });
 
         // Submit the adapted QIR to the target platform
+        // TODO Handle err
         err = QDMI_control_submit(device, &frag, childQuantumTask.n_shots,
                                   device->library.info, &job);
         CHECK_ERR(err, "QDMI_control_submit");
@@ -238,9 +239,8 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
             results[std::to_string(i)] = raw_numbers[i];
 
         free(raw_numbers);
-        //free(frag->qirmod);
         free(frag);
-        // free(device);
+        free(device);
     }
 
     auto end = std::chrono::steady_clock::now();
