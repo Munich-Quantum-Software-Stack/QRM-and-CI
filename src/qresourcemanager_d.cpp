@@ -214,7 +214,12 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         }
 
         // TODO Handle err
-        err = QDMI_control_readout_raw_num(device, &status, raw_numbers);
+        err = QDMI_control_readout_raw_num(
+            device, 
+            &status, 
+            childQuantumTask.task_id, 
+            raw_numbers
+        );
 
         for (long i = 0; i < ((long)1 << numbits); i++)
             results[std::to_string(i)] = raw_numbers[i];
