@@ -1,0 +1,20 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Test",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/tests/QRMTest", // Path to your test executable
+            "args": [], // Add any command-line arguments needed by your test program
+            "cwd": "${workspaceFolder}/",
+            "env": {
+                "PASSES" : "$HOME/bin/lib/passes", 
+                "QDMI_CONFIG_FILE" : "$HOME/mqss/qrm.git/.qdmi-config",
+                "CONF_IBM" : "$HOME/mqss/qrm.git/inputs/conf.json",
+                "TOKEN_WMI" : "$HOME/mqss/qrm.git/tokens/token.txt",
+            },
+            "preLaunchTask": "build" // Replace "build" with the name of your build task if you have one
+        }
+    ]
+}
