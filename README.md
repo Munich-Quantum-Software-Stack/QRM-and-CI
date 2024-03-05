@@ -37,7 +37,7 @@ To install the Quantum Resource Manager daemon system wide, follow these steps:
 1. Install the required dependencies:
    ```bash
    sudo apt update
-   sudo apt install -y cmake llvm llvm-dev rabbitmq-server g++ curl libgtest-dev nlohmann-json3-dev libjansson-dev
+   sudo apt install -y cmake llvm llvm-dev rabbitmq-server g++ curl libgtest-dev nlohmann-json3-dev libjansson-dev libcjson-dev
    ```
 
 2. Set the following environment variables:
