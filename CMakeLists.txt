@@ -7,6 +7,9 @@ project(
 # Set the C++ standard
 set(CMAKE_CXX_STANDARD 17)
 
+add_compile_options("-g")
+
+
 # Set the installation directory for the daemon
 #if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 set(CMAKE_INSTALL_PREFIX $ENV{HOME}/bin CACHE PATH "..." FORCE)
@@ -17,6 +20,8 @@ set(INSTALL_PATH "${CMAKE_INSTALL_PREFIX}")
 file(WRITE ${CMAKE_INSTALL_PREFIX}/logs/qresourcemanager_d.log "")
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+
+find_library(RABBITMQ_LIBRARY rabbitmq)
 
 # Find FoMaC package
 find_package(fomac REQUIRED)
@@ -70,12 +75,14 @@ add_library(SchedulerRunner SHARED src/scheduler_runner/SchedulerRunner.cpp)
 add_library(SelectorRunner  SHARED src/selector_runner/SelectorRunner.cpp)
 add_library(PassRunner      SHARED src/pass_runner/PassRunner.cpp)
 add_library(QirPassRunner   SHARED src/pass_runner/QirPassRunner.cpp)
+add_library(QRMD   SHARED src/qresourcemanager_d.cpp)
 
 target_link_libraries(GeneratorRunner PRIVATE qdmi qinfo fomac)
 target_link_libraries(SchedulerRunner PRIVATE qdmi qinfo fomac)
 target_link_libraries(SelectorRunner  PRIVATE qdmi qinfo fomac)
 target_link_libraries(PassRunner      PRIVATE qdmi qinfo fomac)
 target_link_libraries(QirPassRunner   PRIVATE qdmi qinfo fomac)
+target_link_libraries(QRMD   PRIVATE qdmi qinfo fomac QirPassRunner PassRunner SelectorRunner SchedulerRunner GeneratorRunner rabbitmq)
 
 set(EXECUTABLE_NAME
     "qresourcemanager_d"

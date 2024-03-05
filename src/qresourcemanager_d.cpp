@@ -106,7 +106,6 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
             << "   [qresourcemanager_d]..Warning: There was an error splitting "
                "the quantum circuit"
             << std::endl;
-        return;
     }
 
     // Compile and execute each generated sub-circuit
