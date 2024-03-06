@@ -188,11 +188,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
             {
                 OS << module; 
                 OS.flush();
-                const char *qir = str.data();
-
-                std::string qir_str(qir);
-
-                modules.push_back(qir_str);
+                modules.push_back(str.data());
                 raw_svector_ostream ostream(buffer);
                 WriteBitcodeToFile(module, ostream);
 
