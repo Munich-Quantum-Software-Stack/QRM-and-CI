@@ -51,8 +51,8 @@ extern "C" std::vector<std::string> selector(void)
         passesPath + "/libQirCommuteXCnotPass.so",
         passesPath + "/libQirCommuteCnotZPass.so",
         passesPath + "/libQirCommuteZCnotPass.so",
-        passesPath + "/libQirPlaceIrreversibleGatesInMetadataPass.so",
         passesPath + "/libQirAnnotateUnsupportedGatesPass.so",
+        passesPath + "/libQirPlaceIrreversibleGatesInMetadataPass.so",
         // passesPath + "/libQirU3ToRzRyRzDecompositionPass.so",
         // passesPath + "/libQirRzToRxRyRxDecompositionPass.so", TODO Bug?
         passesPath + "/libQirCNotToHCZHDecompositionPass.so",
@@ -64,10 +64,7 @@ extern "C" std::vector<std::string> selector(void)
         // passesPath + "/libQirZYZDecompositionPass.so",
         passesPath + "/libQirFunctionAnnotatorPass.so",
         passesPath + "/libQirRedundantGatesCancellationPass.so",
-        passesPath + "/libQirFunctionReplacementPass.so",
-        //passesPath + "/libQirReplaceConstantBranchesPass.so",
         passesPath + "/libQirGroupingPass.so",
-        //passesPath + "/libQirRemoveNonEntrypointFunctionsPass.so",
         passesPath + "/libQirDeferMeasurementPass.so",
         //passesPath + "/libQirBarrierBeforeFinalMeasurementsPass.so",
         passesPath + "/libQirRemoveBasicBlocksWithSingleNonConditionalBranchIns"
@@ -87,6 +84,9 @@ extern "C" std::vector<std::string> selector(void)
         passesPath + "/libQirSDaggerToSPass.so",
         passesPath + "/libQirReverseCnotPass.so",
         passesPath + "/libQirSwapAndCnotReplacementPass.so",
+        passesPath + "/libQirFunctionReplacementPass.so",
+        passesPath + "/libQirReplaceConstantBranchesPass.so",
+        passesPath + "/libQirRemoveNonEntrypointFunctionsPass.so",
     };
 
     std::cout << "   [Selector]............Returning list of passes to the "

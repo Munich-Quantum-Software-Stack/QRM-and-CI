@@ -1,3 +1,7 @@
+/home/ubuntu/bin/lib/libbackend_qlm.so
+param1=01234
+param2=0.0
+param3=one
 /home/ubuntu/bin/lib/libbackend_ibm.so
 param1=01234
 param2=0.0
