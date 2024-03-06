@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
     rabbitmq_new_connection(&conn, &socket);
 
     // Open the QIR file
-    const char *filename = "../../benchmarks/ibm.ll";
+    const char *filename = "../../benchmarks/q7.ll";
     std::ifstream file(filename, std::ios::binary);
     if (!file.is_open())
     {
