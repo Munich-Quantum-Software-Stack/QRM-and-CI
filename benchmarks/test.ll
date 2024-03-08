@@ -1,30 +1,12 @@
-; type definitions
+; ModuleID = 'my-circuit'
+source_filename = "my-circuit"
 
-%Result = type opaque
 %Qubit = type opaque
+%Result = type opaque
 
-; global constants (labels for output recording)
-
-@0 = internal constant [3 x i8] c"r1\00"
-@1 = internal constant [3 x i8] c"r2\00"
-
-@d0 = internal constant double 0.0
-@d1 = internal constant double 17.2787595947
-@d2 = internal constant double 12.56637061435917295384
-
-; entry point definition
-
-define i64 @Entry_Point_Name() #0 {
+define void @my-circuit() #0 {
 entry:
-  %0 = sdiv i32 1, 0
-  %zero = load double, double* @d0
-  %pi4 = load double, double* @d1
-  %null_rotation = load double, double* @d2
-  ; calls to initialize the execution environment
   call void @__quantum__rt__initialize(i8* null)
-  ; calls to QIS functions that are not irreversible
-  call void @__quantum__qis__U3__body(double %zero, double %zero, double %zero, %Qubit* null)
-  call void @__quantum__qis__rz__body(double %pi4, %Qubit* null)
   call void @__quantum__qis__h__body(%Qubit* null)
   call void @__quantum__qis__cnot__body(%Qubit* null, %Qubit* inttoptr (i64 1 to %Qubit*))
   call void @__quantum__qis__x__body(%Qubit* inttoptr (i64 1 to %Qubit*))
@@ -102,60 +84,21 @@ exit_block:                                       ; preds = %false_block, %true_
   ret i64 0
 }
 
-define i64 @NonEntry_Point_Name() #2 {
-entry:
-  ret i64 0
-}
-
-; declarations of QIS functions
+declare void @__quantum__rt__initialize(i8*)
 
 declare void @__quantum__qis__h__body(%Qubit*)
 
-declare void @__quantum__qis__U3__body(double, double, double, %Qubit*)
-
-declare void @__quantum__qis__rz__body(double, %Qubit*)
-
-declare void @__quantum__qis__ry__body(double, %Qubit*)
-
-declare void @__quantum__qis__rx__body(double, %Qubit*)
-
-declare void @__quantum__qis__x__body(%Qubit*)
-
-declare void @__quantum__qis__y__body(%Qubit*)
-
-declare void @__quantum__qis__z__body(%Qubit*)
-
-declare void @__quantum__qis__s__body(%Qubit*)
-
-declare void @__quantum__qis__s__adj(%Qubit*)
-
 declare void @__quantum__qis__cnot__body(%Qubit*, %Qubit*)
-
-declare void @__quantum__qis__cz__body(%Qubit*, %Qubit*)
-
-declare void @__quantum__qis__swap__body(%Qubit*, %Qubit*)
-
-declare void @__quantum__qis__id__body(%Qubit*)
 
 declare void @__quantum__qis__mz__body(%Qubit*, %Result* writeonly) #1
 
-; declarations of runtime functions for initialization and output recording
-
-declare void @__quantum__rt__initialize(i8*)
-
-declare void @__quantum__rt__tuple_record_output(i64, i8*)
+declare void @__quantum__rt__array_record_output(i64, i8*)
 
 declare void @__quantum__rt__result_record_output(%Result*, i8*)
 
-; attributes
 
-attributes #0 = { "entry_point" "qir_profiles"="base_profile" "output_labeling_schema"="schema_id" "num_required_qubits"="2" "num_required_results"="2" }
-
+ #0 = { "entry_point" "num_required_qubits"="3" "num_required_results"="3" "output_labeling_schema" "qir_profiles"="custom" }
 attributes #1 = { "irreversible" }
-
-attributes #2 = { "qir_profiles"="base_profile" }
-
-; module flags
 
 !llvm.module.flags = !{!0, !1, !2, !3}
 

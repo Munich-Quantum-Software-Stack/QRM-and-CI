@@ -34,8 +34,8 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
 {
     QuantumTask task;
 
-    json QuantumTask_json = json::parse(QuantumTask_str);
-
+        json QuantumTask_json = json::parse(QuantumTask_str);
+    
     if (!QuantumTask_json.contains("task_id"))
     {
         std::cout << "   [qresourcemanager_d]..Warning: task_id not defined"
@@ -52,7 +52,20 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
     task.circuit_file = QuantumTask_json["circuit_file"];
     task.circuit_file_type = QuantumTask_json["circuit_file_type"];
     task.result_destination = QuantumTask_json["result_destination"];
-    task.preferred_qpu = QuantumTask_json["preferred_qpu"];
+    // TODO: there must be an easier way to do this
+    nlohmann::json json_obj = QuantumTask_json["preferred_qpus"];
+    std::vector<std::string> preferred_qpus;
+    if (json_obj.is_string()) {
+      std::string preferred_qpus_str = json_obj.get<std::string>();
+      std::stringstream ss(preferred_qpus_str);
+      std::string token;
+      while (std::getline(ss, token, ',')) {
+        preferred_qpus.push_back(token);
+      }
+    } else if (json_obj.is_array()) {
+      preferred_qpus = json_obj.get<std::vector<std::string>>();
+    }
+    task.preferred_qpus = preferred_qpus;    
     task.scheduled_qpu = QuantumTask_json["scheduled_qpu"];
     task.priority = QuantumTask_json["priority"];
     task.optimisation_level = QuantumTask_json["optimisation_level"];

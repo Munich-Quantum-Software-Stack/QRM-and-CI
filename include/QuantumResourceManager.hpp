@@ -53,7 +53,7 @@ struct QuantumTask
     std::string circuit_file;
     std::string circuit_file_type;
     std::string result_destination;
-    std::string preferred_qpu;
+    std::vector<std::string> preferred_qpus;
     std::string scheduled_qpu;
     int priority;
     int optimisation_level;

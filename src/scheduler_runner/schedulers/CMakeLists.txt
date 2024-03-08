@@ -1,5 +1,5 @@
 # Include all new schedulers here
-set(SCHEDULERS_SOURCE_FILES scheduler_round_robin.cpp)
+set(SCHEDULERS_SOURCE_FILES scheduler_round_robin.cpp scheduler_heuristic.cpp)
 
 # Set RPATH for the shared libraries in this directory
 set(CMAKE_INSTALL_RPATH "${INSTALL_PATH}/lib")
