@@ -34,8 +34,8 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
 {
     QuantumTask task;
 
-        json QuantumTask_json = json::parse(QuantumTask_str);
-    
+    json QuantumTask_json = json::parse(QuantumTask_str);
+
     if (!QuantumTask_json.contains("task_id"))
     {
         std::cout << "   [qresourcemanager_d]..Warning: task_id not defined"
@@ -193,14 +193,16 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         }
 
         SmallVector<char, 0> buffer;
-        std::string str;
-        raw_string_ostream OS(str);
         childQuantumTask.thread_safe_module.withModuleDo(
             [&](Module &module)
             {
+                std::string str;
+                raw_string_ostream OS(str);
                 OS << module; 
                 OS.flush();
-                modules.push_back(str.data());
+                const char *qir = str.data();
+                modules.push_back((char *)qir);
+
                 raw_svector_ostream ostream(buffer);
                 WriteBitcodeToFile(module, ostream);
 
@@ -212,13 +214,12 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                     return;
                 }
 
-                void* qirmod = static_cast<void *>(buffer.data());
+                void* qirmod = static_cast<void*>(buffer.data());
                 frag->sizebuffer = buffer.size();
                 err = QDMI_control_pack_qir(device, qirmod, &frag);
             });
 
         // Submit the adapted QIR to the target platform
-        job->task_id = childQuantumTask.task_id;
         // TODO Handle err
         err = QDMI_control_submit(device, &frag, childQuantumTask.n_shots,
                                   device->library.info, &job);
@@ -229,8 +230,8 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         // TODO Handle err
         QDMI_Status status;
         err = QDMI_control_readout_size(device, &status, &numbits);
-        int* raw_numbers = new int[1 << numbits];
-        if (numbits == 0)
+        int *raw_numbers = (int *)malloc(((long)1 << numbits) * sizeof(int));
+        if (raw_numbers == NULL)
         {
             std::cout << "   [qresourcemanager_d]..Warning: "
                       << "The results could not be fetched" << std::endl;
@@ -242,14 +243,14 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         err = QDMI_control_readout_raw_num(
             device, 
             &status, 
-            job->task_id, 
+            childQuantumTask.task_id, 
             raw_numbers
         );
 
         for (long i = 0; i < ((long)1 << numbits); i++)
             results[std::to_string(i)] = raw_numbers[i];
 
-        delete[] raw_numbers;
+        free(raw_numbers);
         free(frag);
         free(device);
     }
