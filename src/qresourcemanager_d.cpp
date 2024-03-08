@@ -193,16 +193,14 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         }
 
         SmallVector<char, 0> buffer;
+        std::string str;
+        raw_string_ostream OS(str);
         childQuantumTask.thread_safe_module.withModuleDo(
             [&](Module &module)
             {
-                std::string str;
-                raw_string_ostream OS(str);
                 OS << module; 
                 OS.flush();
-                const char *qir = str.data();
-                modules.push_back((char *)qir);
-
+                modules.push_back(str.data());
                 raw_svector_ostream ostream(buffer);
                 WriteBitcodeToFile(module, ostream);
 
@@ -214,12 +212,13 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                     return;
                 }
 
-                void* qirmod = static_cast<void*>(buffer.data());
+                void* qirmod = static_cast<void *>(buffer.data());
                 frag->sizebuffer = buffer.size();
                 err = QDMI_control_pack_qir(device, qirmod, &frag);
             });
 
         // Submit the adapted QIR to the target platform
+        job->task_id = childQuantumTask.task_id;
         // TODO Handle err
         err = QDMI_control_submit(device, &frag, childQuantumTask.n_shots,
                                   device->library.info, &job);
@@ -230,8 +229,8 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         // TODO Handle err
         QDMI_Status status;
         err = QDMI_control_readout_size(device, &status, &numbits);
-        int *raw_numbers = (int *)malloc(((long)1 << numbits) * sizeof(int));
-        if (raw_numbers == NULL)
+        int* raw_numbers = new int[1 << numbits];
+        if (numbits == 0)
         {
             std::cout << "   [qresourcemanager_d]..Warning: "
                       << "The results could not be fetched" << std::endl;
@@ -243,14 +242,14 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         err = QDMI_control_readout_raw_num(
             device, 
             &status, 
-            childQuantumTask.task_id, 
+            job->task_id, 
             raw_numbers
         );
 
         for (long i = 0; i < ((long)1 << numbits); i++)
             results[std::to_string(i)] = raw_numbers[i];
 
-        free(raw_numbers);
+        delete[] raw_numbers;
         free(frag);
         free(device);
     }
