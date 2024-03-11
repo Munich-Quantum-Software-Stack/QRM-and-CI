@@ -55,17 +55,22 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
     // TODO: there must be an easier way to do this
     nlohmann::json json_obj = QuantumTask_json["preferred_qpus"];
     std::vector<std::string> preferred_qpus;
-    if (json_obj.is_string()) {
-      std::string preferred_qpus_str = json_obj.get<std::string>();
-      std::stringstream ss(preferred_qpus_str);
-      std::string token;
-      while (std::getline(ss, token, ',')) {
-        preferred_qpus.push_back(token);
-      }
-    } else if (json_obj.is_array()) {
-      preferred_qpus = json_obj.get<std::vector<std::string>>();
+    if (json_obj.is_string())
+    {
+        std::string preferred_qpus_str = json_obj.get<std::string>();
+        std::stringstream ss(preferred_qpus_str);
+        std::string token;
+        while (std::getline(ss, token, ','))
+        {
+            preferred_qpus.push_back(token);
+        }
     }
-    task.preferred_qpus = preferred_qpus;    
+    else if (json_obj.is_array())
+    {
+        preferred_qpus = json_obj.get<std::vector<std::string>>();
+    }
+    task.preferred_qpus = preferred_qpus;
+    task.duration = QuantumTask_json["duration"];
     task.scheduled_qpu = QuantumTask_json["scheduled_qpu"];
     task.priority = QuantumTask_json["priority"];
     task.optimisation_level = QuantumTask_json["optimisation_level"];
@@ -140,7 +145,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                                     ? "libscheduler_round_robin.so"
                                     : childQuantumTask.change_scheduler;
 
-        QDMI_Device device = invokeScheduler(scheduler, childQuantumTask);
+        QDMI_Device device = invokeSchedulera(scheduler, childQuantumTask);
 
         // childQuantumTask.setTargetDevice(device);
 
@@ -198,7 +203,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
             {
                 std::string str;
                 raw_string_ostream OS(str);
-                OS << module; 
+                OS << module;
                 OS.flush();
                 const char *qir = str.data();
                 modules.push_back((char *)qir);
@@ -214,7 +219,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                     return;
                 }
 
-                void* qirmod = static_cast<void*>(buffer.data());
+                void *qirmod = static_cast<void *>(buffer.data());
                 frag->sizebuffer = buffer.size();
                 err = QDMI_control_pack_qir(device, qirmod, &frag);
             });
@@ -241,11 +246,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
 
         // TODO Handle err
         err = QDMI_control_readout_raw_num(
-            device, 
-            &status, 
-            childQuantumTask.task_id, 
-            raw_numbers
-        );
+            device, &status, childQuantumTask.task_id, raw_numbers);
 
         for (long i = 0; i < ((long)1 << numbits); i++)
             results[std::to_string(i)] = raw_numbers[i];
@@ -320,7 +321,7 @@ void signalHandler(int signum)
  */
 int main(int argc, char *argv[])
 {
-    //setbuf(stdout, NULL);
+    // setbuf(stdout, NULL);
 
     if (argc != 1 && argc != 2 && argc != 3)
     {
@@ -355,40 +356,40 @@ int main(int argc, char *argv[])
     }
 
     // Fork the process to create a daemon
-    //pid_t pid = fork();
+    // pid_t pid = fork();
 
-    //if (pid < 0)
+    // if (pid < 0)
     //{
-    //    std::cerr << "   [qresourcemanager_d]..Failed to fork" << std::endl;
-    //    return 1;
-    //}
+    //     std::cerr << "   [qresourcemanager_d]..Failed to fork" << std::endl;
+    //     return 1;
+    // }
 
     std::string filePath;
 
     if (stream == "log")
         filePath = std::string(argv[2]) + "/logs/qresourcemanager_d.log";
 
-    //if (pid > 0)
+    // if (pid > 0)
     //{
-    //    std::cout
-    //        << "   [qresourcemanager_d]..To stop this daemon type: kill -15 "
-    //        << pid << std::endl;
-    //    if (stream == "log")
-    //        std::cout << "   [qresourcemanager_d]..The log can be found in "
-    //                  << filePath << std::endl;
+    //     std::cout
+    //         << "   [qresourcemanager_d]..To stop this daemon type: kill -15 "
+    //         << pid << std::endl;
+    //     if (stream == "log")
+    //         std::cout << "   [qresourcemanager_d]..The log can be found in "
+    //                   << filePath << std::endl;
 
     //    return 0;
     //}
 
     //// Create a new session and become the session leader
-    //setsid();
+    // setsid();
 
     //// Change the working directory to root to avoid locking the current
     //// directory
-    //chdir("/");
+    // chdir("/");
 
     //// Set up a signal handler for graceful termination
-    //signal(SIGTERM, signalHandler);
+    // signal(SIGTERM, signalHandler);
 
     // Set the output stream
     if (stream == "log")
@@ -465,14 +466,14 @@ int main(int argc, char *argv[])
             //// Create a new thread that executes 'handleQuantumDaemon' to run
             //// the received scheduler, and the received selector targeting
             //// the received QIR
-            //std::thread QuantumDaemonThread(handleQuantumDaemon,
-            //    std::ref(conn),
-            //    QDQueue, 
-            //    parentQuantumTask
+            // std::thread QuantumDaemonThread(handleQuantumDaemon,
+            //     std::ref(conn),
+            //     QDQueue,
+            //     parentQuantumTask
             //);
 
             //// Detach from this thread once done
-            //QuantumDaemonThread.detach();
+            // QuantumDaemonThread.detach();
 
             handleQuantumDaemon(conn, QDQueue, parentQuantumTask);
         }

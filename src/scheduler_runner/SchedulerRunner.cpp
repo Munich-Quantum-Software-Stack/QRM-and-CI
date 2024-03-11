@@ -34,7 +34,9 @@ QDMI_Device invokeScheduler(const std::string &nameScheduler,
               << nameScheduler << std::endl;
 
     // Load the scheduler as a shared library
-    pathScheduler = "/home/ubuntu/mqss/qrm.git/build/src/scheduler_runner/schedulers/libscheduler_round_robin.so";
+    pathScheduler =
+        "/home/ubuntu/mqss/qrm.git/build/src/scheduler_runner/schedulers/" +
+        nameScheduler;
     void *lib_handle = dlopen(pathScheduler.c_str(), RTLD_LAZY);
 
     if (!lib_handle)

@@ -36,7 +36,8 @@ std::vector<QuantumTask> invokeGenerator(const QuantumTask &parentQuantumTask,
               << nameGenerator << std::endl;
 
     // Load the generator as a shared library
-    pathGenerator = "/home/ubuntu/mqss/qrm.git/build/src/generator_runner/generators/libgenerator_cutter.so";
+    pathGenerator = "/home/ubuntu/mqss/qrm.git/build/src/generator_runner/"
+                    "generators/libgenerator_cutter.so";
     void *lib_handle = dlopen(pathGenerator.c_str(), RTLD_LAZY);
 
     if (!lib_handle)

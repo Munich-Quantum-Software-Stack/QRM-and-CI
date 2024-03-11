@@ -22,7 +22,8 @@ struct QuantumResult
     double execution_time;
 };
 
-int main(){
+int main()
+{
     QuantumResult result;
 
     amqp_connection_state_t conn;
@@ -62,7 +63,8 @@ int main(){
         {"circuit_file", ""},
         {"circuit_file_type", "QIR"},
         {"result_destination", ""},
-        {"preferred_qpu", "Q20"},
+        {"preferred_qpus", "Q20, Q5"},
+        {"duration", 1},
         {"scheduled_qpu", ""},
         {"priority", 0},
         {"optimisation_level", 0},
@@ -73,7 +75,7 @@ int main(){
         {"circuit_qiskit", genericQir},
         {"additional_information", ""},
         {"change_selector", "libselector_manual.so"},
-        {"change_scheduler", "libscheduler_round_robin.so"},
+        {"change_scheduler", "libscheduler_heuristic.so"},
     };
 
     auto qt = JSONToQuantumTask(QuantumTask_json.dump().c_str());

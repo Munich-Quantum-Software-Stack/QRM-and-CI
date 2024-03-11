@@ -43,7 +43,7 @@ extern "C" std::vector<std::string> selector(void)
     std::vector<std::string> passes{
         passesPath + "/libQirQMapPass.so",
         passesPath + "/libQirDivisionByZeroPass.so",
-        //passesPath + "/libQirNormalizeArgAnglePass.so",
+        // passesPath + "/libQirNormalizeArgAnglePass.so",
         passesPath + "/libQirXCnotXReductionPass.so",
         passesPath + "/libQirCommuteCnotRxPass.so",
         passesPath + "/libQirCommuteRxCnotPass.so",
@@ -66,7 +66,7 @@ extern "C" std::vector<std::string> selector(void)
         passesPath + "/libQirRedundantGatesCancellationPass.so",
         passesPath + "/libQirGroupingPass.so",
         passesPath + "/libQirDeferMeasurementPass.so",
-        //passesPath + "/libQirBarrierBeforeFinalMeasurementsPass.so",
+        // passesPath + "/libQirBarrierBeforeFinalMeasurementsPass.so",
         passesPath + "/libQirRemoveBasicBlocksWithSingleNonConditionalBranchIns"
                      "tsPass.so",
         passesPath + "/libQirQubitRemapPass.so",

@@ -26,6 +26,7 @@
 #include <thread>
 #include <unistd.h>
 #include <vector>
+#include <qdmi.h>
 
 using llvm::orc::ThreadSafeModule;
 

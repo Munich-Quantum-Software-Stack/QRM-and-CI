@@ -1,16 +1,16 @@
 #include "../include/connection_handling.hpp"
 
+#include <chrono>
 #include <cstdlib>
 #include <ctime>
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <nlohmann/json.hpp>
-#include <string>
-#include <vector>
 #include <stdio.h>
+#include <string>
 #include <thread>
-#include <chrono>
+#include <vector>
 
 using json = nlohmann::json;
 
@@ -95,7 +95,8 @@ int main(int argc, char *argv[])
         {"circuit_file", ""},
         {"circuit_file_type", "QIR"},
         {"result_destination", ""},
-        {"preferred_qpus", "Q20, Q7"},
+        {"preferred_qpus", "Q20,Q7"},
+        {"duration", 1},
         {"scheduled_qpu", ""},
         {"priority", 0},
         {"optimisation_level", 0},
@@ -123,8 +124,8 @@ int main(int argc, char *argv[])
     const char *results = receive_message(&conn, QDQueue);
     // TODO Why do we need such a delay for the output
     //      stream to work
-    //std::this_thread::sleep_for(std::chrono::milliseconds(150));
-    //std::cout << std::flush;
+    // std::this_thread::sleep_for(std::chrono::milliseconds(150));
+    // std::cout << std::flush;
     if (results)
     {
         QuantumResult quantumResult = JSONToQuantumResult(results);
@@ -148,8 +149,9 @@ int main(int argc, char *argv[])
                   << quantumResult.execution_time << " s." << std::endl;
         std::cout << "                      L ...executed_circuit(s): ";
         for (const auto &qir : quantumResult.executed_circuit)
-            std::cout << std::endl << "Circuit " << ++count << ":"  
-                      << std::endl << qir;
+            std::cout << std::endl
+                      << "Circuit " << ++count << ":" << std::endl
+                      << qir;
         std::cout << std::endl << "Results: " << std::endl;
         for (const auto &result : quantumResult.results)
             std::cout << "\t" << result.first << ": " << result.second

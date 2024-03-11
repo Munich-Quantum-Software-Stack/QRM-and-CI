@@ -9,7 +9,7 @@
             "args": [], // Add any command-line arguments needed by your test program
             "cwd": "${workspaceFolder}/",
             "env": {
-                "PASSES" : "$HOME/bin/lib/passes", 
+                "PASSES" : "$HOME/bin/lib/passes",
                 "QDMI_CONFIG_FILE" : "$HOME/mqss/qrm.git/.qdmi-config",
                 "CONF_IBM" : "$HOME/mqss/qrm.git/inputs/conf.json",
                 "TOKEN_WMI" : "$HOME/mqss/qrm.git/tokens/token.txt",

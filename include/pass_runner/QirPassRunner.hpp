@@ -6,8 +6,8 @@
 #ifndef QIR_MODULE_PASS_MANAGER_H
 #define QIR_MODULE_PASS_MANAGER_H
 
-#include "PassModule.hpp"
 #include "../src/my_qdmi.hpp"
+#include "PassModule.hpp"
 
 #include <dlfcn.h>
 #include <string>
@@ -48,17 +48,20 @@ struct QirMetadata
         injectedAnnotations;         /**< Map of injected annotations. */
     bool shouldRemoveCallAttributes; /**< Boolean value for controlling the
                                           removal of call attributes. */
-    std::vector<Queue> queues;       /**< Map of queues: Platform name and Job */
-    std::unordered_map<int, float> end_times; /**< Map of end times: Task ID and
-                                                 end time */
+    std::vector<Queue> queues; /**< Map of queues: Platform name and Job */
+    std::unordered_map<int, float> ends;      /**< Map of end times: Task ID and
+                                                      end time */
     std::unordered_map<int, float> durations; /**< Map of durations: Task ID and
                                                  duration */
-
-    Queue* get_queue(std::string platform) {
-        auto it = std::find_if(
-            queues.begin(), queues.end(),
-            [&platform](const Queue &queue) { return queue.platform == platform; });
-        if (it != queues.end()) {
+    std::unordered_map<int, float> priorities; /**< Map of priorities: Task ID
+                                                 and duration */
+    Queue *get_queue(std::string platform)
+    {
+        auto it = std::find_if(queues.begin(), queues.end(),
+                               [&platform](const Queue &queue)
+                               { return queue.platform == platform; });
+        if (it != queues.end())
+        {
             return &(*it);
         }
         // initialize queue if not found
@@ -66,28 +69,44 @@ struct QirMetadata
         return &queues.back();
     }
 
-    float get_end_time(int task_id) {
-        if(end_times.find(task_id) != end_times.end())
-            return end_times[task_id];
-        else
-            end_times[task_id] = 0.;
-            return 0.;
+    float get_end(int task_id)
+    {
+        if (ends.find(task_id) != ends.end())
+            return ends[task_id];
+
+        ends[task_id] = 0.;
+        return 0.;
     }
 
-    void update_end_time(int task_id, float new_end_time) {
-        if (new_end_time > end_times[task_id])
-        end_times[task_id] = new_end_time;
+    void update_end(int task_id, float new_end)
+    {
+        if (new_end > ends[task_id])
+            ends[task_id] = new_end;
     }
 
-    float get_duration(int task_id) {
-        if(durations.find(task_id) != durations.end())
+    float get_priority(int task_id)
+    {
+        if (priorities.find(task_id) != priorities.end())
+            return priorities[task_id];
+
+        priorities[task_id] = 0.;
+        return 0.;
+    }
+
+    void update_priority(int task_id, float new_priority)
+    {
+        if (new_priority > priorities[task_id])
+            priorities[task_id] = new_priority;
+    }
+
+    float get_duration(int task_id)
+    {
+        if (durations.find(task_id) != durations.end())
             return durations[task_id];
-        else
-            durations[task_id] = 1.;
-            return 1.;
-    }
-    
 
+        durations[task_id] = 1.;
+        return 1.;
+    }
 
     /**
      * @brief Adds entries to multiple vectors of the metadata. Use example:

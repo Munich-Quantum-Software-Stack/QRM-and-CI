@@ -6,6 +6,7 @@
 #ifndef GENERATORRUNNER_HPP
 #define GENERATORRUNNER_HPP
 
+#include <llvm.hpp>
 #include <algorithm>
 #include <csignal>
 #include <cstring>

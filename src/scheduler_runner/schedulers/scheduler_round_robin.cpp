@@ -28,11 +28,9 @@ extern "C" QDMI_Device scheduler(const QuantumTask &childQuantumTask)
 
     std::cout << "   [Scheduler]...........Choosing "
               << " as target device "
-              << "for job with ID " 
-              << std::endl;
-    
+              << "for job with ID " << std::endl;
+
     int x = 0;
-    
 
     /**
     std::vector<QDMI_Device> devices = FOMAC_available_devices();
