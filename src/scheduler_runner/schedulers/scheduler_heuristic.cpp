@@ -39,7 +39,8 @@ bool skipping(QuantumTask &new_task, const std::string &target_platform)
     }
     else
     {
-        for (int i = queue->tasks.size() - 1; i >= 0; --i)
+        int i = 0;
+        for (i = queue->tasks.size() - 1; i >= 0; --i)
         {
             const QuantumTask &last_task = *queue->tasks[i];
             float last_task_end = qirMetadata.get_end(last_task.task_id);
@@ -76,18 +77,18 @@ bool skipping(QuantumTask &new_task, const std::string &target_platform)
                         // should skip in line (for overall speedup)
                         qirMetadata.update_end(last_task.task_id,
                                                predicted_end);
+                        qirMetadata.update_priority(last_task.task_id,
+                                                    last_task_priority + 1);
                         continue; // check next job in line
                     }
                 }
-                else
-                {
-                    // no (more) skipping -> insert new_task at position i
-                    queue->insertTask(i, &new_task, new_task_duration);
-                    qirMetadata.update_end(new_task.task_id, new_task_duration);
-                    break;
-                }
             }
+            // no (more) skipping
+            break;
         }
+        // insert new_task at position i
+        queue->insertTask(i, &new_task, new_task_duration);
+        qirMetadata.update_end(new_task.task_id, new_task_duration);
     }
     return true;
 }
@@ -95,7 +96,6 @@ bool skipping(QuantumTask &new_task, const std::string &target_platform)
 std::string choose_platform(QuantumTask &task,
                             const std::map<std::string, float> &scores)
 {
-
     // Find the platforms with the three highest final scores
     std::vector<std::string> platforms;
     for (auto &score : scores)
@@ -147,7 +147,6 @@ std::string choose_platform(QuantumTask &task,
             target_platform = platform;
         }
     }
-
     return target_platform;
 }
 
@@ -158,9 +157,8 @@ std::string choose_platform(QuantumTask &task,
  *
  * @return const char *
  */
-extern "C" QDMI_Device scheduler(QuantumTask &task)
+extern "C" QDMI_Device scheduler(std::vector<QuantumTask> &tasks)
 {
-
     // TODO uncomment when FOMAC is available
     // std::vector<QDMI_Device> devices = FOMAC_available_devices();
 
@@ -170,52 +168,68 @@ extern "C" QDMI_Device scheduler(QuantumTask &task)
               << " available device(s)" << std::endl;
 
     std::cout << "   [Scheduler]...........preffered QPU: ";
-    for (auto &qpu : task.preferred_qpus)
+
+    // Sort tasks by priority and within that by duration
+    std::sort(tasks.begin(), tasks.end(),
+              [](const QuantumTask &a, const QuantumTask &b)
+              {
+                  if (a.priority == b.priority)
+                  {
+                      return a.duration > b.duration;
+                  }
+                  return a.priority > b.priority;
+              });
+
+    for (auto &task : tasks)
     {
-        std::cout << qpu << " ";
-    }
 
-    std::map<std::string, float> scores;
-    // Check if the user only wants to use a single QPU
-    if (task.preferred_qpus.size() == 1)
-    {
-        // TODO: Check if the QPU is available
-
-        // Maximal score for the preferred QPU
-        scores = {{task.preferred_qpus[0], 1.0}};
-    }
-    else
-    { // If choice is not forced, use the recommender system
-        // TODO: Calculate ML scores
-
-        // Dummy scores
-        std::vector<std::string> qpus =
-            task.preferred_qpus; // TODO: use devices when available
-        std::vector<float> model_scores(qpus.size());
-        for (auto &score : model_scores)
+        for (auto &qpu : task.preferred_qpus)
         {
-            score = static_cast<float>(rand()) / static_cast<float>(123);
+            std::cout << qpu << " ";
         }
 
-        // Map the model output to a std::map<std::string, float>
-        for (size_t i = 0; i < qpus.size(); ++i)
+        std::map<std::string, float> scores;
+        // Check if the user only wants to use a single QPU
+        if (task.preferred_qpus.size() == 1)
         {
-            scores[qpus[i]] = model_scores[i];
+            // TODO: Check if the QPU is available
+
+            // Maximal score for the preferred QPU
+            scores = {{task.preferred_qpus[0], 1.0}};
         }
+        else
+        { // If choice is not forced, use the recommender system
+            // TODO: Calculate ML scores
+
+            // Dummy scores. TODO: use devices when available
+            std::vector<std::string> qpus = task.preferred_qpus;
+            std::vector<float> model_scores(qpus.size());
+            for (auto &score : model_scores)
+            {
+                score =
+                    static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+            }
+            // Map the model output to a std::map<std::string, float>
+            for (size_t i = 0; i < qpus.size(); ++i)
+            {
+                scores[qpus[i]] = model_scores[i];
+            }
+        }
+
+        std::cout << "   [Scheduler]...........Scores: ";
+        for (auto &score : scores)
+        {
+            std::cout << score.first << " " << score.second << " ";
+        }
+
+        // Choose the platform with the shortest queue out of top 3
+        std::string target_platform = choose_platform(task, scores);
+
+        // Queue the task on the chosen platform and skip if necessary
+        bool success = skipping(task, target_platform);
     }
 
-    std::cout << "   [Scheduler]...........Scores: ";
-    for (auto &score : scores)
-    {
-        std::cout << score.first << " " << score.second << " ";
-    }
-
-    // TODO: scheduling strategy
-
-    std::string target_platform = choose_platform(task, scores);
-    bool success = skipping(task, target_platform);
-
-    std::cout << "   [Scheduler]...........returniing selected device."
+    std::cout << "   [Scheduler]...........returning selected device."
               << std::endl;
 
     return QDMI_Device();

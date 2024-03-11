@@ -33,6 +33,6 @@
 struct QuantumTask;
 
 QDMI_Device invokeScheduler(const std::string &nameScheduler,
-                            const QuantumTask &childQuantumTask);
+                            std::vector<QuantumTask> &childQuantumTasks);
 
 #endif // SCHEDULERRUNNER_HPP

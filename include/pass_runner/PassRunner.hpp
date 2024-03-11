@@ -16,6 +16,7 @@
 #include <fstream>
 #include <iostream>
 #include <netinet/in.h>
+#include <qdmi.h>
 #include <signal.h>
 #include <sstream>
 #include <string>
@@ -26,7 +27,6 @@
 #include <thread>
 #include <unistd.h>
 #include <vector>
-#include <qdmi.h>
 
 using llvm::orc::ThreadSafeModule;
 

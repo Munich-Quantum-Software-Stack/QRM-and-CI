@@ -22,7 +22,7 @@ struct QuantumTask;
  *
  * @return const char *
  */
-extern "C" QDMI_Device scheduler(const QuantumTask &childQuantumTask)
+extern "C" QDMI_Device scheduler(std::vector<QuantumTask> &tasks)
 {
     // Query the available devices
 
@@ -50,4 +50,5 @@ extern "C" QDMI_Device scheduler(const QuantumTask &childQuantumTask)
     return device;
 
     */
+    return QDMI_Device();
 }

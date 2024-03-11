@@ -145,10 +145,9 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                                     ? "libscheduler_round_robin.so"
                                     : childQuantumTask.change_scheduler;
 
-        QDMI_Device device = invokeSchedulera(scheduler, childQuantumTask);
+        QDMI_Device device = invokeScheduler(scheduler, childQuantumTasks);
 
         // childQuantumTask.setTargetDevice(device);
-
         if (device == NULL)
         {
             std::cout << "   [qresourcemanager_d]..Warning: "
