@@ -17,8 +17,8 @@ void crossover(NSGA2Type *nsga2Params, individual *parent1, individual *parent2,
     }
     if (nsga2Params->nint != 0)
     {
-        intcross(nsga2Params, parent1, parent2, child1, child2);
-        // intInterleafCross(nsga2Params, parent1, parent2, child1, child2);
+        // intcross(nsga2Params, parent1, parent2, child1, child2);
+        intInterleafCross(nsga2Params, parent1, parent2, child1, child2);
     }
     if (nsga2Params->nbin != 0)
     {
