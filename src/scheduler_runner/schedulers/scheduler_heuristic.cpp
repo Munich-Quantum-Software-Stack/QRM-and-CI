@@ -24,7 +24,7 @@ bool skipping(QuantumTask &new_task, const std::string &target_platform)
     QirMetadata &qirMetadata = QPR.getMetadata();
 
     auto queue = qirMetadata.get_queue(target_platform);
-    int new_task_duration = qirMetadata.get_duration(new_task.task_id);
+    float new_task_duration = qirMetadata.get_duration(new_task.task_id);
     int new_task_priority = qirMetadata.get_priority(new_task.task_id);
 
     std::cout << "   [Scheduler]...........Inserting QuantumTask with ID "

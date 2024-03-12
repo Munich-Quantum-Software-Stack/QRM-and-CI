@@ -2,6 +2,7 @@
  * @file qresourcemanager_d.cpp
  * @brief TODO
  */
+#include "eval.hpp"
 #include <QuantumResourceManager.hpp>
 
 using json = nlohmann::json;
@@ -140,6 +141,9 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
 
         std::cout << std::endl;
 
+        // Calculate expected execution time
+        float duration = evaluate_gates(childQuantumTask.thread_safe_module);
+
         // Invoke the scheduler
         std::string scheduler = childQuantumTask.change_scheduler == ""
                                     ? "libscheduler_round_robin.so"
@@ -154,7 +158,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                       << "There was an error obtaining the "
                       << "target architecture. The device could not "
                       << "be created." << std::endl;
-            return;
+            continue;
         }
 
         FOMAC_print_coupling_mappings(device);

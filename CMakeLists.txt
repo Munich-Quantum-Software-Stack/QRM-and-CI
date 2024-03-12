@@ -89,7 +89,7 @@ set(EXECUTABLE_NAME
     CACHE STRING "" FORCE)
 
 # Build the executable
-set(SOURCES src/qresourcemanager_d.cpp src/connection_handling.cpp)
+set(SOURCES src/qresourcemanager_d.cpp src/connection_handling.cpp src/eval.cpp)
 set(PUBLIC_QRM_HEADERS
     "include/connection_handling.hpp"
     "include/QuantumResourceManager.hpp"
