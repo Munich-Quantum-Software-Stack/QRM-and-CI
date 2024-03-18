@@ -14,6 +14,8 @@
 #include <unistd.h>
 #include <vector>
 
+#include <qdmi.h>
+
 #include <llvm/ExecutionEngine/Orc/ThreadSafeModule.h>
 #include <llvm/IR/InstrTypes.h>
 #include <llvm/IR/Module.h>
@@ -91,6 +93,7 @@ typedef struct NSGA2Type
     int obj3;
     int angle1;
     int angle2;
+    QDMI_Device device;
 } NSGA2Type;
 
 // Global
@@ -198,11 +201,11 @@ individual *tournament(NSGA2Type *nsga2Params, individual *ind1,
 /**
  * nsga2.c
  */
-NSGA2Type ReadParameters(int sizeChrom, int nobj);
+NSGA2Type ReadParameters(int sizeChrom, int nobj, QDMI_Device &device);
 int InitNSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
               const char *local_path, bool fVerbose,
               const std::vector<std::string> designSpace);
-int NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM, bool fVerbose,
+std::vector<std::string> NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM, bool fVerbose,
           const std::vector<std::string> designSpace);
 void print_nsga2Params(NSGA2Type *nsga2Params);
 

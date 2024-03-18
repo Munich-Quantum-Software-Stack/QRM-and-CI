@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+#include <qdmi.h>
+
 #include "nsga2.hpp"
 
 using llvm::orc::ThreadSafeModule;
@@ -20,7 +22,8 @@ using llvm::orc::ThreadSafeModule;
  *
  * @return std::vector<std::string>
  */
-extern "C" std::vector<std::string> selector(ThreadSafeModule &TSM)
+extern "C" std::vector<std::string> selector(ThreadSafeModule &TSM, 
+    QDMI_Device &device)
 {
     char *passesEnv = std::getenv("PASSES");
 
@@ -93,7 +96,7 @@ extern "C" std::vector<std::string> selector(ThreadSafeModule &TSM)
 
     // Perform the DSE
     std::cout << "   [Selector]............Starting the DSE" << std::endl;
-    NSGA2Type nsga2Params = ReadParameters(passes.size(), 2);
+    NSGA2Type nsga2Params = ReadParameters(passes.size(), 2, device);
     std::cout << "   [Selector]............nsga2Params set" << std::endl;
     char *home = std::getenv("HOME");
     assert(home != nullptr);
@@ -102,10 +105,5 @@ extern "C" std::vector<std::string> selector(ThreadSafeModule &TSM)
     std::cout << "   [Selector]............Init NSGA2" << std::endl;
     InitNSGA2(&nsga2Params, TSM, GA_path, false, passes);
     std::cout << "   [Selector]............NSGA2" << std::endl;
-    NSGA2(&nsga2Params, TSM, false, passes);
-    std::cout << "   [Selector]............Finished the DSE" << std::endl;
-    
-    // TODO: make real return 
-    // Return the list of chosen passes
-    return passes;
+    return NSGA2(&nsga2Params, TSM, false, passes);
 }

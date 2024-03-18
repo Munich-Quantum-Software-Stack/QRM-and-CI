@@ -7,7 +7,7 @@
 #include "nsga2.hpp"
 #include "rand.hpp"
 
-/* Routine to compute crowding distance based on ojbective function values when
+/* Routine to compute crowding distance based on objective function values when
  * the population in in the form of a list */
 void assign_crowding_distance_list(NSGA2Type *nsga2Params, population *pop,
                                    list *lst, int front_size)

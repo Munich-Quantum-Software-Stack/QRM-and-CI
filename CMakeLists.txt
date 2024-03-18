@@ -67,14 +67,14 @@ include_directories(
 # Build shared libraries
 add_library(GeneratorRunner SHARED src/generator_runner/GeneratorRunner.cpp)
 add_library(SchedulerRunner SHARED src/scheduler_runner/SchedulerRunner.cpp)
-add_library(SelectorRunner  SHARED src/selector_runner/SelectorRunner.cpp)
 add_library(PassRunner      SHARED src/pass_runner/PassRunner.cpp)
+add_library(SelectorRunner  SHARED src/selector_runner/SelectorRunner.cpp)
 add_library(QirPassRunner   SHARED src/pass_runner/QirPassRunner.cpp)
 
 target_link_libraries(GeneratorRunner PRIVATE qdmi qinfo fomac)
 target_link_libraries(SchedulerRunner PRIVATE qdmi qinfo fomac)
-target_link_libraries(SelectorRunner  PRIVATE qdmi qinfo fomac)
 target_link_libraries(PassRunner      PRIVATE qdmi qinfo fomac)
+target_link_libraries(SelectorRunner  PRIVATE qdmi qinfo fomac)
 target_link_libraries(QirPassRunner   PRIVATE qdmi qinfo fomac)
 
 set(EXECUTABLE_NAME
@@ -123,8 +123,8 @@ target_link_libraries(${EXECUTABLE_NAME} PRIVATE
   Threads::Threads
   GeneratorRunner
   SchedulerRunner
-  SelectorRunner
   PassRunner
+  SelectorRunner
   QirPassRunner
 )
 
@@ -149,9 +149,9 @@ install(TARGETS GeneratorRunner
         DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
 install(TARGETS SchedulerRunner
         DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
-install(TARGETS SelectorRunner
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
 install(TARGETS PassRunner
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+install(TARGETS SelectorRunner
         DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
 
 install(

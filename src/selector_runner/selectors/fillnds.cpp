@@ -1,4 +1,4 @@
-/* Nond-domination based selection routines */
+/* Non-domination based selection routines */
 
 #include <math.h>
 #include <stdio.h>

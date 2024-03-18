@@ -15,8 +15,8 @@ add_library(nsga2 SHARED nsga2.cpp
                          sort.cpp
                          tourselect.cpp)
 
-#set(CUSTOM_NSGA2_LIBRARY_PATH "${INSTALL_PATH}/lib/selector_runner/selectors")
-target_include_directories(nsga2 PRIVATE ${CMAKE_INSTALL_PREFIX}/include)
+target_include_directories(nsga2 PRIVATE ${CMAKE_INSTALL_PREFIX}/include/pass_runner)
+target_link_directories(nsga2 PRIVATE qdmi)
 
 install(TARGETS nsga2
         DESTINATION "${INSTALL_PATH}/lib")

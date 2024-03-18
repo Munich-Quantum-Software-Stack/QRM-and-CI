@@ -159,7 +159,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                                    ? "libselector_all.so"
                                    : childQuantumTask.change_selector;
         std::vector<std::string> passes = invokeSelector(
-            selector, childQuantumTask.thread_safe_module);
+            selector, childQuantumTask.thread_safe_module, device);
 
         if (passes.empty())
         {
@@ -169,8 +169,8 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         }
 
         // Invoke the passes
-        //invokeTargetSpecificPasses(childQuantumTask.thread_safe_module, passes,
-        //                           device);
+        invokeTargetSpecificPasses(childQuantumTask.thread_safe_module, passes,
+                                   device);
         // Create a fragment
         frag = (QDMI_Fragment)malloc(sizeof(struct QDMI_Fragment_d));
         if (frag == NULL)

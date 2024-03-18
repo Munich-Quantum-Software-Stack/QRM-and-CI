@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <PassRunner.hpp>
+#include "PassRunner.hpp"
 
 #include "nsga2.hpp"
 #include "rand.hpp"
@@ -388,7 +388,6 @@ void evaluate_ind(NSGA2Type *nsga2Params, individual *ind,
                   ThreadSafeModule &TSM,
                   const std::vector<std::string> designSpace, bool fVerbose)
 {
-    std::cout << "[DEBUG] START EVALUATE IND\n";
     // Apply passes here
     std::vector<std::string>
         passes; //(nsga2Params->nint) /*(*(nsga2Params->max_intvar))*/;
@@ -401,13 +400,10 @@ void evaluate_ind(NSGA2Type *nsga2Params, individual *ind,
     }
 
     // std::cout << "[DEBUG] after loop: " << TSM << std::endl;
-    //invokeTargetAgnosticPasses(TSM, passes /*, fVerbose*/);
-    std::cout << "[DEBUG] after invoke\n";
+    invokeTargetSpecificPasses(TSM, passes, nsga2Params->device /*, fVerbose*/);
 
     ind->obj[0] = evaluate_gates(TSM);
-    std::cout << "[DEBUG] after gates\n";
     ind->obj[1] = evaluate_depth(TSM);
-    std::cout << "[DEBUG] after depth\n";
 
     ind->constr_violation = 0.0;
 
@@ -415,5 +411,4 @@ void evaluate_ind(NSGA2Type *nsga2Params, individual *ind,
         for (j = 0; j < nsga2Params->ncon; j++)
             if (ind->constr[j] < 0.0)
                 ind->constr_violation += ind->constr[j];
-    std::cout << "[DEBUG] end\n";
 }

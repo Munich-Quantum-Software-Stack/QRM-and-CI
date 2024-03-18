@@ -193,7 +193,7 @@ class QirPassRunner
      * @param module The module of the submitted QIR.
      * @param MAM The module analysis manager.
      */
-    void target_agnostic_run(Module &module, ModuleAnalysisManager &MAM);
+    void run(Module &module, ModuleAnalysisManager &MAM);
 
     /**
      * @brief Returns the private metadata of 'QirPassRunner', that is,

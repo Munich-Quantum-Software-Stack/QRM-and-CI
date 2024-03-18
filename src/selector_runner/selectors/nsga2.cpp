@@ -24,7 +24,7 @@ static int xtop = 0;
 static int ytop = 0;
 static int ztop = 0;
 
-NSGA2Type ReadParameters(int sizeChrom, int nobj)
+NSGA2Type ReadParameters(int sizeChrom, int nobj, QDMI_Device &device)
 {
     NSGA2Type nsga2Params;
     int i;
@@ -40,6 +40,8 @@ NSGA2Type ReadParameters(int sizeChrom, int nobj)
     nsga2Params.nint = sizeChrom; // Number of integer variables
     nsga2Params.nbin = 0;         // Number of binary variables
     nsga2Params.nsim = 0;         // Number of simulations
+
+    nsga2Params.device = device;
 
     assert(nsga2Params.seed > 0.0 && nsga2Params.seed < 1.0);
     assert(nsga2Params.popsize >= 4 && (nsga2Params.popsize % 4) == 0);
@@ -210,17 +212,12 @@ int InitNSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
     allocate_memory_pop(nsga2Params, child_pop, nsga2Params->popsize);
     allocate_memory_pop(nsga2Params, mixed_pop, 2 * nsga2Params->popsize);
 
-    std::cout << "[DEBUG] after memory allocation" << std::endl;
     // Preparing first Population
     randomize(nsga2Params->seed);
-    std::cout << "[DEBUG] seed randomized" << std::endl;
     initialize_pop(nsga2Params, parent_pop);
 
-    std::cout << "[DEBUG] before evaluate pop" << std::endl;
     evaluate_pop(nsga2Params, parent_pop, TSM, designSpace, fVerbose);
-    std::cout << "[DEBUG] after evaluate pop" << std::endl;
     assign_rank_and_crowding_distance(nsga2Params, parent_pop);
-    std::cout << "[DEBUG] before report" << std::endl;
     report_pop(nsga2Params, parent_pop, fpt1);
     report_feasible(nsga2Params, parent_pop, fpt6);
 
@@ -253,7 +250,7 @@ int InitNSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
     return 0;
 }
 
-int NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM, bool fVerbose,
+std::vector<std::string> NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM, bool fVerbose,
           const std::vector<std::string> designSpace)
 {
     int i;
@@ -261,16 +258,11 @@ int NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM, bool fVerbose,
 
     for (i = 2; i <= nsga2Params->ngen; i++)
     {
-        std::cout << "[DEBUG] before selection" << std::endl;
         selection(nsga2Params, parent_pop, child_pop);
-        std::cout << "[DEBUG] before mutation" << std::endl;
         mutation_pop(nsga2Params, child_pop);
-        std::cout << "[DEBUG] before evaluation" << std::endl;
         //    	decode_pop(nsga2Params, child_pop);
         evaluate_pop(nsga2Params, child_pop, TSM, designSpace, fVerbose);
-        std::cout << "[DEBUG] before merge" << std::endl;
         merge(nsga2Params, parent_pop, child_pop, mixed_pop);
-        std::cout << "[DEBUG] before fill" << std::endl;
         fill_nondominated_sort(nsga2Params, mixed_pop, parent_pop);
 
         time_t now = time(0);
@@ -298,6 +290,23 @@ int NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM, bool fVerbose,
                 nsga2Params->nintcross);
         fprintf(fpt5, "\n Number of mutation of int variable  = %d",
                 nsga2Params->nintmut);
+    }
+
+    individual best_individual = parent_pop->ind[0];
+
+    for (i = 1; i < nsga2Params->popsize; i++) {
+        if (check_dominance(nsga2Params, &(parent_pop->ind[i]),
+            &(best_individual)) == 1)
+        {
+            best_individual = parent_pop->ind[i];
+        }
+    } 
+
+    std::vector<std::string> result;
+
+    for (i = 0; i < nsga2Params->nint; i++)
+    {
+        result.push_back(designSpace[best_individual.xint[i]]);
     }
 
     // Closing the files and freeing up memories...
@@ -335,5 +344,5 @@ int NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM, bool fVerbose,
 
     printf("\n Routine successfully finished \n");
 
-    return (0);
+    return result;
 }
