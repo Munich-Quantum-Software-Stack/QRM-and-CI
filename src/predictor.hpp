@@ -1,10 +1,11 @@
 #ifndef PREDICTOR_H
 #define PREDICTOR_H
 
-#include <onnxruntime/core/session/onnxruntime_cxx_api.h>
 #include <array>
-#include <vector>
 #include <cstdio>
+#include <map>
+#include <onnxruntime/core/session/onnxruntime_cxx_api.h>
+#include <vector>
 
 #include <llvm/ExecutionEngine/Orc/ThreadSafeModule.h>
 #include <llvm/IR/Module.h>

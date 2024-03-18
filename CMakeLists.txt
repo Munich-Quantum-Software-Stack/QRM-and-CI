@@ -81,7 +81,7 @@ add_library(SelectorRunner  SHARED src/selector_runner/SelectorRunner.cpp)
 add_library(PassRunner      SHARED src/pass_runner/PassRunner.cpp)
 add_library(QirPassRunner   SHARED src/pass_runner/QirPassRunner.cpp)
 add_library(QRMD            SHARED src/qresourcemanager_d.cpp)
-add_library(predictor       SHARED src/predictor.cpp)
+add_library(predictor       SHARED src/predictor.cpp src/eval.cpp)
 
 
 target_link_libraries(GeneratorRunner PRIVATE qdmi qinfo fomac)
