@@ -2,7 +2,7 @@
  * @file qresourcemanager_d.cpp
  * @brief TODO
  */
-#include "eval.hpp"
+#include "predictor.hpp"
 #include <QuantumResourceManager.hpp>
 
 using json = nlohmann::json;
@@ -141,8 +141,8 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
 
         std::cout << std::endl;
 
-        // Calculate expected execution time
-        float duration = evaluate_gates(childQuantumTask.thread_safe_module);
+        // TODO: Calculate expected execution time
+        float duration = predict(childQuantumTask.thread_safe_module);
 
         // Invoke the scheduler
         std::string scheduler = childQuantumTask.change_scheduler == ""

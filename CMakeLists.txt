@@ -51,6 +51,8 @@ if(NOT LLVM_CONFIG_DIR)
   )
 endif()
 
+find_library(ONNXRUNTIME_LIBRARY NAMES onnxruntime PATHS /home/ubuntu/onnxruntime/build/Linux/Release)
+
 # Include LLVMConfig.cmake
 list(APPEND CMAKE_PREFIX_PATH "${LLVM_CONFIG_DIR}")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${LLVM_CONFIG_DIR}")
@@ -67,7 +69,10 @@ include_directories(
   "${CMAKE_CURRENT_SOURCE_DIR}/include/selector_runner"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/scheduler_runner"
   "${CMAKE_INSTALL_PREFIX}/include"
-  ${LLVM_INCLUDE_DIRS})
+  ${LLVM_INCLUDE_DIRS}
+  /home/ubuntu/mqss/qrm.git/src
+  /home/ubuntu/onnxruntime/include
+  )
 
 # Build shared libraries
 add_library(GeneratorRunner SHARED src/generator_runner/GeneratorRunner.cpp)
@@ -75,21 +80,24 @@ add_library(SchedulerRunner SHARED src/scheduler_runner/SchedulerRunner.cpp)
 add_library(SelectorRunner  SHARED src/selector_runner/SelectorRunner.cpp)
 add_library(PassRunner      SHARED src/pass_runner/PassRunner.cpp)
 add_library(QirPassRunner   SHARED src/pass_runner/QirPassRunner.cpp)
-add_library(QRMD   SHARED src/qresourcemanager_d.cpp)
+add_library(QRMD            SHARED src/qresourcemanager_d.cpp)
+add_library(predictor       SHARED src/predictor.cpp)
+
 
 target_link_libraries(GeneratorRunner PRIVATE qdmi qinfo fomac)
 target_link_libraries(SchedulerRunner PRIVATE qdmi qinfo fomac)
 target_link_libraries(SelectorRunner  PRIVATE qdmi qinfo fomac)
 target_link_libraries(PassRunner      PRIVATE qdmi qinfo fomac)
 target_link_libraries(QirPassRunner   PRIVATE qdmi qinfo fomac)
-target_link_libraries(QRMD   PRIVATE qdmi qinfo fomac QirPassRunner PassRunner SelectorRunner SchedulerRunner GeneratorRunner rabbitmq)
+target_link_libraries(QRMD            PRIVATE qdmi qinfo fomac QirPassRunner PassRunner SelectorRunner SchedulerRunner GeneratorRunner rabbitmq ${ONNXRUNTIME_LIBRARY})
+target_link_libraries(predictor       PRIVATE ${ONNXRUNTIME_LIBRARY} LLVM)
 
 set(EXECUTABLE_NAME
     "qresourcemanager_d"
     CACHE STRING "" FORCE)
 
 # Build the executable
-set(SOURCES src/qresourcemanager_d.cpp src/connection_handling.cpp src/eval.cpp)
+set(SOURCES src/qresourcemanager_d.cpp src/connection_handling.cpp src/predictor.cpp)
 set(PUBLIC_QRM_HEADERS
     "include/connection_handling.hpp"
     "include/QuantumResourceManager.hpp"
@@ -133,6 +141,8 @@ target_link_libraries(${EXECUTABLE_NAME} PRIVATE
   SelectorRunner
   PassRunner
   QirPassRunner
+  predictor
+  ${ONNXRUNTIME_LIBRARY}
 )
 
 # Include header files
