@@ -36,7 +36,7 @@ int main()
     std::string submit_time(buffer);
 
     // Open the QIR file
-    const char *filename = "benchmarks/test.ll";
+    const char *filename = "benchmarks/bell_state.ll";
     std::ifstream file(filename, std::ios::binary);
     if (!file.is_open())
     {
