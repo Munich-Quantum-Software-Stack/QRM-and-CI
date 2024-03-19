@@ -141,8 +141,9 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
 
         std::cout << std::endl;
 
-        // TODO: Calculate expected execution time
-        float duration = predict(childQuantumTask.thread_safe_module);
+        // Calculate expected execution time
+        childQuantumTask.duration =
+            predict(childQuantumTask.thread_safe_module);
 
         // Invoke the scheduler
         std::string scheduler = childQuantumTask.change_scheduler == ""
