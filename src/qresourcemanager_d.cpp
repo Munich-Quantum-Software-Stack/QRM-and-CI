@@ -6,6 +6,7 @@
 
 using json = nlohmann::json;
 using llvm::orc::ThreadSafeModule;
+using llvm::orc::ThreadSafeContext;
 
 #define CHECK_ERR(a, b)                                                        \
     {                                                                          \
@@ -53,24 +54,21 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
     task.circuit_file_type = QuantumTask_json["circuit_file_type"];
     task.result_destination = QuantumTask_json["result_destination"];
     task.preferred_qpu = QuantumTask_json["preferred_qpu"];
-    //task.scheduled_qpu = QuantumTask_json["scheduled_qpu"];
     task.priority = QuantumTask_json["priority"];
     task.optimisation_level = QuantumTask_json["optimisation_level"];
     task.no_modify = QuantumTask_json["no_modify"];
     task.transpiler_flag = QuantumTask_json["transpiler_flag"];
     task.result_type = QuantumTask_json["result_type"];
     task.submit_time = QuantumTask_json["submit_time"];
-    if (!QuantumTask_json.contains("circuit_qiskit"))
+    if (!QuantumTask_json.contains("qir"))
     {
         std::cout
-            << "   [qresourcemanager_d]..Warning: circuit_qiskit not defined"
+            << "   [qresourcemanager_d]..Warning: Generic QIR missing"
             << std::endl;
         return QuantumTask();
     }
-    task.circuit_qiskit = QuantumTask_json["circuit_qiskit"];
+    task.qir = QuantumTask_json["qir"];
     task.additional_information = QuantumTask_json["additional_information"];
-    task.change_selector = QuantumTask_json["change_selector"];
-    task.change_scheduler = QuantumTask_json["change_scheduler"];
     task.thread_safe_module = ThreadSafeModule();
 
     return task;
@@ -85,21 +83,35 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
  * @param receivedSelector TODO
  */
 void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
-                         const QuantumTask &parentQuantumTask)
+                         QuantumTask &parentQuantumTask)
 {
     int err = 1;
 
-    // TODO THE TARGET-AGNOSTIC OPTIMZATION
-    //      BEFORE CIRCUIT CUTTING
-    // invokeTargetAgnosticPasses(parentQuantumTask.circuit_qiskit, passes);
+    // Insert LLVM::ThreadSafeModule to parentQuantumTask
+    ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
+    SMDiagnostic error;
+    std::string circuit = parentQuantumTask.qir;
+    auto M = parseIR(MemoryBufferRef(circuit, "QIR (LRZ)"), error,
+                      *TSCtx.getContext());
+    ThreadSafeModule TSM = ThreadSafeModule(std::move(M), std::move(TSCtx));
+    parentQuantumTask.thread_safe_module = std::move(TSM);
+
+    // Invoke the target-agnostic selector
+    std::vector<std::string> agnosticPasses = invokeSelector("libselector_agnostic.so");
+
+    if (agnosticPasses.empty())
+    {
+        std::cout << "   [qresourcemanager_d]..Warning: "
+                  << "No passes were selected" << std::endl;
+        return;
+    }
+
+    // Invoke target-agnostic passes
+    invokePasses(parentQuantumTask.thread_safe_module, agnosticPasses);
 
     // Invoke the generator
-    std::string generator = parentQuantumTask.change_generator == ""
-                                ? "libgenerator_cutter.so"
-                                : parentQuantumTask.change_generator;
-
     std::vector<QuantumTask> childQuantumTasks =
-        invokeGenerator(parentQuantumTask, generator);
+        invokeGenerator(parentQuantumTask, "libgenerator_cutter.so");
 
     if (childQuantumTasks.size() == 0)
     {
@@ -151,22 +163,19 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
             return;
         }
 
-        // Invoke the selector
-        std::string selector = childQuantumTask.change_selector == ""
-                                   ? "libselector_all.so"
-                                   : childQuantumTask.change_selector;
-        std::vector<std::string> passes = invokeSelector(selector);
+        // Invoke the target-specific selector
+        std::vector<std::string> specificPasses = invokeSelector("libselector_specific.so");
 
-        if (passes.empty())
+        if (specificPasses.empty())
         {
             std::cout << "   [qresourcemanager_d]..Warning: "
                       << "No passes were selected" << std::endl;
             return;
         }
 
-        // Invoke the passes
-        invokeTargetSpecificPasses(childQuantumTask.thread_safe_module, passes,
-                                   device);
+        // Invoke target-specific passes
+        invokePasses(childQuantumTask.thread_safe_module, specificPasses, device);
+
         // Create a fragment
         frag = (QDMI_Fragment)malloc(sizeof(struct QDMI_Fragment_d));
         if (frag == NULL)

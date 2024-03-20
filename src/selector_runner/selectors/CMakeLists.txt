@@ -1,5 +1,5 @@
 # Include all new selectors here
-set(SELECTORS_SOURCE_FILES selector_all.cpp selector_manual.cpp)
+set(SELECTORS_SOURCE_FILES selector_specific.cpp selector_agnostic.cpp)
 
 # Set RPATH for the shared libraries in this directory
 set(CMAKE_INSTALL_RPATH "${INSTALL_PATH}/lib")

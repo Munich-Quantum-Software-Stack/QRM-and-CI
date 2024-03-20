@@ -96,17 +96,14 @@ int main(int argc, char *argv[])
         {"circuit_file_type", "QIR"},
         {"result_destination", ""},
         {"preferred_qpu", "Q7"},
-        //{"scheduled_qpu", ""},
         {"priority", 0},
         {"optimisation_level", 0},
         {"no_modify", false},
         {"transpiler_flag", true},
         {"result_type", 0},
         {"submit_time", submit_time},
-        {"circuit_qiskit", genericQir},
+        {"qir", genericQir},
         {"additional_information", ""},
-        {"change_selector", "libselector_manual.so"},
-        {"change_scheduler", "libscheduler_round_robin.so"},
     };
 
     std::string QuantumTask_str = QuantumTask_json.dump();

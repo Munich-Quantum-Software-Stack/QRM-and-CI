@@ -61,11 +61,8 @@ struct QuantumTask
     bool transpiler_flag;
     int result_type;
     std::string submit_time;
-    std::string circuit_qiskit;
+    std::string qir;
     std::string additional_information;
-    std::string change_generator;
-    std::string change_selector;
-    std::string change_scheduler;
     ThreadSafeModule thread_safe_module;
 };
 

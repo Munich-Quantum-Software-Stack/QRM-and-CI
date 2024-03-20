@@ -56,11 +56,9 @@ QuantumTask createQuantumTask(std::unique_ptr<Module> &module,
     childQuantumTask.transpiler_flag = parentQuantumTask.transpiler_flag;
     childQuantumTask.result_type = parentQuantumTask.result_type;
     childQuantumTask.submit_time = parentQuantumTask.submit_time;
-    childQuantumTask.circuit_qiskit = parentQuantumTask.circuit_qiskit;
+    childQuantumTask.qir = parentQuantumTask.qir;
     childQuantumTask.additional_information =
         parentQuantumTask.additional_information;
-    childQuantumTask.change_selector = parentQuantumTask.change_selector;
-    childQuantumTask.change_scheduler = parentQuantumTask.change_scheduler;
     childQuantumTask.thread_safe_module = std::move(TSM);
 
     return childQuantumTask;
@@ -84,7 +82,7 @@ generator(const QuantumTask &parentQuantumTask)
     ThreadSafeContext TSCtx2(std::make_unique<LLVMContext>());
 
     SMDiagnostic error;
-    std::string circuit = parentQuantumTask.circuit_qiskit;
+    std::string circuit = parentQuantumTask.qir;
 
     auto M1 = parseIR(MemoryBufferRef(circuit, "QIR (LRZ)"), error,
                       *TSCtx1.getContext());
