@@ -53,7 +53,7 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
     task.circuit_file_type = QuantumTask_json["circuit_file_type"];
     task.result_destination = QuantumTask_json["result_destination"];
     task.preferred_qpu = QuantumTask_json["preferred_qpu"];
-    task.scheduled_qpu = QuantumTask_json["scheduled_qpu"];
+    //task.scheduled_qpu = QuantumTask_json["scheduled_qpu"];
     task.priority = QuantumTask_json["priority"];
     task.optimisation_level = QuantumTask_json["optimisation_level"];
     task.no_modify = QuantumTask_json["no_modify"];
@@ -87,6 +87,7 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
 void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                          const QuantumTask &parentQuantumTask)
 {
+    int err = 1;
 
     // TODO THE TARGET-AGNOSTIC OPTIMZATION
     //      BEFORE CIRCUIT CUTTING
@@ -109,8 +110,11 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         return;
     }
 
+    // Invoke the scheduler
+    // TODO Handle err
+    err = invokeScheduler("libscheduler_round_robin.so", &childQuantumTasks);
+
     // Compile and execute each generated sub-circuit
-    int err;
     std::vector<std::string> modules;
     std::vector<std::string> targets;
     std::map<std::string, int> results;
@@ -123,14 +127,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
 
         std::cout << std::endl;
 
-        // Invoke the scheduler
-        std::string scheduler = childQuantumTask.change_scheduler == ""
-                                    ? "libscheduler_round_robin.so"
-                                    : childQuantumTask.change_scheduler;
-
-        QDMI_Device device = invokeScheduler(scheduler, childQuantumTask);
-
-        // childQuantumTask.setTargetDevice(device);
+        QDMI_Device device = childQuantumTask.scheduled_qpu;
 
         if (device == NULL)
         {
@@ -202,6 +199,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
 
                 void* qirmod = static_cast<void *>(buffer.data());
                 frag->sizebuffer = buffer.size();
+                // TODO Handle err
                 err = QDMI_control_pack_qir(device, qirmod, &frag);
             });
 
@@ -212,10 +210,14 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                                   device->library.info, &job);
         CHECK_ERR(err, "QDMI_control_submit");
 
+        // Wait for the results to be ready
+        QDMI_Status status;
+        // TODO Handle err
+        err = QDMI_control_wait(device, &job, &status);
+
         // Get the results back
         int numbits = 0;
         // TODO Handle err
-        QDMI_Status status;
         err = QDMI_control_readout_size(device, &status, &numbits);
         int* raw_numbers = new int[1 << numbits];
         if (numbits == 0)
@@ -239,7 +241,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
 
         delete[] raw_numbers;
         free(frag);
-        free(device);
+        //free(device);
     }
 
     auto end = std::chrono::steady_clock::now();

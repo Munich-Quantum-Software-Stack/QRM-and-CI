@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
     rabbitmq_new_connection(&conn, &socket);
 
     // Open the QIR file
-    const char *filename = "../../benchmarks/q7.ll";
+    const char *filename = "../../benchmarks/bell_state.ll";
     std::ifstream file(filename, std::ios::binary);
     if (!file.is_open())
     {
@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
         {"circuit_file_type", "QIR"},
         {"result_destination", ""},
         {"preferred_qpu", "Q7"},
-        {"scheduled_qpu", ""},
+        //{"scheduled_qpu", ""},
         {"priority", 0},
         {"optimisation_level", 0},
         {"no_modify", false},
