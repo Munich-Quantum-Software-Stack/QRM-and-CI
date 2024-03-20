@@ -267,7 +267,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                  QDQueue);                  // queue
 
     std::cout
-        << "   [qresourcemanager_d]..Adapted QIR sent to the Quantum Daemon"
+        << "   [qresourcemanager_d]..Executed QIR circuits sent back to the Quantum Daemon"
         << std::endl;
 }
 
