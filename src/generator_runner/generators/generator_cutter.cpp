@@ -96,8 +96,9 @@ generator(const QuantumTask &parentQuantumTask)
     childQuantumTasks.push_back(
         createQuantumTask(M2, TSCtx2, parentQuantumTask, 1));
 
-    std::cout << "   [Generator]...........Returning generated "
-              << "sub-circuits to the Generator Runner" << std::endl;
+    std::cout << "   [Generator]...........Returning "
+              << childQuantumTasks.size()
+              << " child circuits to the Generator Runner" << std::endl;
 
     return childQuantumTasks;
 }
