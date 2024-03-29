@@ -394,9 +394,10 @@ void evaluate_ind(NSGA2Type *nsga2Params, individual *ind,
 
     int i, j;
 
-    for (j = 0; j < nsga2Params->nint; j++)
+    for (j = 0; j < nsga2Params->nbits[0]; j++)
     {
-        passes.push_back(designSpace[ind->xint[j]]);
+        if (ind->gene[0][j] == 1)
+            passes.push_back(designSpace[j]);
     }
 
     // std::cout << "[DEBUG] after loop: " << TSM << std::endl;

@@ -105,5 +105,6 @@ extern "C" std::vector<std::string> selector(ThreadSafeModule &TSM,
     std::cout << "   [Selector]............Init NSGA2" << std::endl;
     InitNSGA2(&nsga2Params, TSM, GA_path, false, passes);
     std::cout << "   [Selector]............NSGA2" << std::endl;
-    return NSGA2(&nsga2Params, TSM, false, passes);
+    NSGA2(&nsga2Params, TSM, false, passes);
+    return passes;
 }

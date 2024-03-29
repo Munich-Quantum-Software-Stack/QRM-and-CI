@@ -32,15 +32,14 @@ NSGA2Type ReadParameters(int sizeChrom, int nobj, QDMI_Device &device)
     srand(time(NULL));
 
     nsga2Params.seed = (float)rand() / (float)(RAND_MAX); // Seed value
-    nsga2Params.popsize = 8;      // Population size (multiple of 4)
-    nsga2Params.ngen = 16;        // Number of generations
-    nsga2Params.nobj = nobj;      // Number of objectives
-    nsga2Params.ncon = 0;         // Number of constraints
-    nsga2Params.nreal = 0;        // Number of real variables
-    nsga2Params.nint = sizeChrom; // Number of integer variables
-    nsga2Params.nbin = 0;         // Number of binary variables
-    nsga2Params.nsim = 0;         // Number of simulations
-
+    nsga2Params.popsize = 256; // Population size (multiple of 4)
+    nsga2Params.ngen = 24;     // Number of generations
+    nsga2Params.nobj = nobj;  // Number of objectives
+    nsga2Params.ncon = 0;     // Number of constraints
+    nsga2Params.nreal = 0;    // Number of real variables
+    nsga2Params.nint = 0;     // Number of integer variables
+    nsga2Params.nbin = 1;     // Number of binary variables
+    nsga2Params.nsim = 0;     // Number of simulations
     nsga2Params.device = device;
 
     assert(nsga2Params.seed > 0.0 && nsga2Params.seed < 1.0);
@@ -49,8 +48,8 @@ NSGA2Type ReadParameters(int sizeChrom, int nobj, QDMI_Device &device)
     assert(nsga2Params.ngen > 0);
     assert(nsga2Params.nobj > 0);
     assert(nsga2Params.ncon >= 0);
-    assert(nsga2Params.nint >= 0);
-    // assert(nsga2Params.nbin > 0);
+    // assert(nsga2Params.nint >= 0);
+    assert(nsga2Params.nbin > 0);
 
     std::cout << "                         L ...seed value: "
               << nsga2Params.seed << std::endl;
@@ -60,31 +59,34 @@ NSGA2Type ReadParameters(int sizeChrom, int nobj, QDMI_Device &device)
               << nsga2Params.ngen << std::endl;
     std::cout << "                         L ...number of objectives: "
               << nsga2Params.nobj << std::endl;
-    std::cout << "                         L ...number of integer variables: "
+    std::cout << "                         L ...number of binary variables: "
               << nsga2Params.nint << std::endl;
 
-    // nsga2Params.nbits = (int *)malloc(nsga2Params.nbin * sizeof(int));
-    nsga2Params.min_intvar = (int *)malloc(nsga2Params.nint * sizeof(int));
-    nsga2Params.max_intvar = (int *)malloc(nsga2Params.nint * sizeof(int));
-    // nsga2Params.pmut_real = (double)malloc(sizeof(double));
-    nsga2Params.pcross_int =
-        0.6; // Probability of crossover of int variable (0.6-1.0)
+    nsga2Params.nbits = (int *)malloc(nsga2Params.nbin * sizeof(int));
+    nsga2Params.min_binvar =
+        (double *)malloc(nsga2Params.nbin * sizeof(double));
+    nsga2Params.max_binvar =
+        (double *)malloc(nsga2Params.nbin * sizeof(double));
+    nsga2Params.pmut_bin = (double *)malloc(nsga2Params.nbin * sizeof(double));
+    nsga2Params.pcross_bin =
+        0.6; // Probability of crossover of bin variable (0.6-1.0)
 
-    for (i = 0; i < nsga2Params.nint; i++)
+    for (i = 0; i < nsga2Params.nbin; i++)
     {
-        nsga2Params.min_intvar[i] = 0;
-        nsga2Params.max_intvar[i] = sizeChrom - 1;
+        nsga2Params.min_binvar[i] = 0;
+        nsga2Params.max_binvar[i] = 1;
 
-        // nsga2Params.nbits[i] = sizeChrom;
-        nsga2Params.pmut_int = 0.5; //(double)1/nsga2Params.nbits[i];
+        nsga2Params.nbits[i] = sizeChrom;
+        nsga2Params.pmut_bin[i] = 0.5; //(double)1/nsga2Params.nbits[i];
 
-        assert(nsga2Params.pmut_int >= 0.0 && nsga2Params.pmut_int <= 1.0);
+        assert(nsga2Params.pmut_bin[i] >= 0.0 &&
+               nsga2Params.pmut_bin[i] <= 1.0);
     }
 
-    assert(nsga2Params.pcross_int >= 0.0 && nsga2Params.pcross_int <= 1.0);
+    assert(nsga2Params.pcross_bin >= 0.0 && nsga2Params.pcross_bin <= 1.0);
 
     std::cout << "                         L ...crossover probability: "
-              << nsga2Params.pcross_int << std::endl;
+              << nsga2Params.pcross_bin << std::endl;
 
     nsga2Params.choice =
         0; // Use gnuplot to display the results realtime (0 for NO) (1 for yes)
@@ -130,7 +132,7 @@ int InitNSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
     fpt5 = fopen(local_params, "w");
     fpt6 = fopen(local_feasible_pop, "w");
 
-    assert(nsga2Params->nint > 0);
+    assert(nsga2Params->nbin > 0);
     std::cout << "[DEBUG] After assert" << std::endl;
 
     fprintf(fpt1, "# This file contains the data of initial population\n");
@@ -149,22 +151,21 @@ int InitNSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
             nsga2Params->nobj);
     fprintf(fpt5, "\n Number of constraints                       = %d",
             nsga2Params->ncon);
-    fprintf(fpt5, "\n Number of integer variables                 = %d",
-            nsga2Params->nint);
-    fprintf(fpt5, "\n Probability of crossover of int variable    = %e",
-            nsga2Params->pcross_int);
+    fprintf(fpt5, "\n Number of binary variables                  = %d",
+            nsga2Params->nbin);
+    fprintf(fpt5, "\n Probability of crossover of bin variable    = %e",
+            nsga2Params->pcross_bin);
 
-    // nsga2Params->bitlength = 0;
+    nsga2Params->bitlength = 0;
     std::cout << "[DEBUG] Before loop" << std::endl;
-    for (i = 0; i < nsga2Params->nint; i++)
+    for (i = 0; i < nsga2Params->nbin; i++)
     {
-        // fprintf(fpt5, "\n Number of bits for binary variable %d         =
-        // %d",
-        //        i + 1, nsga2Params->nbits[i]);
-        fprintf(fpt5, "\n Probability of mutation of integer variable %d = %e",
-                i + 1, nsga2Params->pmut_int);
+        fprintf(fpt5, "\n Number of bits for binary variable %d         = %d",
+                i + 1, nsga2Params->nbits[i]);
+        fprintf(fpt5, "\n Probability of mutation of binary variable %d = %e",
+                i + 1, nsga2Params->pmut_bin[i]);
 
-        // nsga2Params->bitlength += nsga2Params->nbits[i];
+        nsga2Params->bitlength += nsga2Params->nbits[i];
     }
 
     fprintf(fpt5, "\n Seed for random number generator = %e",
@@ -175,25 +176,25 @@ int InitNSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
         "# of objectives = %d, # of constraints = %d, # of int_var = %d, # of "
         "bits of bin_var = %d, constr_violation, rank, crowding_distance\n",
         nsga2Params->nobj, nsga2Params->ncon, nsga2Params->nint,
-        nsga2Params->nbin);
+        nsga2Params->bitlength);
     fprintf(
         fpt2,
         "# of objectives = %d, # of constraints = %d, # of int_var = %d, # of "
         "bits of bin_var = %d, constr_violation, rank, crowding_distance\n",
         nsga2Params->nobj, nsga2Params->ncon, nsga2Params->nint,
-        nsga2Params->nbin);
+        nsga2Params->bitlength);
     fprintf(
         fpt3,
         "# of objectives = %d, # of constraints = %d, # of int_var = %d, # of "
         "bits of bin_var = %d, constr_violation, rank, crowding_distance\n",
         nsga2Params->nobj, nsga2Params->ncon, nsga2Params->nint,
-        nsga2Params->nbin);
+        nsga2Params->bitlength);
     fprintf(
         fpt4,
         "# of objectives = %d, # of constraints = %d, # of int_var = %d, # of "
         "bits of bin_var = %d, constr_violation, rank, crowding_distance\n",
         nsga2Params->nobj, nsga2Params->ncon, nsga2Params->nint,
-        nsga2Params->nbin);
+        nsga2Params->bitlength);
 
     nsga2Params->nbinmut = 0;
     nsga2Params->nintmut = 0;
@@ -212,12 +213,17 @@ int InitNSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
     allocate_memory_pop(nsga2Params, child_pop, nsga2Params->popsize);
     allocate_memory_pop(nsga2Params, mixed_pop, 2 * nsga2Params->popsize);
 
+    std::cout << "[DEBUG] after memory allocation" << std::endl;
     // Preparing first Population
     randomize(nsga2Params->seed);
+    std::cout << "[DEBUG] seed randomized" << std::endl;
     initialize_pop(nsga2Params, parent_pop);
 
+    std::cout << "[DEBUG] before evaluate pop" << std::endl;
     evaluate_pop(nsga2Params, parent_pop, TSM, designSpace, fVerbose);
+    std::cout << "[DEBUG] after evaluate pop" << std::endl;
     assign_rank_and_crowding_distance(nsga2Params, parent_pop);
+    std::cout << "[DEBUG] before report" << std::endl;
     report_pop(nsga2Params, parent_pop, fpt1);
     report_feasible(nsga2Params, parent_pop, fpt6);
 
@@ -258,11 +264,16 @@ std::vector<std::string> NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM, bo
 
     for (i = 2; i <= nsga2Params->ngen; i++)
     {
+        std::cout << "[DEBUG] before selection" << std::endl;
         selection(nsga2Params, parent_pop, child_pop);
+        std::cout << "[DEBUG] before mutation" << std::endl;
         mutation_pop(nsga2Params, child_pop);
+        std::cout << "[DEBUG] before evaluation" << std::endl;
         //    	decode_pop(nsga2Params, child_pop);
         evaluate_pop(nsga2Params, child_pop, TSM, designSpace, fVerbose);
+        std::cout << "[DEBUG] before merge" << std::endl;
         merge(nsga2Params, parent_pop, child_pop, mixed_pop);
+        std::cout << "[DEBUG] before fill" << std::endl;
         fill_nondominated_sort(nsga2Params, mixed_pop, parent_pop);
 
         time_t now = time(0);
@@ -284,29 +295,12 @@ std::vector<std::string> NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM, bo
     report_pop(nsga2Params, parent_pop, fpt2);
     report_feasible(nsga2Params, parent_pop, fpt3);
 
-    if (nsga2Params->nint != 0)
+    if (nsga2Params->nbin != 0)
     {
-        fprintf(fpt5, "\n Number of crossover of int variable = %d",
-                nsga2Params->nintcross);
-        fprintf(fpt5, "\n Number of mutation of int variable  = %d",
-                nsga2Params->nintmut);
-    }
-
-    individual best_individual = parent_pop->ind[0];
-
-    for (i = 1; i < nsga2Params->popsize; i++) {
-        if (check_dominance(nsga2Params, &(parent_pop->ind[i]),
-            &(best_individual)) == 1)
-        {
-            best_individual = parent_pop->ind[i];
-        }
-    } 
-
-    std::vector<std::string> result;
-
-    for (i = 0; i < nsga2Params->nint; i++)
-    {
-        result.push_back(designSpace[best_individual.xint[i]]);
+        fprintf(fpt5, "\n Number of crossover of bin variable = %d",
+                nsga2Params->nbincross);
+        fprintf(fpt5, "\n Number of mutation of bin variable  = %d",
+                nsga2Params->nbinmut);
     }
 
     // Closing the files and freeing up memories...
@@ -327,11 +321,12 @@ std::vector<std::string> NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM, bo
     if (nsga2Params->choice != 0)
         pclose(gp);
 
-    if (nsga2Params->nint != 0)
+    if (nsga2Params->nbin != 0)
     {
-        free(nsga2Params->min_intvar);
-        free(nsga2Params->max_intvar);
-        // free(nsga2Params->nbits);
+        free(nsga2Params->min_binvar);
+        free(nsga2Params->max_binvar);
+        free(nsga2Params->nbits);
+        free(nsga2Params->pmut_bin);
     }
 
     deallocate_memory_pop(nsga2Params, parent_pop, nsga2Params->popsize);
@@ -344,5 +339,5 @@ std::vector<std::string> NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM, bo
 
     printf("\n Routine successfully finished \n");
 
-    return result;
+    return designSpace;
 }
