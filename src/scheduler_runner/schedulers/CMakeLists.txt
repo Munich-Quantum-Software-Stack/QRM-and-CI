@@ -10,7 +10,7 @@ foreach(src_file ${SCHEDULERS_SOURCE_FILES})
   get_filename_component(src_name ${src_file} NAME_WE)
   add_library(${src_name} MODULE ${src_file})
   target_link_libraries(${src_name} PRIVATE
-    QirPassRunner qdmi qinfo fomac)
+    QirPassRunner qdmi qinfo fomac LLVM)
 
   set_target_properties(
     ${src_name}

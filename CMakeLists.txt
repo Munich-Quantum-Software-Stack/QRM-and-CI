@@ -18,6 +18,9 @@ file(WRITE ${CMAKE_INSTALL_PREFIX}/logs/qresourcemanager_d.log "")
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
+# Find rabbitmq-c package
+find_package(rabbitmq-c REQUIRED)
+
 # Find FoMaC package
 find_package(fomac REQUIRED)
 
@@ -28,30 +31,20 @@ find_package(qdmi REQUIRED)
 find_package(qinfo REQUIRED)
 
 # Find nlohmann_json package
+set(nlohmann_json_DIR /opt/homebrew/Cellar/nlohmann-json/3.11.3/lib/cmake/nlohmann_json) #TODO
 find_package(nlohmann_json REQUIRED)
 
 # Find the Threads package
 find_package(Threads REQUIRED)
 
+# Find LLVMConfig.cmake
+find_package(LLVM REQUIRED CONFIG)
+
 # Set LLVM_ENABLE_THREADS to ON
 set(LLVM_ENABLE_THREADS ON)
 
-# Find LLVMConfig.cmake
-find_path(LLVM_CONFIG_DIR LLVMConfig.cmake HINTS "${CMAKE_PREFIX_PATH}" ENV
-                                                 LLVM_DIR)
-
-if(NOT LLVM_CONFIG_DIR)
-  message(
-    FATAL_ERROR "LLVMConfig.cmake not found. Set CMAKE_PREFIX_PATH or LLVM_DIR."
-  )
-endif()
-
-# Include LLVMConfig.cmake
-list(APPEND CMAKE_PREFIX_PATH "${LLVM_CONFIG_DIR}")
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${LLVM_CONFIG_DIR}")
-find_package(LLVM REQUIRED CONFIG)
-
 # Set up LLVM-specific flags
+message("-- LLVM_INCLUDE_DIRS: ${LLVM_INCLUDE_DIRS}")
 add_definitions(${LLVM_DEFINITIONS})
 
 # Add the include paths
@@ -62,7 +55,10 @@ include_directories(
   "${CMAKE_CURRENT_SOURCE_DIR}/include/selector_runner"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/scheduler_runner"
   "${CMAKE_INSTALL_PREFIX}/include"
-  ${LLVM_INCLUDE_DIRS})
+  ${LLVM_INCLUDE_DIRS}
+  /opt/homebrew/Cellar/nlohmann-json/3.11.3/include #TODO
+  /opt/homebrew/Cellar/rabbitmq-c/0.14.0/include #TODO
+)
 
 # Build shared libraries
 add_library(GeneratorRunner SHARED src/generator_runner/GeneratorRunner.cpp)
@@ -71,11 +67,11 @@ add_library(PassRunner      SHARED src/pass_runner/PassRunner.cpp)
 add_library(SelectorRunner  SHARED src/selector_runner/SelectorRunner.cpp)
 add_library(QirPassRunner   SHARED src/pass_runner/QirPassRunner.cpp)
 
-target_link_libraries(GeneratorRunner PRIVATE qdmi qinfo fomac)
-target_link_libraries(SchedulerRunner PRIVATE qdmi qinfo fomac)
-target_link_libraries(PassRunner      PRIVATE qdmi qinfo fomac)
-target_link_libraries(SelectorRunner  PRIVATE qdmi qinfo fomac)
-target_link_libraries(QirPassRunner   PRIVATE qdmi qinfo fomac)
+target_link_libraries(GeneratorRunner PRIVATE qdmi qinfo fomac LLVM)
+target_link_libraries(SchedulerRunner PRIVATE qdmi qinfo fomac LLVM)
+target_link_libraries(SelectorRunner  PRIVATE qdmi qinfo fomac LLVM)
+target_link_libraries(QirPassRunner   PRIVATE qdmi qinfo fomac LLVM)
+target_link_libraries(PassRunner      PRIVATE qdmi qinfo fomac LLVM QirPassRunner)
 
 set(EXECUTABLE_NAME
     "qresourcemanager_d"
@@ -114,11 +110,12 @@ add_subdirectory(src/scheduler_runner/schedulers)
 
 # Link the executable with the required libraries
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE
+  #rabbitmq-c
+  /opt/homebrew/Cellar/rabbitmq-c/0.14.0/lib/librabbitmq.dylib #TODO
   qdmi
   qinfo
   fomac
   LLVM
-  rabbitmq
   nlohmann_json::nlohmann_json
   Threads::Threads
   GeneratorRunner
@@ -130,8 +127,7 @@ target_link_libraries(${EXECUTABLE_NAME} PRIVATE
 
 # Include header files
 target_include_directories(${EXECUTABLE_NAME}
-    PRIVATE /usr/local/include #RabbitMQ
-            ${CMAKE_INSTALL_PREFIX}/include
+    PRIVATE ${CMAKE_INSTALL_PREFIX}/include
             ${CMAKE_BINARY_DIR}/_deps/qdmi-src/src #TODO
     PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
            $<INSTALL_INTERFACE:include>

@@ -32,8 +32,8 @@ NSGA2Type ReadParameters(int sizeChrom, int nobj, QDMI_Device &device)
     srand(time(NULL));
 
     nsga2Params.seed = (float)rand() / (float)(RAND_MAX); // Seed value
-    nsga2Params.popsize = 8;      // Population size (multiple of 4)
-    nsga2Params.ngen = 16;        // Number of generations
+    nsga2Params.popsize = 64;      // Population size (multiple of 4)
+    nsga2Params.ngen = 3;        // Number of generations
     nsga2Params.nobj = nobj;      // Number of objectives
     nsga2Params.ncon = 0;         // Number of constraints
     nsga2Params.nreal = 0;        // Number of real variables
@@ -90,7 +90,7 @@ NSGA2Type ReadParameters(int sizeChrom, int nobj, QDMI_Device &device)
         0; // Use gnuplot to display the results realtime (0 for NO) (1 for yes)
 
     // assert(nsga2Params.nreal ^ nsga2Params.nbin);
-    std::cout << "[DEBUG] end of nsga2" << std::endl;
+    //std::cout << "[DEBUG] end of nsga2" << std::endl;
     return nsga2Params;
 }
 
@@ -108,7 +108,7 @@ int InitNSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
     char local_params[strlen(local_path) + 100];
     char local_feasible_pop[strlen(local_path) + 100];
 
-    std::cout << "[DEBUG] Before snprintf" << std::endl;
+    //std::cout << "[DEBUG] Before snprintf" << std::endl;
 
     snprintf(local_intial_pop, sizeof(local_intial_pop), "%s%s", local_path,
              "initial_pop.out");
@@ -131,7 +131,7 @@ int InitNSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
     fpt6 = fopen(local_feasible_pop, "w");
 
     assert(nsga2Params->nint > 0);
-    std::cout << "[DEBUG] After assert" << std::endl;
+    //std::cout << "[DEBUG] After assert" << std::endl;
 
     fprintf(fpt1, "# This file contains the data of initial population\n");
     fprintf(fpt2, "# This file contains the data of final population\n");
@@ -155,7 +155,7 @@ int InitNSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
             nsga2Params->pcross_int);
 
     // nsga2Params->bitlength = 0;
-    std::cout << "[DEBUG] Before loop" << std::endl;
+    //std::cout << "[DEBUG] Before loop" << std::endl;
     for (i = 0; i < nsga2Params->nint; i++)
     {
         // fprintf(fpt5, "\n Number of bits for binary variable %d         =
@@ -202,7 +202,7 @@ int InitNSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
     nsga2Params->nintcross = 0;
     nsga2Params->nrealcross = 0;
 
-    std::cout << "[DEBUG] Before population initialization" << std::endl;
+    //std::cout << "[DEBUG] Before population initialization" << std::endl;
     // Initializing the populations
     parent_pop = (population *)malloc(sizeof(population));
     child_pop = (population *)malloc(sizeof(population));
@@ -216,12 +216,16 @@ int InitNSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
     randomize(nsga2Params->seed);
     initialize_pop(nsga2Params, parent_pop);
 
+    std::cout << "   [Heuristic]..........."
+                  << "Generation "
+                  << 1
+                  << std::endl;
     evaluate_pop(nsga2Params, parent_pop, TSM, designSpace, fVerbose);
     assign_rank_and_crowding_distance(nsga2Params, parent_pop);
     report_pop(nsga2Params, parent_pop, fpt1);
     report_feasible(nsga2Params, parent_pop, fpt6);
 
-    std::cout << "[DEBUG] after population things" << std::endl;
+    //std::cout << "[DEBUG] after population things" << std::endl;
     char buff[100];
     time_t now = time(0);
     strftime(buff, 100, "%Y-%m-%d %H:%M:%S.000", localtime(&now));
@@ -233,12 +237,12 @@ int InitNSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
 
     report_pop(nsga2Params, parent_pop, fpt4);
 
-    std::cout << "[DEBUG] after report pop" << std::endl;
-    if (nsga2Params->choice != 0)
-    {
-        ranges_pop(nsga2Params, parent_pop, &xtop, &ytop, &ztop);
-        onthefly_display(nsga2Params, parent_pop, gp, 1, xtop, ytop, ztop);
-    }
+    //std::cout << "[DEBUG] after report pop" << std::endl;
+    //if (nsga2Params->choice != 0)
+    //{
+    //    ranges_pop(nsga2Params, parent_pop, &xtop, &ytop, &ztop);
+    //    onthefly_display(nsga2Params, parent_pop, gp, 1, xtop, ytop, ztop);
+    //}
 
     fflush(fpt1);
     fflush(fpt2);
@@ -261,6 +265,10 @@ std::vector<std::string> NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM, bo
         selection(nsga2Params, parent_pop, child_pop);
         mutation_pop(nsga2Params, child_pop);
         //    	decode_pop(nsga2Params, child_pop);
+        std::cout << "   [Heuristic]..........."
+                  << "Generation "
+                  << i
+                  << std::endl;
         evaluate_pop(nsga2Params, child_pop, TSM, designSpace, fVerbose);
         merge(nsga2Params, parent_pop, child_pop, mixed_pop);
         fill_nondominated_sort(nsga2Params, mixed_pop, parent_pop);

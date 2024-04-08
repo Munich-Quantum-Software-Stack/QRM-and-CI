@@ -62,20 +62,21 @@ int main(int argc, char *argv[])
 
     // Open the QIR file
     // const char *filename = "../../benchmarks/test.ll";
-    std::string benchmark_dir = "../../../MQT_benchmark_QIR_mini";
-    std::string default_results_dir = "../../../logs";
-    std::string final_results_dir =
-        "../../../experiments/13-02-24/binary_gen8_pop8";
+    const char *filename = "../../benchmarks/qftentangled_indep_qiskit_20.ll";
+    //std::string benchmark_dir = "../../../MQT_benchmark_QIR_mini";
+    //std::string default_results_dir = "../../../logs";
+    //std::string final_results_dir =
+    //    "../../../experiments/13-02-24/binary_gen8_pop8";
 
-    for (const auto &entry : std::filesystem::directory_iterator(benchmark_dir))
-        if (entry.is_regular_file() && entry.path().extension() == ".ll")
-        {
-            std::ifstream file(entry.path(), std::ios::binary);
+    //for (const auto &entry : std::filesystem::directory_iterator(benchmark_dir))
+    //    if (entry.is_regular_file() && entry.path().extension() == ".ll")
+    //    {
+            std::ifstream file(filename /*entry.path()*/, std::ios::binary);
             if (!file.is_open())
             {
                 std::cerr
                     << "[Quantum Daemon]......Failed to open file with QIR: "
-                    << entry.path() << std::endl;
+                    << filename /*entry.path()*/ << std::endl;
                 return 1;
             }
 
@@ -181,7 +182,7 @@ int main(int argc, char *argv[])
 
             std::filesystem::copy(default_results_dir, copy_to);
             */
-        }
+        //}
     // Close the connections
     close_connections(&conn);
 

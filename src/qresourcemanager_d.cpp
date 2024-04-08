@@ -4,7 +4,7 @@
  */
 #include <QuantumResourceManager.hpp>
 
-using json = nlohmann::json;
+//using json = nlohmann::json;
 using llvm::orc::ThreadSafeModule;
 
 #define CHECK_ERR(a, b)                                                        \
@@ -34,7 +34,7 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
 {
     QuantumTask task;
 
-    json QuantumTask_json = json::parse(QuantumTask_str);
+    nlohmann::json QuantumTask_json = nlohmann::json::parse(QuantumTask_str);
 
     if (!QuantumTask_json.contains("task_id"))
     {
@@ -243,7 +243,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
     std::chrono::duration<double> elapsed_seconds = end - start;
 
     // Create JSON string to send back to the Quantum Daemon
-    json QuantumResult_json = {
+    nlohmann::json QuantumResult_json = {
         {"task_id", -1},
         {"results", results},
         {"destination", ""},

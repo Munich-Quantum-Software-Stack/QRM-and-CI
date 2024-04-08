@@ -5,7 +5,9 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -14,6 +16,44 @@
 #include "nsga2.hpp"
 
 using llvm::orc::ThreadSafeModule;
+
+/**
+ * @brief TODO
+ * @param TODO
+ */
+std::vector<std::string> separatePaths(const std::string &passesPaths)
+{
+    std::vector<std::string> paths;
+    std::istringstream ss(passesPaths);
+    std::string path;
+
+    while (std::getline(ss, path, ':'))
+        if (path != "")
+            paths.push_back(path);
+
+    return paths;
+}
+
+/**
+ * @brief TODO
+ * @param TODO
+ */
+std::vector<std::string> findSOPasses(const std::vector<std::string> &paths)
+{
+    std::vector<std::string> soPasses;
+
+    for (const std::string &path : paths)
+        for (const auto &entry : std::filesystem::directory_iterator(path))
+            if (entry.is_regular_file() && entry.path().extension() == ".dylib")
+            {
+                std::string filename = entry.path().filename().string();
+                if (filename.substr(0, 6) == "libQir" &&
+                    filename.find("Analysis") == std::string::npos)
+                    soPasses.push_back(entry.path().string());
+            }
+
+    return soPasses;
+}
 
 /**
  * @brief The main entry point of the program.
@@ -36,63 +76,20 @@ extern "C" std::vector<std::string> selector(ThreadSafeModule &TSM,
         return std::vector<std::string>{};
     }
 
-    std::string passesPath = passesEnv;
+    //std::string passesPath = passesEnv;
 
-    if (passesPath.find(':') != std::string::npos)
-    {
-        std::cout << "   [Selector]............Warning: Environment variable "
-                     "$PASSES contains more than one path"
-                  << std::endl;
+    //if (passesPath.find(':') != std::string::npos)
+    //{
+    //    std::cout << "   [Selector]............Warning: Environment variable "
+    //                 "$PASSES contains more than one path"
+    //              << std::endl;
 
-        return std::vector<std::string>{};
-    }
+    //    return std::vector<std::string>{};
+    //}
 
-    // Append the existing passes
-    std::vector<std::string> passes{
-        passesPath + "/libQirDivisionByZeroPass.so",
-        passesPath + "/libQirNormalizeArgAnglePass.so",
-        // passesPath + "/libQirXCnotXReductionPass.so", TODO BUG?
-        passesPath + "/libQirCommuteCnotRxPass.so",
-        passesPath + "/libQirCommuteRxCnotPass.so",
-        passesPath + "/libQirCommuteCnotXPass.so",
-        passesPath + "/libQirCommuteXCnotPass.so",
-        passesPath + "/libQirCommuteCnotZPass.so",
-        passesPath + "/libQirCommuteZCnotPass.so",
-        passesPath + "/libQirPlaceIrreversibleGatesInMetadataPass.so",
-        passesPath + "/libQirAnnotateUnsupportedGatesPass.so",
-        passesPath + "/libQirU3ToRzRyRzDecompositionPass.so",
-        passesPath + "/libQirRzToRxRyRxDecompositionPass.so",
-        passesPath + "/libQirCNotToHCZHDecompositionPass.so",
-        passesPath + "/libQirSwapToCnotsDecompositionPass.so",
-        passesPath + "/libQirCZToHCnotHDecompositionPass.so",
-        passesPath + "/libQirFunctionAnnotatorPass.so",
-        passesPath + "/libQirRedundantGatesCancellationPass.so",
-        passesPath + "/libQirFunctionReplacementPass.so",
-        passesPath + "/libQirReplaceConstantBranchesPass.so",
-        passesPath + "/libQirGroupingPass.so",
-        passesPath + "/libQirRemoveNonEntrypointFunctionsPass.so",
-        passesPath + "/libQirDeferMeasurementPass.so",
-        passesPath + "/libQirBarrierBeforeFinalMeasurementsPass.so",
-        // passesPath +
-        //  "/libQirRemoveBasicBlocksWithSingleNonConditionalBranchIns"
-        //               "tsPass.so",
-        //   passesPath + "/libQirQubitRemapPass.so", TODO BREAKS THE DEPTH'S
-        //   FITNESS EVALUATION
-        passesPath + "/libQirResourceAnnotationPass.so",
-        passesPath + "/libQirNullRotationCancellationPass.so",
-        passesPath + "/libQirMergeRotationsPass.so",
-        passesPath + "/libQirDoubleCnotCancellationPass.so",
-        passesPath + "/libQirHadamardAndXGateSwitchPass.so",
-        passesPath + "/libQirHadamardAndYGateSwitchPass.so",
-        passesPath + "/libQirHadamardAndZGateSwitchPass.so",
-        passesPath + "/libQirXGateAndHadamardSwitchPass.so",
-        passesPath + "/libQirYGateAndHadamardSwitchPass.so",
-        passesPath + "/libQirZGateAndHadamardSwitchPass.so",
-        passesPath + "/libQirSToSDaggerPass.so",
-        passesPath + "/libQirSDaggerToSPass.so",
-        passesPath + "/libQirReverseCnotPass.so",
-        passesPath + "/libQirSwapAndCnotReplacementPass.so",
-    };
+	std::string pathPasses = passesEnv;
+    std::vector<std::string> soPaths = separatePaths(pathPasses);
+    std::vector<std::string> passes = findSOPasses(soPaths);
 
     // Perform the DSE
     std::cout << "   [Selector]............Starting the DSE" << std::endl;
@@ -100,7 +97,7 @@ extern "C" std::vector<std::string> selector(ThreadSafeModule &TSM,
     std::cout << "   [Selector]............nsga2Params set" << std::endl;
     char *home = std::getenv("HOME");
     assert(home != nullptr);
-    std::string results_path = std::string(home) + "/logs/results_";
+    std::string results_path = std::string(home) + "/qrm.git/logs/results_";
     const char *GA_path = results_path.c_str();
     std::cout << "   [Selector]............Init NSGA2" << std::endl;
     InitNSGA2(&nsga2Params, TSM, GA_path, false, passes);

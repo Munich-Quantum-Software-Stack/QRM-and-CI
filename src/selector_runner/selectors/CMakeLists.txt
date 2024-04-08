@@ -21,34 +21,40 @@ add_library(nsga2 SHARED
     tourselect.cpp
 )
 
-target_include_directories(nsga2 PRIVATE ${CMAKE_INSTALL_PREFIX}/include/pass_runner)
-target_link_directories(nsga2 PRIVATE qdmi)
+target_include_directories(nsga2 PRIVATE 
+    ${CMAKE_INSTALL_PREFIX}/src/selector_runner/selectors/
+    ${CMAKE_INSTALL_PREFIX}/include/pass_runner
+    ${CMAKE_BINARY_DIR}/_deps/qdmi-src/include #TODO
+    ${CMAKE_BINARY_DIR}/_deps/qinfo-src/include #TODO
+)
+#target_link_directories(nsga2 PRIVATE qdmi)
+target_link_libraries(nsga2 PRIVATE qdmi LLVM PassRunner)
 
 install(TARGETS nsga2
     DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
     PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_PREFIX}/include" # Install headers too
 )
 
-add_library(hillclimb SHARED
-    hill_climbing.cpp
-    rand.cpp
-    metrics.cpp
-)
-
-target_include_directories(hillclimb PRIVATE ${CMAKE_INSTALL_PREFIX}/include/pass_runner)
-target_link_libraries(hillclimb PRIVATE qdmi)
-
-install(TARGETS hillclimb
-    DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
-    PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_PREFIX}/include"
-)
+#add_library(hillclimb SHARED
+#    hill_climbing.cpp
+#    rand.cpp
+#    metrics.cpp
+#)
+#
+#target_include_directories(hillclimb PRIVATE ${CMAKE_INSTALL_PREFIX}/include/pass_runner)
+#target_link_libraries(hillclimb PRIVATE qdmi)
+#
+#install(TARGETS hillclimb
+#    DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
+#    PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_PREFIX}/include"
+#)
 
 # Include all new selectors here
 set(SELECTORS_SOURCE_FILES
-    selector_all.cpp
-    selector_manual.cpp
+#    selector_all.cpp
+#    selector_manual.cpp
     selector_ga.cpp
-    selector_hillclimb.cpp
+#    selector_hillclimb.cpp
 )
 
 # Compile each selector as a shared object
@@ -61,7 +67,8 @@ foreach(src_file ${SELECTORS_SOURCE_FILES})
         qinfo
         fomac
         nsga2
-        hillclimb
+#        hillclimb
+        LLVM
     )
 
     # Set include directories for the library

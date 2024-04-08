@@ -28,7 +28,13 @@ void evaluate_pop(NSGA2Type *nsga2Params, population *pop,
 {
     int i;
     for (i = 0; i < nsga2Params->popsize; i++)
+    {
+        std::cout << "   [Heuristic]..........."
+                  << "Candidate "
+                  << i + 1
+                  << std::endl;
         evaluate_ind(nsga2Params, &(pop->ind[i]), TSM, designSpace, fVerbose);
+    }
 }
 
 int evaluate_depth(ThreadSafeModule &TSM)
