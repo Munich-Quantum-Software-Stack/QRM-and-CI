@@ -33,7 +33,7 @@ NSGA2Type ReadParameters(int sizeChrom, int nobj, QDMI_Device &device)
 
     nsga2Params.seed = (float)rand() / (float)(RAND_MAX); // Seed value
     nsga2Params.popsize = 256; // Population size (multiple of 4)
-    nsga2Params.ngen = 24;     // Number of generations
+    nsga2Params.ngen = 8;     // Number of generations
     nsga2Params.nobj = nobj;  // Number of objectives
     nsga2Params.ncon = 0;     // Number of constraints
     nsga2Params.nreal = 0;    // Number of real variables
@@ -240,11 +240,13 @@ int InitNSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
     report_pop(nsga2Params, parent_pop, fpt4);
 
     std::cout << "[DEBUG] after report pop" << std::endl;
+    /*
     if (nsga2Params->choice != 0)
     {
         ranges_pop(nsga2Params, parent_pop, &xtop, &ytop, &ztop);
         onthefly_display(nsga2Params, parent_pop, gp, 1, xtop, ytop, ztop);
     }
+    */
 
     fflush(fpt1);
     fflush(fpt2);

@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
     std::string benchmark_dir = "../../../MQT_benchmark_QIR_mini";
     std::string default_results_dir = "../../../logs";
     std::string final_results_dir =
-        "../../../experiments/13-02-24/binary_gen8_pop8";
+        "../../../experiments/binary_gen8_pop256";
 
     for (const auto &entry : std::filesystem::directory_iterator(benchmark_dir))
         if (entry.is_regular_file() && entry.path().extension() == ".ll")

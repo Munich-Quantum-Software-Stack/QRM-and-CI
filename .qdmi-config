@@ -10,7 +10,3 @@ param3=one
 param1=01234
 param2=0.0
 param3=one
-/home/ubuntu/bin/lib/libbackend_wmi.so
-param1=01234
-param2=0.0
-param3=one
