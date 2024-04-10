@@ -40,7 +40,6 @@ NSGA2Type ReadParameters(int sizeChrom, int nobj, QDMI_Device &device)
     nsga2Params.nint = sizeChrom; // Number of integer variables
     nsga2Params.nbin = 0;         // Number of binary variables
     nsga2Params.nsim = 0;         // Number of simulations
-
     nsga2Params.device = device;
 
     assert(nsga2Params.seed > 0.0 && nsga2Params.seed < 1.0);
@@ -234,11 +233,13 @@ int InitNSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
     report_pop(nsga2Params, parent_pop, fpt4);
 
     std::cout << "[DEBUG] after report pop" << std::endl;
+    /*
     if (nsga2Params->choice != 0)
     {
         ranges_pop(nsga2Params, parent_pop, &xtop, &ytop, &ztop);
         onthefly_display(nsga2Params, parent_pop, gp, 1, xtop, ytop, ztop);
     }
+    */
 
     fflush(fpt1);
     fflush(fpt2);
