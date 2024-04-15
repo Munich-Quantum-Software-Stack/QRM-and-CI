@@ -32,7 +32,7 @@
 
 struct QuantumTask;
 
-QDMI_Device invokeScheduler(const std::string &nameScheduler,
-                            std::vector<QuantumTask> &childQuantumTasks);
+int invokeScheduler(const std::string &nameScheduler,
+                    std::vector<QuantumTask> *childQuantumTasks);
 
 #endif // SCHEDULERRUNNER_HPP

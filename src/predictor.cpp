@@ -75,8 +75,7 @@ float predict(ThreadSafeModule &TSM)
         evaluate_supermarq_plus(TSM, gate_counts);
 
     // Prepare input tensor
-    int num_features = 53;
-    std::array<float, num_features> input_data;
+    std::array<float, 53> input_data;
     int i = 0;
     // Fill input_data with gate_counts values
     for (const auto &pair : gate_counts)
@@ -88,7 +87,7 @@ float predict(ThreadSafeModule &TSM)
     {
         input_data[i++] = (float)(value);
     }
-    std::vector<int64_t> input_shape = {1, num_features};
+    std::vector<int64_t> input_shape = {1, 53};
     Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
         memory_info, input_data.data(), input_data.size(), input_shape.data(),
         input_shape.size());

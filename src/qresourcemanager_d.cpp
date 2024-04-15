@@ -72,7 +72,6 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
     }
     task.preferred_qpus = preferred_qpus;
     task.duration = QuantumTask_json["duration"];
-    task.scheduled_qpu = QuantumTask_json["scheduled_qpu"];
     task.priority = QuantumTask_json["priority"];
     task.optimisation_level = QuantumTask_json["optimisation_level"];
     task.no_modify = QuantumTask_json["no_modify"];
@@ -106,6 +105,7 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
 void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                          const QuantumTask &parentQuantumTask)
 {
+    int err = 1;
 
     // TODO THE TARGET-AGNOSTIC OPTIMZATION
     //      BEFORE CIRCUIT CUTTING
@@ -127,8 +127,19 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
             << std::endl;
     }
 
+    // TODO: move into scheduler
+    for (auto &childQuantumTask : childQuantumTasks)
+    {
+        // Calculate expected execution time
+        childQuantumTask.duration =
+            predict(childQuantumTask.thread_safe_module);
+    }
+
+    // Invoke the scheduler
+    // TODO Handle err
+    err = invokeScheduler("libscheduler_round_robin.so", &childQuantumTasks);
+
     // Compile and execute each generated sub-circuit
-    int err;
     std::vector<std::string> modules;
     std::vector<std::string> targets;
     std::map<std::string, int> results;
@@ -141,18 +152,8 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
 
         std::cout << std::endl;
 
-        // Calculate expected execution time
-        childQuantumTask.duration =
-            predict(childQuantumTask.thread_safe_module);
+        QDMI_Device device = childQuantumTask.scheduled_qpu;
 
-        // Invoke the scheduler
-        std::string scheduler = childQuantumTask.change_scheduler == ""
-                                    ? "libscheduler_round_robin.so"
-                                    : childQuantumTask.change_scheduler;
-
-        QDMI_Device device = invokeScheduler(scheduler, childQuantumTasks);
-
-        // childQuantumTask.setTargetDevice(device);
         if (device == NULL)
         {
             std::cout << "   [qresourcemanager_d]..Warning: "

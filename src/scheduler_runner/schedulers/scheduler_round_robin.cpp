@@ -22,33 +22,34 @@ struct QuantumTask;
  *
  * @return const char *
  */
-extern "C" QDMI_Device scheduler(std::vector<QuantumTask> &tasks)
+extern "C" int scheduler(std::vector<QuantumTask> *childQuantumTasks)
 {
     // Query the available devices
-
-    std::cout << "   [Scheduler]...........Choosing "
-              << " as target device "
-              << "for job with ID " << std::endl;
-
-    int x = 0;
-
-    /**
     std::vector<QDMI_Device> devices = FOMAC_available_devices();
 
-    QDMI_Device device = devices.back();
+    if (devices.size() == 0)
+    {
+        std::cout << "   [Scheduler]...........Error: no devices found"
+                  << std::endl;
+        return 1;
+    }
 
     std::cout << "   [Scheduler]..........." << devices.size()
               << " available device(s)" << std::endl;
 
-    const char *libname = strrchr(device->library.libname, '/');
+    for (auto &childQuantumTask : *childQuantumTasks)
+    {
+        QDMI_Device device = devices.back();
 
-    std::cout << "   [Scheduler]...........Choosing "
-              << libname << " as target device "
-              << "for job with ID " << childQuantumTask.task_id
-              << std::endl;
+        const char *libname = strrchr(device->library.libname, '/');
 
-    return device;
+        std::cout << "   [Scheduler]...........Setting " << libname
+                  << " as target device "
+                  << "for job with ID " << childQuantumTask.task_id
+                  << std::endl;
 
-    */
-    return QDMI_Device();
+        childQuantumTask.scheduled_qpu = device;
+    }
+
+    return 0;
 }

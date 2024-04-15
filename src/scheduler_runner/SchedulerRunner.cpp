@@ -14,8 +14,8 @@
  * @param pathScheduler TODO
  * @return QuantumTask
  */
-QDMI_Device invokeScheduler(const std::string &nameScheduler,
-                            std::vector<QuantumTask> &childQuantumTasks)
+int invokeScheduler(const std::string &nameScheduler,
+                    std::vector<QuantumTask> *childQuantumTasks)
 {
     std::string pathScheduler;
     char buffer[PATH_MAX];
@@ -34,9 +34,6 @@ QDMI_Device invokeScheduler(const std::string &nameScheduler,
               << nameScheduler << std::endl;
 
     // Load the scheduler as a shared library
-    pathScheduler =
-        "/home/ubuntu/mqss/qrm.git/build/src/scheduler_runner/schedulers/" +
-        nameScheduler;
     void *lib_handle = dlopen(pathScheduler.c_str(), RTLD_LAZY);
 
     if (!lib_handle)
@@ -46,11 +43,11 @@ QDMI_Device invokeScheduler(const std::string &nameScheduler,
                "library: "
             << dlerror() << std::endl;
 
-        return NULL;
+        return 1;
     }
 
     // Dynamic loading and linking of the shared library
-    typedef QDMI_Device (*SchedulerFunction)(std::vector<QuantumTask> &);
+    typedef int (*SchedulerFunction)(std::vector<QuantumTask> *);
     SchedulerFunction scheduler =
         reinterpret_cast<SchedulerFunction>(dlsym(lib_handle, "scheduler"));
 

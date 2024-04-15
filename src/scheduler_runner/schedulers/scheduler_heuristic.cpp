@@ -157,7 +157,7 @@ std::string choose_platform(QuantumTask &task,
  *
  * @return const char *
  */
-extern "C" QDMI_Device scheduler(std::vector<QuantumTask> &tasks)
+extern "C" int scheduler(std::vector<QuantumTask> *tasks)
 {
     // TODO uncomment when FOMAC is available
     // std::vector<QDMI_Device> devices = FOMAC_available_devices();
@@ -170,7 +170,7 @@ extern "C" QDMI_Device scheduler(std::vector<QuantumTask> &tasks)
     std::cout << "   [Scheduler]...........preffered QPU: ";
 
     // Sort tasks by priority and within that by duration
-    std::sort(tasks.begin(), tasks.end(),
+    std::sort((*tasks).begin(), (*tasks).end(),
               [](const QuantumTask &a, const QuantumTask &b)
               {
                   if (a.priority == b.priority)
@@ -180,7 +180,7 @@ extern "C" QDMI_Device scheduler(std::vector<QuantumTask> &tasks)
                   return a.priority > b.priority;
               });
 
-    for (auto &task : tasks)
+    for (auto &task : *tasks)
     {
 
         for (auto &qpu : task.preferred_qpus)
@@ -232,5 +232,5 @@ extern "C" QDMI_Device scheduler(std::vector<QuantumTask> &tasks)
     std::cout << "   [Scheduler]...........returning selected device."
               << std::endl;
 
-    return QDMI_Device();
+    return 0;
 }
