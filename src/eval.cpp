@@ -209,12 +209,12 @@ evaluate_supermarq_plus(ThreadSafeModule &TSM,
             ? (double)activity_count / (double)(depth * num_qubits)
             : 0.0;
 
-    return std::vector<double>{program_communication,
-                               critical_depth,
-                               entanglement_ratio,
-                               parallelism,
-                               liveness,
-                               directed_program_communication,
-                               one_qubit_gates_per_layer,
-                               two_qubit_gates_per_layer};
+    return std::vector<double>{
+        static_cast<double>(num_qubits), static_cast<double>(depth),
+        // original supermarq features
+        program_communication, critical_depth, entanglement_ratio, parallelism,
+        liveness,
+        // plus features
+        directed_program_communication, one_qubit_gates_per_layer,
+        two_qubit_gates_per_layer};
 }
