@@ -21,9 +21,9 @@ float predict(ThreadSafeModule &TSM)
                                               {"__quantum__qis__y__body", 0},
                                               {"__quantum__qis__z__body", 0},
                                               {"__quantum__qis__h__body", 0},
-                                              {"s", 0},
+                                              {"__quantum__qis__s__body", 0},
                                               {"sdg", 0},
-                                              {"t", 0},
+                                              {"__quantum__qis__t__body", 0},
                                               {"tdg", 0},
                                               {"__quantum__qis__rx__body", 0},
                                               {"__quantum__qis__ry__body", 0},
@@ -75,23 +75,20 @@ float predict(ThreadSafeModule &TSM)
         evaluate_supermarq_plus(TSM, gate_counts);
 
     // Prepare input tensor
-    std::array<float, 40> input_data;
+    int num_features = 53;
+    std::array<float, num_features> input_data;
     int i = 0;
     // Fill input_data with gate_counts values
     for (const auto &pair : gate_counts)
     {
-        if (i >= 40)
-            break; // Prevent overflow
         input_data[i++] = (float)(pair.second);
     }
     // Fill the rest of input_data with supermarq_plus values
     for (const double &value : supermarq_plus)
     {
-        if (i >= 40)
-            break; // Prevent overflow
         input_data[i++] = (float)(value);
     }
-    std::vector<int64_t> input_shape = {1, 40};
+    std::vector<int64_t> input_shape = {1, num_features};
     Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
         memory_info, input_data.data(), input_data.size(), input_shape.data(),
         input_shape.size());
