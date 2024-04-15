@@ -55,7 +55,7 @@ struct QuantumTask
     std::string result_destination;
     std::vector<std::string> preferred_qpus;
     float duration;
-    std::string scheduled_qpu;
+    QDMI_Device scheduled_qpu;
     int priority;
     int optimisation_level;
     bool no_modify;
