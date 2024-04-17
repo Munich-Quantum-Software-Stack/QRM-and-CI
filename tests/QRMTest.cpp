@@ -63,7 +63,7 @@ int main()
         {"circuit_file", ""},
         {"circuit_file_type", "QIR"},
         {"result_destination", ""},
-        {"preferred_qpus", "Q20, Q5"},
+        {"preferred_qpus", "Q20,Q5"},
         {"duration", 1},
         {"scheduled_qpu", ""},
         {"priority", 0},

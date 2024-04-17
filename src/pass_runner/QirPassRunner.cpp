@@ -10,6 +10,13 @@
 
 using namespace llvm;
 
+const char *registered_devices[] = {
+    "/bin/lib/libbackend_qlm.so",
+    "/bin/lib/libbackend_ibm.so",
+    "/bin/lib/libbackend_wmi.so",
+    "/bin/lib/libbackend_q7.so",
+};
+
 /**
  * @brief Default constructor of the 'QirPassRunner' class
  */

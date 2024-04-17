@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <thread>
 #include <unistd.h>
+#include <variant>
 #include <vector>
 
 #include <connection_handling.hpp>

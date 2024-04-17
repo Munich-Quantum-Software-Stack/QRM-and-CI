@@ -137,7 +137,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
 
     // Invoke the scheduler
     // TODO Handle err
-    err = invokeScheduler("libscheduler_round_robin.so", &childQuantumTasks);
+    err = invokeScheduler("libscheduler_heuristic.so", &childQuantumTasks);
 
     // Compile and execute each generated sub-circuit
     std::vector<std::string> modules;

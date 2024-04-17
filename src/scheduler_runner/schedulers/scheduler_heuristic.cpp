@@ -1,35 +1,144 @@
 /**
  * @file scheduler_heuristic.cpp
- * @brief Implementation of a dummy scheduler.
+ * @brief Implementation of a ML guided scheduler.
  */
 
 #include <iostream>
 #include <string>
+#include <unordered_set>
 #include <vector>
-
 #include "PassModule.hpp"
 #include "QuantumResourceManager.hpp"
-
 #include "../../my_qdmi.hpp"
 #include <fomac.hpp>
 #include <qdmi.h>
 
 using llvm::orc::ThreadSafeModule;
-
-bool skipping(QuantumTask &new_task, const std::string &target_platform)
+/**
+ * @brief Calculate scores for the devices. Either based on user preference, ML
+ * model, or both.
+ * @param task The QuantumTask to be scheduled.
+ * @return Scores for the devices.
+ */
+std::map<std::string, float> calculate_scores(QuantumTask &task)
 {
+    std::map<std::string, float> scores;
+
+    // User only wants to use a single QPU
+    if (task.preferred_qpus.size() == 1)
+    {
+        // maximum score for the only QPU
+        scores = {{task.preferred_qpus.front(), 1.0}};
+    }
+    // TODO User wants to use some QPUs more than others -> user ranking
+    else
+    { // If choice is not forced or the user preference is ambiguous
+        // TODO Calculate ML scores
+
+        // TODO use devices when available
+        std::vector<std::string> qpus = task.preferred_qpus;
+        std::vector<float> model_scores(qpus.size());
+        for (auto &score : model_scores)
+        {
+            score = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+        }
+        // Map the model output to a std::map<std::string, float>
+        for (size_t i = 0; i < qpus.size(); ++i)
+        {
+            scores[qpus[i]] = model_scores[i];
+        }
+    }
+
+    std::cout << "   [Scheduler]...........Scores: ";
+    for (auto &score : scores)
+    {
+        std::cout << score.first << " " << score.second << " ";
+    }
+    return scores;
+}
+
+/**
+ * @brief Select the shortest queue among the top 3 scored devices.
+ * @param task The QuantumTask to be scheduled.
+ * @param scores The scores of the devices.
+ * @return The name of the selected device.
+ */
+std::string choose_device(QuantumTask &task,
+                          const std::map<std::string, float> &scores)
+{
+    // Find the devices with the three highest final scores
+    std::vector<std::string> devices;
+    for (auto &score : scores)
+    {
+        if (devices.size() < 3)
+        {
+            devices.push_back(score.first);
+        }
+        else
+        {
+            for (auto &device : devices)
+            {
+                if (score.second > scores.at(device))
+                {
+                    device = score.first;
+                    break;
+                }
+            }
+        }
+    }
+
+    std::cout << "   [Scheduler]...........Choosing target QDMI_Device from"
+              << " the following devices: ";
+    for (auto &device : devices)
+    {
+        std::cout << device << " ";
+    }
 
     // Get current queue from metadata
     QirPassRunner &QPR = QirPassRunner::getInstance();
     QirMetadata &qirMetadata = QPR.getMetadata();
 
-    auto queue = qirMetadata.get_queue(target_platform);
+    // Find the queue with shortest end time among the three devices
+    float min_end_time = std::numeric_limits<float>::max();
+    std::string target_device;
+
+    for (auto &device : devices)
+    {
+        auto queue = qirMetadata.get_queue(device);
+        if (queue->tasks.empty())
+        {
+            target_device = device;
+            break;
+        }
+        float end_time = qirMetadata.get_end(queue->tasks.back()->task_id);
+        if (end_time < min_end_time)
+        {
+            min_end_time = end_time;
+            target_device = device;
+        }
+    }
+    return target_device;
+}
+
+/**
+ * @brief Schedule a QuantumTask on a target device using skipping strategy.
+ * @param new_task The QuantumTask to be scheduled.
+ * @param target_device The target device to schedule the QuantumTask on.
+ * @return True if the QuantumTask was successfully scheduled, false otherwise.
+ */
+bool skipping_schedule(QuantumTask &new_task, const std::string &target_device)
+{
+    // Get current queue from metadata
+    QirPassRunner &QPR = QirPassRunner::getInstance();
+    QirMetadata &qirMetadata = QPR.getMetadata();
+
+    auto queue = qirMetadata.get_queue(target_device);
     float new_task_duration = qirMetadata.get_duration(new_task.task_id);
     int new_task_priority = qirMetadata.get_priority(new_task.task_id);
 
     std::cout << "   [Scheduler]...........Inserting QuantumTask with ID "
-              << new_task.task_id << " into the queue for platform "
-              << target_platform << std::endl;
+              << new_task.task_id << " into the queue for device "
+              << target_device << std::endl;
 
     // Check if the queue is empty
     if (queue->tasks.empty())
@@ -93,81 +202,19 @@ bool skipping(QuantumTask &new_task, const std::string &target_platform)
     return true;
 }
 
-std::string choose_platform(QuantumTask &task,
-                            const std::map<std::string, float> &scores)
-{
-    // Find the platforms with the three highest final scores
-    std::vector<std::string> platforms;
-    for (auto &score : scores)
-    {
-        if (platforms.size() < 3)
-        {
-            platforms.push_back(score.first);
-        }
-        else
-        {
-            for (auto &platform : platforms)
-            {
-                if (score.second > scores.at(platform))
-                {
-                    platform = score.first;
-                    break;
-                }
-            }
-        }
-    }
-
-    std::cout << "   [Scheduler]...........Choosing target QDMI_Device from"
-              << " the following platforms: ";
-    for (auto &platform : platforms)
-    {
-        std::cout << platform << " ";
-    }
-
-    // Get current queue from metadata
-    QirPassRunner &QPR = QirPassRunner::getInstance();
-    QirMetadata &qirMetadata = QPR.getMetadata();
-
-    // Find the queue with shortest end time among the three platforms
-    float min_end_time = std::numeric_limits<float>::max();
-    std::string target_platform;
-
-    for (auto &platform : platforms)
-    {
-        auto queue = qirMetadata.get_queue(platform);
-        if (queue->tasks.empty())
-        {
-            target_platform = platform;
-            break;
-        }
-        float end_time = qirMetadata.get_end(queue->tasks.back()->task_id);
-        if (end_time < min_end_time)
-        {
-            min_end_time = end_time;
-            target_platform = platform;
-        }
-    }
-    return target_platform;
-}
-
 /**
- * @brief The main entry point of the program.
- *
- * The Scheduler.
- *
- * @return const char *
+ * @brief Entry point for the scheduler.
+ * @param task The QuantumTask to be scheduled.
+ * @return The selected device on which the task was scheduled.
  */
 extern "C" int scheduler(std::vector<QuantumTask> *tasks)
 {
     // TODO uncomment when FOMAC is available
     // std::vector<QDMI_Device> devices = FOMAC_available_devices();
-
     std::vector<std::string> devices = {"Q5", "Q20", "Q50"};
 
     std::cout << "   [Scheduler]..........." << devices.size()
               << " available device(s)" << std::endl;
-
-    std::cout << "   [Scheduler]...........preffered QPU: ";
 
     // Sort tasks by priority and within that by duration
     std::sort((*tasks).begin(), (*tasks).end(),
@@ -180,53 +227,20 @@ extern "C" int scheduler(std::vector<QuantumTask> *tasks)
                   return a.priority > b.priority;
               });
 
+    // Queue each task
     for (auto &task : *tasks)
     {
+        // Calculate scores to produce device ranking
+        std::map<std::string, float> scores = calculate_scores(task);
 
-        for (auto &qpu : task.preferred_qpus)
-        {
-            std::cout << qpu << " ";
-        }
+        // Choose the device with the shortest queue out of top 3
+        std::string target_device = choose_device(task, scores);
 
-        std::map<std::string, float> scores;
-        // Check if the user only wants to use a single QPU
-        if (task.preferred_qpus.size() == 1)
-        {
-            // TODO: Check if the QPU is available
+        // Queue the task on the chosen device and skip if necessary
+        bool success = skipping_schedule(task, target_device);
 
-            // Maximal score for the preferred QPU
-            scores = {{task.preferred_qpus[0], 1.0}};
-        }
-        else
-        { // If choice is not forced, use the recommender system
-            // TODO: Calculate ML scores
-
-            // Dummy scores. TODO: use devices when available
-            std::vector<std::string> qpus = task.preferred_qpus;
-            std::vector<float> model_scores(qpus.size());
-            for (auto &score : model_scores)
-            {
-                score =
-                    static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
-            }
-            // Map the model output to a std::map<std::string, float>
-            for (size_t i = 0; i < qpus.size(); ++i)
-            {
-                scores[qpus[i]] = model_scores[i];
-            }
-        }
-
-        std::cout << "   [Scheduler]...........Scores: ";
-        for (auto &score : scores)
-        {
-            std::cout << score.first << " " << score.second << " ";
-        }
-
-        // Choose the platform with the shortest queue out of top 3
-        std::string target_platform = choose_platform(task, scores);
-
-        // Queue the task on the chosen platform and skip if necessary
-        bool success = skipping(task, target_platform);
+        // TODO once FOMAC is available, set the QPU
+        // task.scheduled_qpu = target_device;
     }
 
     std::cout << "   [Scheduler]...........returning selected device."

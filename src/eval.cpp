@@ -218,3 +218,97 @@ evaluate_supermarq_plus(ThreadSafeModule &TSM,
         directed_program_communication, one_qubit_gates_per_layer,
         two_qubit_gates_per_layer};
 }
+
+double calculate_circuit_duration(ThreadSafeModule &TSM,
+                                  double single_qubit_gate_time,
+                                  double multi_qubit_gate_time,
+                                  double measurement_time)
+{
+    std::string QIS_START = "__quantum__qis_";
+    double circuit_duration = 0.0;
+    std::unordered_map<std::string, double> qubit_times;
+
+    if (!TSM)
+    {
+        std::cerr << "ThreadSafeModule is null" << std::endl;
+        return 0.0;
+    }
+    TSM.withModuleDo(
+        [&](Module &module)
+        {
+            LLVMContext &Context = module.getContext();
+            StructType *qubitType = StructType::getTypeByName(Context, "Qubit");
+            for (auto &function : module)
+            {
+                for (auto &block : function)
+                {
+                    for (auto &instruction : block)
+                    {
+                        if (auto call_instr = dyn_cast<CallBase>(&instruction))
+                        {
+                            if (auto f = call_instr->getCalledFunction())
+                            {
+                                auto op_name =
+                                    static_cast<std::string>(f->getName());
+
+                                bool is_quantum =
+                                    (op_name.size() >= QIS_START.size() &&
+                                     op_name.substr(0, QIS_START.size()) ==
+                                         QIS_START);
+
+                                if (is_quantum)
+                                {
+                                    double gate_time = 0.0;
+                                    if (op_name == "__quantum__qis__measure")
+                                    {
+                                        gate_time = measurement_time;
+                                    }
+                                    else if (call_instr->getNumOperands() > 1)
+                                    {
+                                        gate_time = multi_qubit_gate_time;
+                                    }
+                                    else
+                                    {
+                                        gate_time = single_qubit_gate_time;
+                                    }
+
+                                    // Look for qubits affected by the gate
+                                    for (Use &operand : call_instr->operands())
+                                    {
+                                        if (auto *val =
+                                                dyn_cast<Value>(&operand))
+                                        {
+                                            if (val->getType() ==
+                                                PointerType::get(qubitType, 0))
+                                            {
+                                                std::string qubit;
+                                                llvm::raw_string_ostream stream(
+                                                    qubit);
+                                                operand.get()->printAsOperand(
+                                                    stream, true);
+                                                stream.flush();
+
+                                                // Add gate time to qubit time
+                                                qubit_times[qubit] += gate_time;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+    // Find the maximum qubit time
+    for (const auto &pair : qubit_times)
+    {
+        if (pair.second > circuit_duration)
+        {
+            circuit_duration = pair.second;
+        }
+    }
+
+    return circuit_duration;
+}
