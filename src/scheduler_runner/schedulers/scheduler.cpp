@@ -1,5 +1,5 @@
 /**
- * @file scheduler_heuristic.cpp
+ * @file scheduler.cpp
  * @brief Implementation of a ML guided scheduler.
  */
 

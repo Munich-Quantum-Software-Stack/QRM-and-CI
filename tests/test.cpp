@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
         {"circuit_qiskit", genericQir},
         {"additional_information", ""},
         {"change_selector", "libselector_manual.so"},
-        {"change_scheduler", "libscheduler_heuristic.so"},
+        {"change_scheduler", "libscheduler.so"},
     };
 
     std::string QuantumTask_str = QuantumTask_json.dump();

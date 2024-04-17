@@ -35,7 +35,7 @@ int invokeScheduler(const std::string &nameScheduler,
 
     // TODO: remove hardcoded path to the scheduler shared library
     pathScheduler = "/home/ubuntu/mqss/qrm.git/build/src/scheduler_runner/"
-                    "schedulers/libscheduler_heuristic.so";
+                    "schedulers/libscheduler.so";
 
     // Load the scheduler as a shared library
     void *lib_handle = dlopen(pathScheduler.c_str(), RTLD_LAZY);
