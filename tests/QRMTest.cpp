@@ -75,7 +75,7 @@ int main()
         {"circuit_qiskit", genericQir},
         {"additional_information", ""},
         {"change_selector", "libselector_manual.so"},
-        {"change_scheduler", "libscheduler_heuristic.so"},
+        {"change_scheduler", "libscheduler.so"},
     };
 
     auto qt = JSONToQuantumTask(QuantumTask_json.dump().c_str());
