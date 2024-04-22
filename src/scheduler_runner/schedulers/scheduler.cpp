@@ -2,15 +2,12 @@
  * @file scheduler.cpp
  * @brief Implementation of a ML guided scheduler.
  */
-//#include "my_qdmi.hpp"
-#include "PassModule.hpp"
 #include "QuantumResourceManager.hpp"
 #include "predictor.hpp"
 #include <fomac.hpp>
 #include <iostream>
 #include <qdmi.h>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 using llvm::orc::ThreadSafeModule;
