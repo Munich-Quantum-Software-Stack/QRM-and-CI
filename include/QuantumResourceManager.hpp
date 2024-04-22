@@ -58,6 +58,7 @@ struct QuantumTask
     float duration;
     QDMI_Device scheduled_qpu;
     int priority;
+    float age;
     int optimisation_level;
     bool no_modify;
     bool transpiler_flag;
