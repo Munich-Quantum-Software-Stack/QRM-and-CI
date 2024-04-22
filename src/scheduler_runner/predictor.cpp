@@ -1,13 +1,14 @@
 #include "predictor.hpp"
 #include "eval.hpp"
 #include <map>
+#include <iostream>
 
 /*
- * @brief Predict ... based on a pretrained ONNX model
+ * @brief Predict "expected fidelity" based on a pretrained ONNX model
  * @param TSM The quantum circuit to evaluate
- * @return The predicted ...
+ * @return The predicted "expected fidelity"
  */
-float predict(ThreadSafeModule &TSM)
+float predict(ThreadSafeModule &TSM, std::string device)
 {
     std::map<std::string, int> gate_counts = {{"__quantum__qis__U3__body", 0},
                                               {"u2", 0},
@@ -60,11 +61,21 @@ float predict(ThreadSafeModule &TSM)
     // Initialize the environment
     Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "ModelPrediction");
 
+    // Declare the session pointer
+    Ort::Session* session = nullptr;
+
     // Initialize the session
-    Ort::Session session(env,
-                         "/home/ubuntu/mqt/mqt-predictor/evaluations/"
-                         "supervised_ml_models/model.onnx",
-                         session_options);
+    try {
+        session = new Ort::Session(env,
+                                "/home/ubuntu/mqt/mqt-predictor-fork/evaluations/supervised_ml_models/model.onnx",
+                                session_options);
+    } catch (const Ort::Exception& exception) {
+        if (exception.GetOrtErrorCode() == ORT_FAIL) {
+            std::cerr << "Failed to open model: " << exception.what() << std::endl;
+        } else {
+            throw;  // Re-throw the exception if it's not a failure to open the model
+        }
+    }
 
     // Create a memory information object
     Ort::MemoryInfo memory_info =
@@ -110,11 +121,13 @@ float predict(ThreadSafeModule &TSM)
     output_tensors.push_back(std::move(output_tensor));
 
     // Run the model
-    session.Run(Ort::RunOptions{nullptr}, input_node_names.data(),
+    session->Run(Ort::RunOptions{nullptr}, input_node_names.data(),
                 input_tensors.data(), input_tensors.size(),
                 output_node_names.data(), output_tensors.data(),
                 output_tensors.size());
     float *floatarr = output_tensors[0].GetTensorMutableData<float>();
 
+    // Delete the session after use
+    delete session;
     return floatarr[0];
 }

@@ -81,24 +81,28 @@ add_library(SelectorRunner  SHARED src/selector_runner/SelectorRunner.cpp)
 add_library(PassRunner      SHARED src/pass_runner/PassRunner.cpp)
 add_library(QirPassRunner   SHARED src/pass_runner/QirPassRunner.cpp)
 add_library(QRMD            SHARED src/qresourcemanager_d.cpp)
-add_library(predictor       SHARED src/predictor.cpp src/eval.cpp)
+add_library(predictor       SHARED src/scheduler_runner/predictor.cpp)
+add_library(eval            SHARED src/scheduler_runner/eval.cpp)
 
 
 target_link_libraries(GeneratorRunner PRIVATE qdmi qinfo fomac)
-target_link_libraries(SchedulerRunner PRIVATE qdmi qinfo fomac)
+target_link_libraries(SchedulerRunner PRIVATE qdmi qinfo fomac predictor)
 target_link_libraries(SelectorRunner  PRIVATE qdmi qinfo fomac)
 target_link_libraries(PassRunner      PRIVATE qdmi qinfo fomac)
 target_link_libraries(QirPassRunner   PRIVATE qdmi qinfo fomac)
 target_link_libraries(QRMD            PRIVATE qdmi qinfo fomac QirPassRunner PassRunner SelectorRunner SchedulerRunner GeneratorRunner rabbitmq ${ONNXRUNTIME_LIBRARY})
-target_link_libraries(predictor       PRIVATE ${ONNXRUNTIME_LIBRARY} LLVM)
+target_link_libraries(predictor       PRIVATE ${ONNXRUNTIME_LIBRARY} LLVM eval)
 
 set(EXECUTABLE_NAME
     "qresourcemanager_d"
     CACHE STRING "" FORCE)
 
 # Build the executable
-set(SOURCES src/qresourcemanager_d.cpp src/connection_handling.cpp src/predictor.cpp)
+set(SOURCES src/qresourcemanager_d.cpp src/connection_handling.cpp)
 set(PUBLIC_QRM_HEADERS
+    "include/scheduler_runner/my_qdmi.hpp"
+    "include/scheduler_runner/predictor.hpp"
+    "include/scheduler_runner/eval.hpp"
     "include/connection_handling.hpp"
     "include/QuantumResourceManager.hpp"
     "include/pass_runner/PassModule.hpp"

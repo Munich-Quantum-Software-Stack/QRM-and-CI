@@ -17,7 +17,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src)
 #find_library(RABBITMQ_LIBRARY rabbitmq)
 
 add_executable(QirTest ${TEST_SOURCE} ../src/connection_handling.cpp)
-add_executable(QRMTest ${TEST_SOURCE2} ../src/connection_handling.cpp ../src/pass_runner/QirPassRunner.cpp ../src/predictor.cpp ../src/eval.cpp)
+add_executable(QRMTest ${TEST_SOURCE2} ../src/connection_handling.cpp ../src/pass_runner/QirPassRunner.cpp ../src/scheduler_runner/predictor.cpp ../src/scheduler_runner/eval.cpp)
 
 #target_link_libraries(QirTest ${RABBITMQ_LIBRARY} ${GTEST_LIBRARIES})
 target_link_libraries(QirTest rabbitmq)

@@ -2,7 +2,6 @@
  * @file qresourcemanager_d.cpp
  * @brief TODO
  */
-#include "predictor.hpp"
 #include <QuantumResourceManager.hpp>
 
 using json = nlohmann::json;
@@ -125,14 +124,6 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
             << "   [qresourcemanager_d]..Warning: There was an error splitting "
                "the quantum circuit"
             << std::endl;
-    }
-
-    // TODO: move into scheduler
-    for (auto &childQuantumTask : childQuantumTasks)
-    {
-        // Calculate expected execution time
-        childQuantumTask.duration =
-            predict(childQuantumTask.thread_safe_module);
     }
 
     // Invoke the scheduler

@@ -1,7 +1,7 @@
 #ifndef MY_QDMI_HPP
 #define MY_QDMI_HPP
 
-#include "../include/QuantumResourceManager.hpp"
+#include "QuantumResourceManager.hpp"
 
 #include <deque>
 

@@ -12,6 +12,6 @@
 
 using llvm::orc::ThreadSafeModule;
 
-float predict(ThreadSafeModule &TSM);
+float predict(ThreadSafeModule &TSM, std::string device);
 
 #endif // PREDICTOR_H

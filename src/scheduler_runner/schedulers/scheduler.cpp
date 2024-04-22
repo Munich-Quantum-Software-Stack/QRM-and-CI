@@ -2,16 +2,16 @@
  * @file scheduler.cpp
  * @brief Implementation of a ML guided scheduler.
  */
-
+//#include "my_qdmi.hpp"
+#include "PassModule.hpp"
+#include "QuantumResourceManager.hpp"
+#include "predictor.hpp"
+#include <fomac.hpp>
 #include <iostream>
+#include <qdmi.h>
 #include <string>
 #include <unordered_set>
 #include <vector>
-#include "PassModule.hpp"
-#include "QuantumResourceManager.hpp"
-#include "../../my_qdmi.hpp"
-#include <fomac.hpp>
-#include <qdmi.h>
 
 using llvm::orc::ThreadSafeModule;
 /**
@@ -30,22 +30,14 @@ std::map<std::string, float> calculate_scores(QuantumTask &task)
         // maximum score for the only QPU
         scores = {{task.preferred_qpus.front(), 1.0}};
     }
-    // TODO User wants to use some QPUs more than others -> user ranking
+    // TODO
+    // else if (user wants to use some QPUs more than others):
+    //      scores = task.preferred_qpus
     else
-    { // If choice is not forced or the user preference is ambiguous
-        // TODO Calculate ML scores
-
-        // TODO use devices when available
-        std::vector<std::string> qpus = task.preferred_qpus;
-        std::vector<float> model_scores(qpus.size());
-        for (auto &score : model_scores)
-        {
-            score = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
-        }
-        // Map the model output to a std::map<std::string, float>
-        for (size_t i = 0; i < qpus.size(); ++i)
-        {
-            scores[qpus[i]] = model_scores[i];
+    { // If choice is not forced or the user preference is equally distributed
+        for (auto &device : task.preferred_qpus)
+        { // Predict expected fidelity for every device
+            scores[device] = predict(task.thread_safe_module, device);
         }
     }
 
