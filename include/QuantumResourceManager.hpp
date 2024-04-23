@@ -58,7 +58,10 @@ struct QuantumTask
     float duration;
     QDMI_Device scheduled_qpu;
     int priority;
-    float age;
+    float age; // initial value is 0, increases every time the task is skipped
+               // by new tasks
+    float end; // keeps track of the end time of the task (sum of all previous
+               // task.duration in queue)
     int optimisation_level;
     bool no_modify;
     bool transpiler_flag;

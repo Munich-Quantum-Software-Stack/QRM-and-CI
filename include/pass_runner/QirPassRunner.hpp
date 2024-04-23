@@ -48,64 +48,37 @@ struct QirMetadata
         injectedAnnotations;         /**< Map of injected annotations. */
     bool shouldRemoveCallAttributes; /**< Boolean value for controlling the
                                           removal of call attributes. */
-    std::vector<Queue> queues; /**< Map of queues: Platform name and Job */
-    std::unordered_map<int, float> ends;      /**< Map of end times: Task ID and
-                                                      end time */
-    std::unordered_map<int, float> durations; /**< Map of durations: Task ID and
-                                                 duration */
-    std::unordered_map<int, float> priorities; /**< Map of priorities: Task ID
-                                                 and duration */
-    Queue *get_queue(std::string platform)
+    std::vector<MyQueue> queues; /**< Map of queues: Platform name and Job */
+    std::unordered_map<int, float> parent_ends; /**< Map of end times: Task ID
+                                                 and end time */
+
+    MyQueue *get_queue(std::string platform)
     {
         auto it = std::find_if(queues.begin(), queues.end(),
-                               [&platform](const Queue &queue)
-                               { return queue.platform == platform; });
+                               [&platform](const MyQueue &MyQueue)
+                               { return MyQueue.platform == platform; });
         if (it != queues.end())
         {
             return &(*it);
         }
-        // initialize queue if not found
-        queues.push_back(Queue(platform));
+        // initialize MyQueue if not found
+        queues.push_back(MyQueue(platform));
         return &queues.back();
     }
 
-    float get_end(int task_id)
+    float get_parent_end(int task_id)
     {
-        if (ends.find(task_id) != ends.end())
-            return ends[task_id];
+        if (parent_ends.find(task_id) != parent_ends.end())
+            return parent_ends[task_id];
 
-        ends[task_id] = 0.;
+        parent_ends[task_id] = 0.;
         return 0.;
     }
 
-    void update_end(int task_id, float new_end)
+    void update_parent_end(int task_id, float new_end)
     {
-        if (new_end > ends[task_id])
-            ends[task_id] = new_end;
-    }
-
-    float get_priority(int task_id)
-    {
-        if (priorities.find(task_id) != priorities.end())
-            return priorities[task_id];
-
-        priorities[task_id] = 0.;
-        return 0.;
-    }
-
-    void update_priority(int task_id, float new_priority)
-    {
-        if (new_priority > priorities[task_id])
-            priorities[task_id] = new_priority;
-    }
-
-    float get_duration(int task_id)
-    {
-        if (durations.find(task_id) != durations.end())
-            return durations[task_id];
-
-        durations[task_id] = 1.;
-        return 1.;
+        if (new_end > parent_ends[task_id])
+            parent_ends[task_id] = new_end;
     }
 
     /**

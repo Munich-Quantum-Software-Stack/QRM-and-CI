@@ -90,6 +90,7 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
     task.change_scheduler = QuantumTask_json["change_scheduler"];
     task.thread_safe_module = ThreadSafeModule();
     task.age = 0.;
+    task.end = 0.;
     return task;
 }
 
