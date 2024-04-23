@@ -4,6 +4,7 @@
  */
 #include "QuantumResourceManager.hpp"
 #include "predictor.hpp"
+#include <cstddef>
 #include <fomac.hpp>
 #include <iostream>
 #include <qdmi.h>
@@ -48,12 +49,10 @@ std::map<std::string, float> calculate_scores(QuantumTask &task)
 
 /**
  * @brief Select the shortest queue among the top 3 scored devices.
- * @param task The QuantumTask to be scheduled.
  * @param scores The scores of the devices.
  * @return The name of the selected device.
  */
-std::string choose_device(QuantumTask &task,
-                          const std::map<std::string, float> &scores)
+std::string choose_device(const std::map<std::string, float> &scores)
 {
     // Find the devices with the three highest final scores
     std::vector<std::string> devices;
@@ -99,8 +98,7 @@ std::string choose_device(QuantumTask &task,
             target_device = device;
             break;
         }
-        float end_time =
-            qirMetadata.get_parent_end(queue->tasks.back()->task_id);
+        float end_time = queue->tasks.back()->end;
         if (end_time < min_end_time)
         {
             min_end_time = end_time;
@@ -131,67 +129,72 @@ bool skipping_schedule(QuantumTask &new_task, std::string &target_device)
               << new_task.task_id << " into the queue for device "
               << target_device << std::endl;
 
-    float previous_task_end;
-
-    // Check if the queue has any tasks
+    // Check if the queue is empty
     if (queue->tasks.empty())
     {
-        previous_task_end = queue->insertTask(0, &new_task, new_task.duration);
-        // previous_task_end == 0.0
+        queue->insertTask(0, &new_task, new_task.duration);
+        new_task.end = new_task.duration;
     }
     else
     {
         int i = 0;
-        for (i = queue->tasks.size() - 1; i >= 0; --i)
+        QuantumTask *last_task = NULL;
+
+        for (i = queue->tasks.size(); i > 0; --i)
         {
-            QuantumTask &last_task = *queue->tasks[i];
+            last_task = queue->tasks[i - 1];
+            float predicted_end = last_task->end + new_task.duration;
 
-            float predicted_end = last_task.end + new_task.duration;
-
+            // always skip lower priority tasks
             if (new_task.priority >
-                std::floor(last_task.priority + last_task.age))
+                std::floor(last_task->priority + last_task->age))
             {
-                // always skip lower priority tasks
-                last_task.end = predicted_end;
-                // increase age of skipped task
-                last_task.age = last_task.age + age_increment;
+                // update the end time of the (to be) skipped task
+                last_task->end = predicted_end;
+                // increase age of the (to be) skipped task
+                last_task->age = last_task->age + age_increment;
                 continue; // check next job in line
             }
-            else if (new_task.priority == last_task.priority)
+            // possibly skip tasks with same priority
+            else if (new_task.priority == last_task->priority)
             {
-                int last_parent_id = (last_task.parent_id == -1)
-                                         ? last_task.task_id
-                                         : last_task.parent_id;
+                // we dont have access to the parent task directly
+                int last_parent_id = (last_task->parent_id == -1)
+                                         ? last_task->task_id
+                                         : last_task->parent_id;
+                // so we keep track of their end times in metadata
                 float last_parent_end =
                     qirMetadata.get_parent_end(last_parent_id);
 
+                // can skip in line (wo delaying other task)
                 if (predicted_end < last_parent_end)
                 {
-                    // can skip in line (wo delaying other task)
+                    // we dont have access to the parent task directly
                     float new_parent_id = (new_task.parent_id == -1)
                                               ? new_task.task_id
                                               : new_task.parent_id;
+                    // so we keep track of their end times in metadata
                     float new_parent_end =
                         qirMetadata.get_parent_end(new_parent_id);
 
+                    // should skip in line (for overall speedup)
                     if (new_parent_end < last_parent_end)
                     {
-                        // should skip in line (for overall speedup)
-                        last_task.end = predicted_end;
-                        // increase age of skipped task
-                        last_task.age = last_task.age + age_increment;
+                        // update the end time of the (to be) skipped task
+                        last_task->end = predicted_end;
+                        // increase age of the (to be) skipped task
+                        last_task->age = last_task->age + age_increment;
                         continue; // check next job in line
                     }
                 }
             }
-            // no (more) skipping
-            break;
+            break; // no (more) skipping
         }
-        // insert new_task at position i and store the end time of the previous
-        // task in queue
-        previous_task_end = queue->insertTask(i, &new_task, new_task.duration);
+        // insert new_task at position i
+        queue->insertTask(i, &new_task, new_task.duration);
+        new_task.end = (i == 0 ? new_task.duration
+                               : queue->tasks[i - 1]->end + new_task.duration);
     }
-    new_task.end = previous_task_end + new_task.duration;
     return true;
 }
 
@@ -227,7 +230,7 @@ extern "C" int scheduler(std::vector<QuantumTask> *tasks)
         std::map<std::string, float> scores = calculate_scores(task);
 
         // Choose the device with the shortest queue out of top 3
-        std::string target_device = choose_device(task, scores);
+        std::string target_device = choose_device(scores);
 
         // Queue the task on the chosen device and skip if necessary
         bool success = skipping_schedule(task, target_device);

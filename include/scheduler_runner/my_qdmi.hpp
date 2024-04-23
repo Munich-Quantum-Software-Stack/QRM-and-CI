@@ -11,22 +11,19 @@ struct MyQueue
 {
     std::string platform;            // Name of the platform
     std::deque<QuantumTask *> tasks; // List of tasks in the queue
-    float totalDuration;             // Total duration of all tasks in the queue
 
-    MyQueue(std::string platform) : platform(platform), totalDuration(0.0) {}
+    MyQueue(std::string platform) : platform(platform) {}
 
-    float insertTask(int position, QuantumTask *task, float duration)
+    void insertTask(int position, QuantumTask *task, float duration)
     {
-        if (position >= 0 && position <= tasks.size())
+        if (0 <= position && position <= tasks.size())
         {
             tasks.insert(tasks.begin() + position, task);
-            totalDuration += duration; // Update total duration
-            return 1.;                 // TODO
         }
         else
         {
-            // Handle error: position out of range
-            return 0.;
+            std::cerr << "Error: Position " << position
+                      << " is out of range.\n";
         }
     }
 };
