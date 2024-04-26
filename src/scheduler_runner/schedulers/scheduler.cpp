@@ -114,7 +114,7 @@ std::string choose_device(const std::map<std::string, float> &scores)
  * @param target_device The target device to schedule the QuantumTask on.
  * @return True if the QuantumTask was successfully scheduled, false otherwise.
  */
-bool skipping_schedule(QuantumTask &new_task, std::string &target_device)
+bool skipping_schedule(QuantumTask *new_task, std::string &target_device)
 {
     // Get current queue from metadata
     QirPassRunner &QPR = QirPassRunner::getInstance();
@@ -126,14 +126,14 @@ bool skipping_schedule(QuantumTask &new_task, std::string &target_device)
     float age_increment = 0.5;
 
     std::cout << "   [Scheduler]...........Inserting QuantumTask with ID "
-              << new_task.task_id << " into the queue for device "
+              << new_task->task_id << " into the queue for device "
               << target_device << std::endl;
 
     // Check if the queue is empty
     if (queue->tasks.empty())
     {
-        queue->insertTask(0, &new_task, new_task.duration);
-        new_task.end = new_task.duration;
+        queue->insertTask(0, new_task, new_task->duration);
+        new_task->end = new_task->duration;
     }
     else
     {
@@ -143,10 +143,10 @@ bool skipping_schedule(QuantumTask &new_task, std::string &target_device)
         for (i = queue->tasks.size(); i > 0; --i)
         {
             last_task = queue->tasks[i - 1];
-            float predicted_end = last_task->end + new_task.duration;
+            float predicted_end = last_task->end + new_task->duration;
 
             // always skip lower priority tasks
-            if (new_task.priority >
+            if (new_task->priority >
                 std::floor(last_task->priority + last_task->age))
             {
                 // update the end time of the (to be) skipped task
@@ -156,7 +156,7 @@ bool skipping_schedule(QuantumTask &new_task, std::string &target_device)
                 continue; // check next job in line
             }
             // possibly skip tasks with same priority
-            else if (new_task.priority == last_task->priority)
+            else if (new_task->priority == last_task->priority)
             {
                 // we dont have access to the parent task directly
                 int last_parent_id = (last_task->parent_id == -1)
@@ -170,9 +170,9 @@ bool skipping_schedule(QuantumTask &new_task, std::string &target_device)
                 if (predicted_end < last_parent_end)
                 {
                     // we dont have access to the parent task directly
-                    float new_parent_id = (new_task.parent_id == -1)
-                                              ? new_task.task_id
-                                              : new_task.parent_id;
+                    float new_parent_id = (new_task->parent_id == -1)
+                                              ? new_task->task_id
+                                              : new_task->parent_id;
                     // so we keep track of their end times in metadata
                     float new_parent_end =
                         qirMetadata.get_parent_end(new_parent_id);
@@ -191,9 +191,10 @@ bool skipping_schedule(QuantumTask &new_task, std::string &target_device)
             break; // no (more) skipping
         }
         // insert new_task at position i
-        queue->insertTask(i, &new_task, new_task.duration);
-        new_task.end = (i == 0 ? new_task.duration
-                               : queue->tasks[i - 1]->end + new_task.duration);
+        queue->insertTask(i, new_task, new_task->duration);
+        new_task->end =
+            (i == 0 ? new_task->duration
+                    : queue->tasks[i - 1]->end + new_task->duration);
     }
     return true;
 }
