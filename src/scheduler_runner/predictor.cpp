@@ -4,12 +4,16 @@
 #include <map>
 
 /*
- * @brief Predict some figure of merit based on a pretrained ONNX model
+ * @brief Predict some figure of merit based on a pretrained ONNX model for each
+ * device
  * @param TSM The quantum circuit to evaluate
- * @return The predicted figure of merit
+ * @param devices The devices to predict the figure of merit for
+ * @return The predicted figure of merit for each device
  */
-float predict(ThreadSafeModule &TSM, std::string device)
+std::map<std::string, float> predict(const ThreadSafeModule &TSM,
+                                     const std::vector<std::string> devices)
 {
+    // Prepare circuit feature vector for model input
     std::map<std::string, int> gate_counts = {{"__quantum__qis__U3__body", 0},
                                               {"u2", 0},
                                               {"u1", 0},
@@ -54,29 +58,6 @@ float predict(ThreadSafeModule &TSM, std::string device)
                                               {"c4x", 0},
                                               {"__quantum__qis__mz__body", 0}};
 
-    // Initialize session options
-    Ort::SessionOptions session_options;
-    session_options.SetIntraOpNumThreads(1);
-
-    // Initialize the environment
-    Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "ModelPrediction");
-
-    // Declare the session pointer
-    Ort::Session *session = nullptr;
-
-    // Initialize the session
-    try
-    {
-        session = new Ort::Session(
-            env, // TODO: remove hardcoded path to the scheduler shared library
-            "/home/ubuntu/mqss/qrm.git/include/scheduler_runner/model.onnx",
-            session_options);
-    }
-    catch (const Ort::Exception &exception)
-    {
-        throw;
-    }
-
     // Create a memory information object
     Ort::MemoryInfo memory_info =
         Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
@@ -108,26 +89,62 @@ float predict(ThreadSafeModule &TSM, std::string device)
     std::vector<Ort::Value> input_tensors;
     input_tensors.push_back(std::move(input_tensor));
 
-    // Prepare output tensor
-    std::vector<const char *> output_node_names = {"variable"};
-    std::array<float, 1> output_data;
-    std::vector<int64_t> output_shape = {1, 1};
-    Ort::Value output_tensor = Ort::Value::CreateTensor<float>(
-        memory_info, output_data.data(), output_data.size(),
-        output_shape.data(), output_shape.size());
+    // Initialize session options
+    Ort::SessionOptions session_options;
+    session_options.SetIntraOpNumThreads(1);
 
-    // Add output_tensor to output_tensors
-    std::vector<Ort::Value> output_tensors;
-    output_tensors.push_back(std::move(output_tensor));
+    // Initialize the environment
+    Ort::Env env(ORT_LOGGING_LEVEL_WARNING, "Predictor");
 
-    // Run the model
-    session->Run(Ort::RunOptions{nullptr}, input_node_names.data(),
-                 input_tensors.data(), input_tensors.size(),
-                 output_node_names.data(), output_tensors.data(),
-                 output_tensors.size());
-    float *floatarr = output_tensors[0].GetTensorMutableData<float>();
+    // Create a map to store the results
+    std::map<std::string, float> results;
 
-    // Delete the session after use
-    delete session;
-    return floatarr[0];
+    // Loop over all devices
+    for (const std::string &device : devices)
+    {
+        // Declare the session pointer
+        Ort::Session *session = nullptr;
+
+        // Initialize the session
+        try
+        {
+            session = new Ort::Session(
+                env, // TODO: remove hardcoded path to the scheduler shared
+                     // library
+                "/home/ubuntu/mqss/qrm.git/include/scheduler_runner/model.onnx",
+                session_options);
+        }
+        catch (const Ort::Exception &exception)
+        {
+            throw;
+        }
+
+        // Prepare output tensor
+        std::vector<const char *> output_node_names = {"variable"};
+        std::array<float, 1> output_data;
+        std::vector<int64_t> output_shape = {1, 1};
+        Ort::Value output_tensor = Ort::Value::CreateTensor<float>(
+            memory_info, output_data.data(), output_data.size(),
+            output_shape.data(), output_shape.size());
+
+        // Add output_tensor to output_tensors
+        std::vector<Ort::Value> output_tensors;
+        output_tensors.push_back(std::move(output_tensor));
+
+        // Run the model
+        session->Run(Ort::RunOptions{nullptr}, input_node_names.data(),
+                     input_tensors.data(), input_tensors.size(),
+                     output_node_names.data(), output_tensors.data(),
+                     output_tensors.size());
+        float *floatarr = output_tensors[0].GetTensorMutableData<float>();
+
+        // Add the device string and model score to the map
+        results[device] = floatarr[0];
+
+        // Delete the session after use
+        delete session;
+    }
+
+    // Return the map of device strings and model scores
+    return results;
 }

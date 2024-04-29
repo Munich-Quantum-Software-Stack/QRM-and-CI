@@ -33,10 +33,8 @@ std::map<std::string, float> calculate_scores(QuantumTask &task)
     //      scores = task.preferred_qpus
     else
     { // If choice is not forced or the user preference is equally distributed
-        for (auto &device : task.preferred_qpus)
-        { // Predict expected fidelity for every device
-            scores[device] = predict(task.thread_safe_module, device);
-        }
+        // Predict expected fidelity for every device
+        scores = predict(task.thread_safe_module, task.preferred_qpus);
     }
 
     std::cout << "   [Scheduler]...........Scores: ";
@@ -44,13 +42,14 @@ std::map<std::string, float> calculate_scores(QuantumTask &task)
     {
         std::cout << score.first << " " << score.second << " ";
     }
+    std::cout << " for task ID " << task.task_id << std::endl;
     return scores;
 }
 
 /**
  * @brief Select the shortest queue among the top 3 scored devices.
  * @param scores The scores of the devices.
- * @return The name of the selected device.
+ * @return The selected target device.
  */
 std::string choose_device(const std::map<std::string, float> &scores)
 {
@@ -73,13 +72,6 @@ std::string choose_device(const std::map<std::string, float> &scores)
                 }
             }
         }
-    }
-
-    std::cout << "   [Scheduler]...........Choosing target QDMI_Device from"
-              << " the following devices: ";
-    for (auto &device : devices)
-    {
-        std::cout << device << " ";
     }
 
     // Get current queue from metadata
@@ -125,15 +117,15 @@ bool skipping_schedule(QuantumTask *new_task, std::string &target_device)
     // e.g. value of 1/2: integer priority level will increase after 2 skips
     float age_increment = 0.5;
 
-    std::cout << "   [Scheduler]...........Inserting QuantumTask with ID "
-              << new_task->task_id << " into the queue for device "
-              << target_device << std::endl;
-
     // Check if the queue is empty
     if (queue->tasks.empty())
     {
         queue->insertTask(0, new_task, new_task->duration);
         new_task->end = new_task->duration;
+        std::cout
+            << "   [Scheduler]...........Inserting (Child)QuantumTask with ID "
+            << new_task->task_id << " into the " << target_device
+            << " queue at position 0" << std::endl;
     }
     else
     {
@@ -195,6 +187,11 @@ bool skipping_schedule(QuantumTask *new_task, std::string &target_device)
         new_task->end =
             (i == 0 ? new_task->duration
                     : queue->tasks[i - 1]->end + new_task->duration);
+
+        std::cout
+            << "   [Scheduler]...........Inserting (Child)QuantumTask with ID "
+            << new_task->task_id << " into the " << target_device
+            << " queue at position " << i << std::endl;
     }
     return true;
 }
@@ -213,7 +210,7 @@ extern "C" int scheduler(std::vector<QuantumTask> *tasks)
     std::cout << "   [Scheduler]..........." << devices.size()
               << " available device(s)" << std::endl;
 
-    // Sort tasks by priority and within that by duration
+    // Sort tasks (by priority and within that) by duration
     std::sort((*tasks).begin(), (*tasks).end(),
               [](const QuantumTask &a, const QuantumTask &b)
               {
@@ -233,15 +230,11 @@ extern "C" int scheduler(std::vector<QuantumTask> *tasks)
         // Choose the device with the shortest queue out of top 3
         std::string target_device = choose_device(scores);
 
-        // Queue the task on the chosen device and skip if necessary
-        bool success = skipping_schedule(task, target_device);
+        // Queue the task on the chosen device and skip if possible
+        bool success = skipping_schedule(&task, target_device);
 
         // TODO once FOMAC is available, set the QPU
         // task.scheduled_qpu = target_device;
     }
-
-    std::cout << "   [Scheduler]...........returning selected device."
-              << std::endl;
-
     return 0;
 }

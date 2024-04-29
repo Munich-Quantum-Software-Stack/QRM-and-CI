@@ -26,7 +26,7 @@ using llvm::orc::ThreadSafeModule;
  * @return A vector of original supermarq and 3 additional features
  */
 std::vector<double>
-evaluate_supermarq_plus(ThreadSafeModule &TSM,
+evaluate_supermarq_plus(const ThreadSafeModule &TSM,
                         std::map<std::string, int> &gate_counts)
 {
     std::string QIS_START = "__quantum__qis_";

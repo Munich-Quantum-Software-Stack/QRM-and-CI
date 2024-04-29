@@ -8,7 +8,7 @@
 using llvm::orc::ThreadSafeModule;
 
 std::vector<double>
-evaluate_supermarq_plus(ThreadSafeModule &TSM,
+evaluate_supermarq_plus(const ThreadSafeModule &TSM,
                         std::map<std::string, int> &gate_counts);
 
 #endif // EVAL_HPP
