@@ -96,7 +96,6 @@ int main(int argc, char *argv[])
         {"circuit_file_type", "QIR"},
         {"result_destination", ""},
         {"preferred_qpus", "Q20,Q7"},
-        {"duration", 1.0},
         {"scheduled_qpu", ""},
         {"priority", 0},
         {"optimisation_level", 0},

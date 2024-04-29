@@ -70,7 +70,6 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
         preferred_qpus = json_obj.get<std::vector<std::string>>();
     }
     task.preferred_qpus = preferred_qpus;
-    task.duration = QuantumTask_json["duration"];
     task.priority = QuantumTask_json["priority"];
     task.optimisation_level = QuantumTask_json["optimisation_level"];
     task.no_modify = QuantumTask_json["no_modify"];

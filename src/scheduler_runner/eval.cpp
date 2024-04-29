@@ -219,6 +219,14 @@ evaluate_supermarq_plus(const ThreadSafeModule &TSM,
         two_qubit_gates_per_layer};
 }
 
+/*
+ * @brief Calculate the duration of a quantum circuit based on the gate times along its critical path
+ * @param TSM The quantum circuit to evaluate
+ * @param single_qubit_gate_time The time taken for a single qubit gate
+ * @param multi_qubit_gate_time The time taken for a multi qubit gate
+ * @param measurement_time The time taken for a measurement
+ * @return The duration of the circuit
+ */
 double calculate_circuit_duration(ThreadSafeModule &TSM,
                                   double single_qubit_gate_time,
                                   double multi_qubit_gate_time,
@@ -259,7 +267,7 @@ double calculate_circuit_duration(ThreadSafeModule &TSM,
                                 if (is_quantum)
                                 {
                                     double gate_time = 0.0;
-                                    if (op_name == "__quantum__qis__measure")
+                                    if (op_name == "__quantum__qis__mz__body")
                                     {
                                         gate_time = measurement_time;
                                     }

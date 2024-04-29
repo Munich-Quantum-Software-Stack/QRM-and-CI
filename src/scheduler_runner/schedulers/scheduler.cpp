@@ -3,6 +3,7 @@
  * @brief Implementation of a ML guided scheduler.
  */
 #include "QuantumResourceManager.hpp"
+#include "eval.hpp"
 #include "predictor.hpp"
 #include <cstddef>
 #include <fomac.hpp>
@@ -229,6 +230,13 @@ extern "C" int scheduler(std::vector<QuantumTask> *tasks)
 
         // Choose the device with the shortest queue out of top 3
         std::string target_device = choose_device(scores);
+
+        // Predict the expected execution time for the task on the chosen device
+        std::map<std::string, float> duration_prediction = predict(task.thread_safe_module, {target_device});
+        // TODO: once we have a trained model, use it for duration prediction
+        //task.duration = duration_prediction[target_device];
+        task.duration =
+            calculate_circuit_duration(task.thread_safe_module, 0.04, 0.6, 15);
 
         // Queue the task on the chosen device and skip if possible
         bool success = skipping_schedule(&task, target_device);
