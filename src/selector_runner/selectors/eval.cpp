@@ -399,11 +399,12 @@ void evaluate_ind(NSGA2Type *nsga2Params, individual *ind,
         passes.push_back(designSpace[ind->xint[j]]);
     }
 
-    // std::cout << "[DEBUG] after loop: " << TSM << std::endl;
-    invokeTargetSpecificPasses(TSM, passes, nsga2Params->device /*, fVerbose*/);
+    std::unique_ptr<Module> copiedModule = CloneModule(*TSM.getModuleUnlocked());
+    ThreadSafeModule copiedTSM(std::move(copiedModule), TSM.getContext());
+    invokeTargetSpecificPasses(copiedTSM, passes, nsga2Params->device /*, fVerbose*/);
 
-    ind->obj[0] = evaluate_gates(TSM);
-    ind->obj[1] = evaluate_depth(TSM);
+    ind->obj[0] = evaluate_gates(copiedTSM);
+    ind->obj[1] = evaluate_depth(copiedTSM);
 
     ind->constr_violation = 0.0;
 
