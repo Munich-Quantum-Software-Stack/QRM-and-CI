@@ -5,6 +5,7 @@ token.txt
 doxygen/
 build/
 docs/build/
+logs*
 tests/test
 rabbitmq*
 .cache/*
