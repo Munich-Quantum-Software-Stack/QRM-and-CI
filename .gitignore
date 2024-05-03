@@ -3,12 +3,12 @@ uninstall.cmake
 compile_qrm.sh
 restart_rabbit.sh
 
-token.txt
 doxygen/
 build/
 docs/build/
-tests/test
 rabbitmq*
+tests/test
+tokens/
 .cache/*
 .vscode/*
 

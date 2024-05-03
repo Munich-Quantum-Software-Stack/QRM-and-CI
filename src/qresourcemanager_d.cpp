@@ -86,6 +86,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                          QuantumTask &parentQuantumTask)
 {
     int err = 1;
+    auto start = std::chrono::steady_clock::now();
 
     // Insert LLVM::ThreadSafeModule to parentQuantumTask
     ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
@@ -130,14 +131,13 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
     std::vector<std::string> modules;
     std::vector<std::string> targets;
     std::map<std::string, int> results;
-    auto start = std::chrono::steady_clock::now();
     for (auto &childQuantumTask : childQuantumTasks)
     {
         QDMI_Job job;
         QDMI_Library lib;
         QDMI_Fragment frag;
 
-        std::cout << std::endl;
+        //std::cout << std::endl;
 
         QDMI_Device device = childQuantumTask.scheduled_qpu;
 
@@ -150,7 +150,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
             return;
         }
 
-        FOMAC_print_coupling_mappings(device);
+        //FOMAC_print_coupling_mappings(device);
 
         const char *lastSlash = std::strrchr(device->library.libname, '/');
         if (lastSlash != nullptr)
@@ -174,7 +174,9 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         }
 
         // Invoke target-specific passes
+        //std::cout << "   [qresourcemanager_d]..I WILL APPLY SPECIFIC PASSES" << std::endl;
         invokePasses(childQuantumTask.thread_safe_module, specificPasses, device);
+        //std::cout << "   [qresourcemanager_d]..I'M DONE APPLYING SPECIFIC PASSES" << std::endl;
 
         // Create a fragment
         frag = (QDMI_Fragment)malloc(sizeof(struct QDMI_Fragment_d));
@@ -209,12 +211,18 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                 void* qirmod = static_cast<void *>(buffer.data());
                 frag->sizebuffer = buffer.size();
                 // TODO Handle err
+                //std::cout << "   [qresourcemanager_d]..I WILL PACK" << std::endl;
                 err = QDMI_control_pack_qir(device, qirmod, &frag);
+                //std::cout << "   [qresourcemanager_d]..I ALREADY PACKED" << std::endl;
             });
 
         // Submit the adapted QIR to the target platform
         job->task_id = childQuantumTask.task_id;
         // TODO Handle err
+        //auto qrm_end = std::chrono::steady_clock::now();
+        //std::chrono::duration<double, std::milli> qrm_elapsed_milliseconds = qrm_end - qrm_start;
+        //std::cout << "It took " << qrm_elapsed_milliseconds.count() << " to reach QDMI_submit" << std::endl;
+        //std::cout << "   [qresourcemanager_d]..I WILL SUBMIT" << std::endl;
         err = QDMI_control_submit(device, &frag, childQuantumTask.n_shots,
                                   device->library.info, &job);
         CHECK_ERR(err, "QDMI_control_submit");
@@ -229,6 +237,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         // TODO Handle err
         err = QDMI_control_readout_size(device, &status, &numbits);
         int* raw_numbers = new int[1 << numbits];
+        memset(raw_numbers, 0, sizeof(int) * (1 << numbits));
         if (numbits == 0)
         {
             std::cout << "   [qresourcemanager_d]..Warning: "
@@ -246,15 +255,16 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         );
 
         for (long i = 0; i < ((long)1 << numbits); i++)
-            results[std::to_string(i)] = raw_numbers[i];
+            results[std::to_string(i)] += raw_numbers[i];
 
-        delete[] raw_numbers;
+        free(raw_numbers);
         free(frag);
         //free(device);
     }
 
     auto end = std::chrono::steady_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end - start;
+    std::chrono::duration<double, std::milli> elapsed_milliseconds = end - start;
+    std::cout << "   [qresourcemanager_d]..Elapsed milliseconds: " << elapsed_milliseconds.count() << std::endl;
 
     // Create JSON string to send back to the Quantum Daemon
     json QuantumResult_json = {
@@ -265,7 +275,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         {"executed_qpu", targets},
         {"executed_circuit", modules},
         {"additional_information", ""},
-        {"execution_time", elapsed_seconds.count()},
+        {"execution_time", elapsed_milliseconds.count()},
     };
 
     std::string QuantumResult_str = QuantumResult_json.dump();
@@ -434,8 +444,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    std::cout << "   [qresourcemanager_d]..Listening on queue " << QRMQueue
-              << std::endl;
+    //std::cout << "   [qresourcemanager_d]..Listening on queue " << QRMQueue
+    //          << std::endl;
 
     // Start the QDMI session
     int err;

@@ -25,7 +25,7 @@ struct QuantumTask;
 extern "C" int scheduler(std::vector<QuantumTask> *childQuantumTasks)
 {
     // Query the available devices
-    std::vector<QDMI_Device> devices = FOMAC_available_devices();
+    std::vector<QDMI_Device> devices = FOMAC_available_devices(false /*verbose*/);
 
     if (devices.size() == 0)
     {

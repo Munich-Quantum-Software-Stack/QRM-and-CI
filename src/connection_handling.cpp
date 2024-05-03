@@ -32,13 +32,13 @@ int rabbitmq_new_connection(amqp_connection_state_t *conn,
     }
 
     amqp_rpc_reply_t login_reply = amqp_login(
-        *conn, // Establishing a login connection on the specified connection
-               // state
-        AMQP_VHOST, // Virtual host for RabbitMQ
-        1,          // Channel number
-        131072,     // Frame max size (maximum size of frames to accept)
-        0, // Heartbeat interval (0 to disable heartbeats, otherwise set in
-           // seconds)
+        *conn,                  // Establishing a login connection on the specified connection
+                                // state
+        AMQP_VHOST,             // Virtual host for RabbitMQ
+        1,                      // Channel number
+        131072,                 // Frame max size (maximum size of frames to accept)
+        0,                      // Heartbeat interval (0 to disable heartbeats, otherwise set in
+                                // seconds)
         AMQP_SASL_METHOD_PLAIN, // Authentication method (AMQP_SASL_METHOD_PLAIN
                                 // for plain text)
         AMQP_USER,              // RabbitMQ username for authentication

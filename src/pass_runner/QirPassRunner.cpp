@@ -180,11 +180,14 @@ QirPassRunner::run(Module &module, ModuleAnalysisManager &MAM, QDMI_Device dev)
 
         // Pointer to 'loadQirPass' function returning a pointer to the
         // 'SpecificPassModule' object
+        //std::cout << "   [Pass Runner].........1" << std::endl;
         using passLoader = SpecificPassModule *(*)();
+        //std::cout << "   [Pass Runner].........2" << std::endl;
 
         // Dynamic loading and linking of the shared library
         passLoader loadQirPass =
             reinterpret_cast<passLoader>(dlsym(lib_handle, "loadQirPass"));
+        //std::cout << "   [Pass Runner].........3" << std::endl;
 
         if (!loadQirPass)
         {
@@ -198,16 +201,22 @@ QirPassRunner::run(Module &module, ModuleAnalysisManager &MAM, QDMI_Device dev)
             continue;
         }
 
+        //std::cout << "   [Pass Runner].........4" << std::endl;
         SpecificPassModule *QirPass = loadQirPass();
 
+        //std::cout << "   [Pass Runner].........5" << std::endl;
         // Apply the pass to the LLVM module 'module'
         /*PA =*/QirPass->run(module, MAM, dev);
+        //std::cout << "   [Pass Runner].........6" << std::endl;
 
         // Free memory
         delete QirPass;
+        //std::cout << "   [Pass Runner].........7" << std::endl;
         dlclose(lib_handle);
+        //std::cout << "   [Pass Runner].........8" << std::endl;
 
         specificPasses_.pop_back();
+        //std::cout << "   [Pass Runner].........9" << std::endl;
     }
 
     // return PA;
