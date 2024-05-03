@@ -405,6 +405,9 @@ void evaluate_ind(NSGA2Type *nsga2Params, individual *ind,
 
     ind->obj[0] = evaluate_gates(copiedTSM);
     ind->obj[1] = evaluate_depth(copiedTSM);
+    ind->obj[2] = evaluate_entanglement_ratio(copiedTSM);
+    ind->obj[3] = evaluate_critical_depth(copiedTSM);
+    ind->obj[4] = evaluate_parallelism(copiedTSM);
 
     ind->constr_violation = 0.0;
 

@@ -49,9 +49,10 @@ extern "C" std::vector<std::string> selector(ThreadSafeModule &TSM,
 
     // Append the existing passes
     std::vector<std::string> passes{
+        passesPath + "/libQirReverseCnotPass.so",
         passesPath + "/libQirDivisionByZeroPass.so",
-        passesPath + "/libQirNormalizeArgAnglePass.so",
-        // passesPath + "/libQirXCnotXReductionPass.so", TODO BUG?
+        passesPath + "/libQirXCnotXReductionPass.so",
+        passesPath + "/libQirSwapAndCnotReplacementPass.so",
         passesPath + "/libQirCommuteCnotRxPass.so",
         passesPath + "/libQirCommuteRxCnotPass.so",
         passesPath + "/libQirCommuteCnotXPass.so",
@@ -66,37 +67,36 @@ extern "C" std::vector<std::string> selector(ThreadSafeModule &TSM,
         passesPath + "/libQirSwapToCnotsDecompositionPass.so",
         passesPath + "/libQirCZToHCnotHDecompositionPass.so",
         passesPath + "/libQirFunctionAnnotatorPass.so",
-        passesPath + "/libQirRedundantGatesCancellationPass.so",
         passesPath + "/libQirFunctionReplacementPass.so",
         passesPath + "/libQirReplaceConstantBranchesPass.so",
-        passesPath + "/libQirGroupingPass.so",
-        passesPath + "/libQirRemoveNonEntrypointFunctionsPass.so",
+        //passesPath + "/libQirGroupingPass.so", // TODO: Excluded due to slowness and bug
+        //passesPath + "/libQirRemoveNonEntrypointFunctionsPass.so",
         passesPath + "/libQirDeferMeasurementPass.so",
         passesPath + "/libQirBarrierBeforeFinalMeasurementsPass.so",
-        // passesPath +
-        //  "/libQirRemoveBasicBlocksWithSingleNonConditionalBranchIns"
-        //               "tsPass.so",
+        passesPath +
+          "/libQirRemoveBasicBlocksWithSingleNonConditionalBranchIns"
+                       "tsPass.so",
         //   passesPath + "/libQirQubitRemapPass.so", TODO BREAKS THE DEPTH'S
         //   FITNESS EVALUATION
         passesPath + "/libQirResourceAnnotationPass.so",
-        passesPath + "/libQirNullRotationCancellationPass.so",
-        passesPath + "/libQirMergeRotationsPass.so",
-        passesPath + "/libQirDoubleCnotCancellationPass.so",
         passesPath + "/libQirHadamardAndXGateSwitchPass.so",
-        passesPath + "/libQirHadamardAndYGateSwitchPass.so",
-        passesPath + "/libQirHadamardAndZGateSwitchPass.so",
         passesPath + "/libQirXGateAndHadamardSwitchPass.so",
+        passesPath + "/libQirHadamardAndYGateSwitchPass.so",
         passesPath + "/libQirYGateAndHadamardSwitchPass.so",
+        passesPath + "/libQirHadamardAndZGateSwitchPass.so",
         passesPath + "/libQirZGateAndHadamardSwitchPass.so",
         passesPath + "/libQirSToSDaggerPass.so",
         passesPath + "/libQirSDaggerToSPass.so",
-        passesPath + "/libQirReverseCnotPass.so",
-        passesPath + "/libQirSwapAndCnotReplacementPass.so",
+        passesPath + "/libQirNormalizeArgAnglePass.so",
+        passesPath + "/libQirNullRotationCancellationPass.so",
+        passesPath + "/libQirMergeRotationsPass.so",
+        passesPath + "/libQirDoubleCnotCancellationPass.so",
+        passesPath + "/libQirRedundantGatesCancellationPass.so",
     };
 
     // Perform the DSE
     std::cout << "   [Selector]............Starting the DSE" << std::endl;
-    NSGA2Type nsga2Params = ReadParameters(passes.size(), 2, device);
+    NSGA2Type nsga2Params = ReadParameters(passes.size(), 5, device);
     std::cout << "   [Selector]............nsga2Params set" << std::endl;
     char *home = std::getenv("HOME");
     assert(home != nullptr);
