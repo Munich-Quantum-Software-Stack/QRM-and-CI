@@ -41,50 +41,60 @@ extern "C" std::vector<std::string> selector(void)
 
     // Append the desired passes
     std::vector<std::string> passes{
-        //passesPath + "/libQirDivisionByZeroPass.so",
-        ////passesPath + "/libQirNormalizeArgAnglePass.so",
-        //passesPath + "/libQirXCnotXReductionPass.so",
-        //passesPath + "/libQirCommuteCnotRxPass.so",
-        //passesPath + "/libQirCommuteRxCnotPass.so",
-        //passesPath + "/libQirCommuteCnotXPass.so",
-        //passesPath + "/libQirCommuteXCnotPass.so",
-        //passesPath + "/libQirCommuteCnotZPass.so",
-        //passesPath + "/libQirCommuteZCnotPass.so",
-        //passesPath + "/libQirPlaceIrreversibleGatesInMetadataPass.so",
-        //// passesPath + "/libQirU3ToRzRyRzDecompositionPass.so",
-        //// passesPath + "/libQirRzToRxRyRxDecompositionPass.so", TODO Bug?
-        //passesPath + "/libQirCNotToHCZHDecompositionPass.so",
-        //passesPath + "/libQirSwapToCnotsDecompositionPass.so",
-        //passesPath + "/libQirCZToHCnotHDecompositionPass.so",
-        //// passesPath + "/libQirU3DecompositionPass.so",
-        //// passesPath + "/libQirXYXDecompositionPass.so",
-        //// passesPath + "/libQirZXZDecompositionPass.so",
-        //// passesPath + "/libQirZYZDecompositionPass.so",
-        //passesPath + "/libQirFunctionAnnotatorPass.so",
-        //passesPath + "/libQirRedundantGatesCancellationPass.so",
-        //passesPath + "/libQirGroupingPass.so",
-        //passesPath + "/libQirDeferMeasurementPass.so",
-        ////passesPath + "/libQirBarrierBeforeFinalMeasurementsPass.so",
-        //passesPath + "/libQirRemoveBasicBlocksWithSingleNonConditionalBranchIns"
-        //             "tsPass.so",
-        //passesPath + "/libQirQubitRemapPass.so",
-        //passesPath + "/libQirResourceAnnotationPass.so",
-        //// passesPath + "/libQirNullRotationCancellationPass.so",
-        //// passesPath + "/libQirMergeRotationsPass.so",
-        //// passesPath + "/libQirDoubleCnotCancellationPass.so",
-        //passesPath + "/libQirHadamardAndXGateSwitchPass.so",
-        //passesPath + "/libQirHadamardAndYGateSwitchPass.so",
-        //passesPath + "/libQirHadamardAndZGateSwitchPass.so",
-        //passesPath + "/libQirXGateAndHadamardSwitchPass.so",
-        //passesPath + "/libQirYGateAndHadamardSwitchPass.so",
-        //passesPath + "/libQirZGateAndHadamardSwitchPass.so",
-        //passesPath + "/libQirSToSDaggerPass.so",
-        //passesPath + "/libQirSDaggerToSPass.so",
-        //passesPath + "/libQirReverseCnotPass.so",
-        //passesPath + "/libQirSwapAndCnotReplacementPass.so",
-        //passesPath + "/libQirFunctionReplacementPass.so",
+        // B
+        passesPath + "/libQirBarrierBeforeFinalMeasurementsPass.so",
+        // C
+        passesPath + "/libQirCNotToHCZHDecompositionPass.so",
+        passesPath + "/libQirCommuteCnotRxPass.so",
+        passesPath + "/libQirCommuteRxCnotPass.so",
+        passesPath + "/libQirCommuteCnotXPass.so",
+        passesPath + "/libQirCommuteXCnotPass.so",
+        passesPath + "/libQirCommuteCnotZPass.so",
+        passesPath + "/libQirCommuteZCnotPass.so",
+        passesPath + "/libQirCZToHCnotHDecompositionPass.so",
+        // D
+        passesPath + "/libQirDeferMeasurementPass.so",
+        // F
+        passesPath + "/libQirFunctionAnnotatorPass.so",
+        passesPath + "/libQirFunctionReplacementPass.so",
+        // G
+        passesPath + "/libQirGroupingPass.so",
+        // H
+        passesPath + "/libQirHadamardAndXGateSwitchPass.so",
+        passesPath + "/libQirHadamardAndYGateSwitchPass.so",
+        passesPath + "/libQirHadamardAndZGateSwitchPass.so",
+        // M
+        passesPath + "/libQirMergeRotationsPass.so",
+        // N
+        passesPath + "/libQirNormalizeArgAnglePass.so",
+        passesPath + "/libQirNullRotationCancellationPass.so",
+        // P
+        passesPath + "/libQirPlaceIrreversibleGatesInMetadataPass.so",
+        passesPath + "/libQirPauliGateAndHadamardSwitchPass.so",
+        // Q
+        passesPath + "/libQirQubitRemapPass.so",
+        // R
+        passesPath + "/libQirRedundantGatesCancellationPass.so",
+        passesPath + "/libQirRemoveBasicBlocksWithSingleNonConditionalBranchInstsPass.so",
         passesPath + "/libQirReplaceConstantBranchesPass.so",
-        //passesPath + "/libQirRemoveNonEntrypointFunctionsPass.so",
+        passesPath + "/libQirResourceAnnotationPass.so",
+        passesPath + "/libQirReverseCnotPass.so",
+        passesPath + "/libQirRzToRxRyRxDecompositionPass.so",
+        // S
+        passesPath + "/libQirSDaggerToSPass.so",
+        passesPath + "/libQirSToSDaggerPass.so",
+        passesPath + "/libQirSwapAndCnotReplacementPass.so",
+        passesPath + "/libQirSwapToCnotsDecompositionPass.so",
+        // X
+        passesPath + "/libQirXCnotXReductionPass.so",
+        passesPath + "/libQirXGateAndHadamardSwitchPass.so",
+        passesPath + "/libQirXYXDecompositionPass.so",
+        // Y
+        passesPath + "/libQirYGateAndHadamardSwitchPass.so",
+        // Z
+        passesPath + "/libQirZGateAndHadamardSwitchPass.so",
+        passesPath + "/libQirZXZDecompositionPass.so",
+        passesPath + "/libQirZYZDecompositionPass.so",
     };
 
     std::cout << "   [Selector]............Returning list of passes to the "

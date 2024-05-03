@@ -12,7 +12,7 @@ using llvm::orc::ThreadSafeContext;
     {                                                                          \
         if (a != QDMI_SUCCESS)                                                 \
         {                                                                      \
-            std::cout << std::endl << "[Error]: " << a << " at " << b;         \
+            std::cout << std::endl << "   [qresourcemanager_d]..Warning: " << b << " returned with status " << a << std::endl;         \
         }                                                                      \
     }
 
@@ -124,8 +124,8 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
     }
 
     // Invoke the scheduler
-    // TODO Handle err
     err = invokeScheduler("libscheduler_round_robin.so", &childQuantumTasks);
+    CHECK_ERR(err, "invokeScheduler");
 
     // Compile and execute each generated sub-circuit
     std::vector<std::string> modules;
@@ -174,9 +174,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         }
 
         // Invoke target-specific passes
-        //std::cout << "   [qresourcemanager_d]..I WILL APPLY SPECIFIC PASSES" << std::endl;
         invokePasses(childQuantumTask.thread_safe_module, specificPasses, device);
-        //std::cout << "   [qresourcemanager_d]..I'M DONE APPLYING SPECIFIC PASSES" << std::endl;
 
         // Create a fragment
         frag = (QDMI_Fragment)malloc(sizeof(struct QDMI_Fragment_d));
@@ -197,6 +195,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                 OS << module; 
                 OS.flush();
                 modules.push_back(str.data());
+                //std::cout << str.data() << std::endl;
                 raw_svector_ostream ostream(buffer);
                 WriteBitcodeToFile(module, ostream);
 
@@ -210,32 +209,25 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
 
                 void* qirmod = static_cast<void *>(buffer.data());
                 frag->sizebuffer = buffer.size();
-                // TODO Handle err
-                //std::cout << "   [qresourcemanager_d]..I WILL PACK" << std::endl;
                 err = QDMI_control_pack_qir(device, qirmod, &frag);
-                //std::cout << "   [qresourcemanager_d]..I ALREADY PACKED" << std::endl;
+                CHECK_ERR(err, "QDMI_control_pack_qir");
             });
 
         // Submit the adapted QIR to the target platform
         job->task_id = childQuantumTask.task_id;
-        // TODO Handle err
-        //auto qrm_end = std::chrono::steady_clock::now();
-        //std::chrono::duration<double, std::milli> qrm_elapsed_milliseconds = qrm_end - qrm_start;
-        //std::cout << "It took " << qrm_elapsed_milliseconds.count() << " to reach QDMI_submit" << std::endl;
-        //std::cout << "   [qresourcemanager_d]..I WILL SUBMIT" << std::endl;
         err = QDMI_control_submit(device, &frag, childQuantumTask.n_shots,
                                   device->library.info, &job);
         CHECK_ERR(err, "QDMI_control_submit");
 
         // Wait for the results to be ready
         QDMI_Status status;
-        // TODO Handle err
         err = QDMI_control_wait(device, &job, &status);
+        CHECK_ERR(err, "QDMI_control_wait");
 
         // Get the results back
         int numbits = 0;
-        // TODO Handle err
         err = QDMI_control_readout_size(device, &status, &numbits);
+        CHECK_ERR(err, "QDMI_control_readout_size");
         int* raw_numbers = new int[1 << numbits];
         memset(raw_numbers, 0, sizeof(int) * (1 << numbits));
         if (numbits == 0)
@@ -246,13 +238,13 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
             return;
         }
 
-        // TODO Handle err
         err = QDMI_control_readout_raw_num(
             device, 
             &status, 
             job->task_id, 
             raw_numbers
         );
+        CHECK_ERR(err, "QDMI_control_readout_raw_num");
 
         for (long i = 0; i < ((long)1 << numbits); i++)
             results[std::to_string(i)] += raw_numbers[i];
