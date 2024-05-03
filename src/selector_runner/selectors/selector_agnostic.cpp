@@ -63,6 +63,8 @@ extern "C" std::vector<std::string> selector(void)
         passesPath + "/libQirHadamardAndXGateSwitchPass.so",
         passesPath + "/libQirHadamardAndYGateSwitchPass.so",
         passesPath + "/libQirHadamardAndZGateSwitchPass.so",
+        passesPath + "/libQirHXHToZPass.so",
+        passesPath + "/libQirHZHToXPass.so",
         // M
         passesPath + "/libQirMergeRotationsPass.so",
         // N
