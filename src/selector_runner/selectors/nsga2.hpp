@@ -127,6 +127,9 @@ void intcross(NSGA2Type *nsga2Params, individual *parent1, individual *parent2,
 void intInterleafCross(NSGA2Type *nsga2Params, individual *parent1,
                        individual *parent2, individual *child1,
                        individual *child2);
+void intTwoPointCross(NSGA2Type *nsga2Params, individual *parent1,
+                       individual *parent2, individual *child1,
+                       individual *child2);
 void bincross(NSGA2Type *nsga2Params, individual *parent1, individual *parent2,
               individual *child1, individual *child2);
 

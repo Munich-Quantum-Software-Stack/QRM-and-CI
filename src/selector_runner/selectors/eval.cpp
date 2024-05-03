@@ -27,6 +27,7 @@ void evaluate_pop(NSGA2Type *nsga2Params, population *pop,
                   const std::vector<std::string> designSpace, bool fVerbose)
 {
     int i;
+    std::cout << "AAA\n";
     for (i = 0; i < nsga2Params->popsize; i++)
         evaluate_ind(nsga2Params, &(pop->ind[i]), TSM, designSpace, fVerbose);
 }
@@ -394,10 +395,12 @@ void evaluate_ind(NSGA2Type *nsga2Params, individual *ind,
 
     int i, j;
 
+    std::cout << "EVAL 1\n";
     for (j = 0; j < nsga2Params->nint; j++)
     {
         passes.push_back(designSpace[ind->xint[j]]);
     }
+    std::cout << "EVAL 2\n";
 
     std::unique_ptr<Module> copiedModule = CloneModule(*TSM.getModuleUnlocked());
     ThreadSafeModule copiedTSM(std::move(copiedModule), TSM.getContext());

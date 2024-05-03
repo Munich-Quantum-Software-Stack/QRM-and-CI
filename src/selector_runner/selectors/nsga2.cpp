@@ -32,8 +32,8 @@ NSGA2Type ReadParameters(int sizeChrom, int nobj, QDMI_Device &device)
     srand(time(NULL));
 
     nsga2Params.seed = (float)rand() / (float)(RAND_MAX); // Seed value
-    nsga2Params.popsize = 8;      // Population size (multiple of 4)
-    nsga2Params.ngen = 16;        // Number of generations
+    nsga2Params.popsize = 64;      // Population size (multiple of 4)
+    nsga2Params.ngen = 64;        // Number of generations
     nsga2Params.nobj = nobj;      // Number of objectives
     nsga2Params.ncon = 0;         // Number of constraints
     nsga2Params.nreal = 0;        // Number of real variables
@@ -260,10 +260,14 @@ std::vector<std::string> NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM, bo
     for (i = 2; i <= nsga2Params->ngen; i++)
     {
         selection(nsga2Params, parent_pop, child_pop);
+        std::cout << "DEBUG A\n";
         mutation_pop(nsga2Params, child_pop);
         //    	decode_pop(nsga2Params, child_pop);
+        std::cout << "DEBUG B\n";
         evaluate_pop(nsga2Params, child_pop, TSM, designSpace, fVerbose);
+        std::cout << "DEBUG C\n";
         merge(nsga2Params, parent_pop, child_pop, mixed_pop);
+        std::cout << "DEBUG D\n";
         fill_nondominated_sort(nsga2Params, mixed_pop, parent_pop);
 
         time_t now = time(0);
@@ -275,6 +279,7 @@ std::vector<std::string> NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM, bo
             printf(" # gen = %d, time = %s\n", i, buff);
 
         report_pop(nsga2Params, parent_pop, fpt4);
+        std::cout << "DEBUG E\n";
         fflush(fpt4);
 
         report_feasible(nsga2Params, parent_pop, fpt6);

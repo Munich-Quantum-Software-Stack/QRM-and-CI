@@ -60,7 +60,7 @@ extern "C" std::vector<std::string> selector(ThreadSafeModule &TSM,
         passesPath + "/libQirCommuteCnotZPass.so",
         passesPath + "/libQirCommuteZCnotPass.so",
         passesPath + "/libQirPlaceIrreversibleGatesInMetadataPass.so",
-        passesPath + "/libQirAnnotateUnsupportedGatesPass.so",
+        passesPath + "/libQirAnnotateUnsupportedGatesPass.so", // TODO: Excluded due to possible segfaults
         passesPath + "/libQirU3ToRzRyRzDecompositionPass.so",
         passesPath + "/libQirRzToRxRyRxDecompositionPass.so",
         passesPath + "/libQirCNotToHCZHDecompositionPass.so",
@@ -73,9 +73,10 @@ extern "C" std::vector<std::string> selector(ThreadSafeModule &TSM,
         //passesPath + "/libQirRemoveNonEntrypointFunctionsPass.so",
         passesPath + "/libQirDeferMeasurementPass.so",
         passesPath + "/libQirBarrierBeforeFinalMeasurementsPass.so",
-        passesPath +
-          "/libQirRemoveBasicBlocksWithSingleNonConditionalBranchIns"
-                       "tsPass.so",
+        // TODO: Only removed for int_gen64_pop64, needs debugging
+        //passesPath +
+        //  "/libQirRemoveBasicBlocksWithSingleNonConditionalBranchIns"
+        //               "tsPass.so",
         //   passesPath + "/libQirQubitRemapPass.so", TODO BREAKS THE DEPTH'S
         //   FITNESS EVALUATION
         passesPath + "/libQirResourceAnnotationPass.so",

@@ -62,10 +62,10 @@ int main(int argc, char *argv[])
 
     // Open the QIR file
     // const char *filename = "../../benchmarks/test.ll";
-    std::string benchmark_dir = "../../../MQT_benchmark_QIR_mini";
+    std::string benchmark_dir = "../../../MQT_under_20";
     std::string default_results_dir = "../../../logs";
     std::string final_results_dir =
-        "../../../experiments/binary_gen8_pop256";
+        "../../../experiments/int/twopoint_rndmut/int_u20_obj5_gen64_pop64";
 
     for (const auto &entry : std::filesystem::directory_iterator(benchmark_dir))
         if (entry.is_regular_file() && entry.path().extension() == ".ll")
@@ -169,7 +169,6 @@ int main(int argc, char *argv[])
                           << std::endl;
             }
             // TODO: uncomment
-            /*
             std::string entry_file(entry.path().stem());
             std::string copy_to = final_results_dir + "/" + entry_file;
             std::filesystem::path to_check = copy_to;
@@ -180,7 +179,6 @@ int main(int argc, char *argv[])
             }
 
             std::filesystem::copy(default_results_dir, copy_to);
-            */
         }
     // Close the connections
     close_connections(&conn);
