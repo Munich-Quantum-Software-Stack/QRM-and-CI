@@ -4,11 +4,13 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <cmath>
 
 #include "PassRunner.hpp"
 
 #include "nsga2.hpp"
 #include "rand.hpp"
+#include "predictor.hpp"
 
 #include <llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h>
 #include <llvm/ExecutionEngine/Orc/Core.h>
@@ -27,6 +29,7 @@ void evaluate_pop(NSGA2Type *nsga2Params, population *pop,
                   const std::vector<std::string> designSpace, bool fVerbose)
 {
     int i;
+    std::cout << "AAA\n";
     for (i = 0; i < nsga2Params->popsize; i++)
         evaluate_ind(nsga2Params, &(pop->ind[i]), TSM, designSpace, fVerbose);
 }
@@ -394,10 +397,12 @@ void evaluate_ind(NSGA2Type *nsga2Params, individual *ind,
 
     int i, j;
 
+    std::cout << "EVAL 1\n";
     for (j = 0; j < nsga2Params->nint; j++)
     {
         passes.push_back(designSpace[ind->xint[j]]);
     }
+    std::cout << "EVAL 2\n";
 
     std::unique_ptr<Module> copiedModule = CloneModule(*TSM.getModuleUnlocked());
     ThreadSafeModule copiedTSM(std::move(copiedModule), TSM.getContext());
@@ -408,6 +413,21 @@ void evaluate_ind(NSGA2Type *nsga2Params, individual *ind,
     ind->obj[2] = evaluate_entanglement_ratio(copiedTSM);
     ind->obj[3] = evaluate_critical_depth(copiedTSM);
     ind->obj[4] = evaluate_parallelism(copiedTSM);
+
+    std::vector<std::string> ga_models = {
+         "q20_ga_number_of_gates",  "q20_ga_depth",
+        "q20_ga_entanglement_ratio", "q20_ga_critical_depth",
+        "q20_ga_parallelism",
+    };
+    std::map<std::string, float> score;
+	
+	score = predict(TSM, ga_models);
+    if (ind->obj[0] <= round(score[ga_models[0]]) && ind->obj[1] <= round(score[ga_models[1]]) 
+        && ind->obj[2] <= score[ga_models[2]] && ind->obj[3] <= score[ga_models[3]]
+        && ind->obj[4] <= score[ga_models[4]])
+    {
+        nsga2Params->cont_search = false;    
+    }
 
     ind->constr_violation = 0.0;
 
