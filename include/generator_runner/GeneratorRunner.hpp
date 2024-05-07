@@ -6,6 +6,9 @@
 #ifndef GENERATORRUNNER_HPP
 #define GENERATORRUNNER_HPP
 
+#include "PassRunner.hpp"
+#include "QuantumResourceManager.hpp"
+
 #include <algorithm>
 #include <csignal>
 #include <cstring>
@@ -19,9 +22,6 @@
 #include <thread>
 #include <unistd.h>
 #include <vector>
-
-#include <PassRunner.hpp>
-#include <QuantumResourceManager.hpp>
 
 using namespace llvm;
 using llvm::orc::ThreadSafeModule;

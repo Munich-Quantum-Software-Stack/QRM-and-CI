@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22.1)
+cmake_minimum_required(VERSION 3.22...3.28)
 project(
   QuantumResourceManager
   VERSION 0.1
@@ -16,62 +16,81 @@ set(INSTALL_PATH "${CMAKE_INSTALL_PREFIX}")
 # Create the qresourcemanager_d.log file
 file(WRITE ${CMAKE_INSTALL_PREFIX}/logs/qresourcemanager_d.log "")
 
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-# Find rabbitmq-c package
-find_package(rabbitmq-c REQUIRED)
-
-# Find FoMaC package
-find_package(fomac REQUIRED)
-
-# Find QDMI package
-find_package(qdmi REQUIRED)
-
-# Find QInfo package
-find_package(qinfo REQUIRED)
-
-# Find nlohmann_json package
-set(nlohmann_json_DIR /opt/homebrew/Cellar/nlohmann-json/3.11.3/lib/cmake/nlohmann_json) #TODO
-find_package(nlohmann_json REQUIRED)
-
-# Find the Threads package
-find_package(Threads REQUIRED)
-
-# Find LLVMConfig.cmake
-find_package(LLVM REQUIRED CONFIG)
+include(cmake/ExternalDependencies.cmake)
 
 # Set LLVM_ENABLE_THREADS to ON
 set(LLVM_ENABLE_THREADS ON)
 
 # Set up LLVM-specific flags
-message("-- LLVM_INCLUDE_DIRS: ${LLVM_INCLUDE_DIRS}")
-add_definitions(${LLVM_DEFINITIONS})
+separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+add_definitions(${LLVM_DEFINITIONS_LIST})
 
-# Add the include paths
-include_directories(
-  "${CMAKE_CURRENT_SOURCE_DIR}/include"
-  "${CMAKE_CURRENT_SOURCE_DIR}/include/generator_runner"
-  "${CMAKE_CURRENT_SOURCE_DIR}/include/pass_runner"
-  "${CMAKE_CURRENT_SOURCE_DIR}/include/selector_runner"
-  "${CMAKE_CURRENT_SOURCE_DIR}/include/scheduler_runner"
-  "${CMAKE_INSTALL_PREFIX}/include"
-  ${LLVM_INCLUDE_DIRS}
-  /opt/homebrew/Cellar/nlohmann-json/3.11.3/include #TODO
-  /opt/homebrew/Cellar/rabbitmq-c/0.14.0/include #TODO
-)
+# # Add the include paths
+# include_directories(
+#   "${CMAKE_CURRENT_SOURCE_DIR}/include"
+#   "${CMAKE_CURRENT_SOURCE_DIR}/include/generator_runner"
+#   "${CMAKE_CURRENT_SOURCE_DIR}/include/pass_runner"
+#   "${CMAKE_CURRENT_SOURCE_DIR}/include/selector_runner"
+#   "${CMAKE_CURRENT_SOURCE_DIR}/include/scheduler_runner"
+#   "${CMAKE_INSTALL_PREFIX}/include"
+#   ${LLVM_INCLUDE_DIRS}
+#   /opt/homebrew/Cellar/nlohmann-json/3.11.3/include #TODO
+#   /opt/homebrew/Cellar/rabbitmq-c/0.14.0/include #TODO
+# )
 
 # Build shared libraries
-add_library(GeneratorRunner SHARED src/generator_runner/GeneratorRunner.cpp)
-add_library(SchedulerRunner SHARED src/scheduler_runner/SchedulerRunner.cpp)
+add_library(QirPassRunner   SHARED src/pass_runner/QirPassRunner.cpp)
 add_library(PassRunner      SHARED src/pass_runner/PassRunner.cpp)
 add_library(SelectorRunner  SHARED src/selector_runner/SelectorRunner.cpp)
-add_library(QirPassRunner   SHARED src/pass_runner/QirPassRunner.cpp)
+add_library(SchedulerRunner SHARED src/scheduler_runner/SchedulerRunner.cpp)
+add_library(GeneratorRunner SHARED src/generator_runner/GeneratorRunner.cpp)
 
-target_link_libraries(GeneratorRunner PRIVATE qdmi qinfo fomac LLVM)
-target_link_libraries(SchedulerRunner PRIVATE qdmi qinfo fomac LLVM)
-target_link_libraries(SelectorRunner  PRIVATE qdmi qinfo fomac LLVM)
-target_link_libraries(QirPassRunner   PRIVATE qdmi qinfo fomac LLVM)
-target_link_libraries(PassRunner      PRIVATE qdmi qinfo fomac LLVM QirPassRunner)
+target_include_directories(QirPassRunner   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/pass_runner
+                                                  ${LLVM_INCLUDE_DIRS})
+target_include_directories(PassRunner   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/pass_runner)
+target_include_directories(SelectorRunner  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/selector_runner
+                                                  ${LLVM_INCLUDE_DIRS})
+target_include_directories(SchedulerRunner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/scheduler_runner
+                                                  ${CMAKE_CURRENT_SOURCE_DIR}/include/pass_runner
+                                                  ${CMAKE_CURRENT_SOURCE_DIR}/include/generator_runner
+                                                  ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(GeneratorRunner PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/generator_runner
+                                                  ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+# Find the necessary LLVM components
+llvm_map_components_to_libnames(LLVM_LIBS support
+                                          core
+                                          mcjit
+                                          analysis
+                                          scalaropts
+                                          codegen
+                                          transformutils
+                                          ipo
+                                          objcarcopts
+                                          vectorize
+                                          instcombine
+                                          bitwriter)
+
+target_link_libraries(QirPassRunner   PRIVATE qdmi qinfo fomac
+                                              ${LLVM_LIBS})
+target_link_libraries(PassRunner      PRIVATE QirPassRunner
+                                              qdmi qinfo fomac
+                                              ${LLVM_LIBS})
+target_link_libraries(SelectorRunner  PRIVATE PassRunner
+                                              qdmi qinfo fomac
+                                              ${LLVM_LIBS})
+target_link_libraries(SchedulerRunner PRIVATE SelectorRunner
+                                              qdmi qinfo fomac
+                                              nlohmann_json::nlohmann_json
+                                              rabbitmq::rabbitmq
+                                              ${LLVM_LIBS})
+target_link_libraries(GeneratorRunner PRIVATE PassRunner SelectorRunner SchedulerRunner
+                                              qdmi qinfo fomac
+                                              nlohmann_json::nlohmann_json
+                                              rabbitmq::rabbitmq
+                                              ${LLVM_LIBS})
 
 set(EXECUTABLE_NAME
     "qresourcemanager_d"
@@ -110,12 +129,11 @@ add_subdirectory(src/scheduler_runner/schedulers)
 
 # Link the executable with the required libraries
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE
-  #rabbitmq-c
-  /opt/homebrew/Cellar/rabbitmq-c/0.14.0/lib/librabbitmq.dylib #TODO
   qdmi
   qinfo
   fomac
-  LLVM
+  ${LLVM_LIBS}
+  rabbitmq::rabbitmq
   nlohmann_json::nlohmann_json
   Threads::Threads
   GeneratorRunner
@@ -128,7 +146,6 @@ target_link_libraries(${EXECUTABLE_NAME} PRIVATE
 # Include header files
 target_include_directories(${EXECUTABLE_NAME}
     PRIVATE ${CMAKE_INSTALL_PREFIX}/include
-            ${CMAKE_BINARY_DIR}/_deps/qdmi-src/src #TODO
     PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
            $<INSTALL_INTERFACE:include>
 )

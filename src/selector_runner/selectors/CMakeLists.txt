@@ -21,14 +21,27 @@ add_library(nsga2 SHARED
     tourselect.cpp
 )
 
-target_include_directories(nsga2 PRIVATE 
+target_include_directories(nsga2 PRIVATE
     ${CMAKE_INSTALL_PREFIX}/src/selector_runner/selectors/
     ${CMAKE_INSTALL_PREFIX}/include/pass_runner
-    ${CMAKE_BINARY_DIR}/_deps/qdmi-src/include #TODO
-    ${CMAKE_BINARY_DIR}/_deps/qinfo-src/include #TODO
+    ${LLVM_INCLUDE_DIRS}
 )
+
+llvm_map_components_to_libnames(LLVM_LIBS support
+                                          core
+                                          mcjit
+                                          analysis
+                                          scalaropts
+                                          codegen
+                                          transformutils
+                                          ipo
+                                          objcarcopts
+                                          vectorize
+                                          instcombine
+                                          bitwriter)
+
 #target_link_directories(nsga2 PRIVATE qdmi)
-target_link_libraries(nsga2 PRIVATE qdmi LLVM PassRunner)
+target_link_libraries(nsga2 PRIVATE qdmi ${LLVM_LIBS} PassRunner)
 
 install(TARGETS nsga2
     DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
@@ -59,7 +72,7 @@ set(SELECTORS_SOURCE_FILES
 
 # Compile each selector as a shared object
 foreach(src_file ${SELECTORS_SOURCE_FILES})
-    get_filename_component(src_name ${src_file} NAME_WE) 
+    get_filename_component(src_name ${src_file} NAME_WE)
     add_library(${src_name} MODULE ${src_file})
     target_link_libraries(${src_name} PRIVATE
         QirPassRunner
@@ -68,11 +81,11 @@ foreach(src_file ${SELECTORS_SOURCE_FILES})
         fomac
         nsga2
 #        hillclimb
-        LLVM
+        ${LLVM_LIBS}
     )
-
+    message(STATUS "CMAKE_CURRENT_SOURCE_DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
     # Set include directories for the library
-    target_include_directories(${src_name} PRIVATE ${CMAKE_INSTALL_PREFIX}/include)
+    target_include_directories(${src_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../include)
 
     # Install the shared library
     install(TARGETS ${src_name}

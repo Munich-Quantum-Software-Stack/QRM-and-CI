@@ -11,7 +11,6 @@ install:
 		echo "-- Building the QRM for macOS"; \
 		cmake -B$(BUILD_DIR) \
 			-DBUILD_WITH_DOCS=OFF \
-			--debug-output \
 			-DCMAKE_INSTALL_PREFIX=$(INSTALL_PATH) && \
 		echo "-- Installing the QRM for macOS"; \
 		cmake --build $(BUILD_DIR) --target install --config Release -v; \

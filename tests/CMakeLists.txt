@@ -1,18 +1,17 @@
 project(MyQirTests)
 
-# Locate and configure the Google Test framework.
-find_package(GTest REQUIRED)
-
+# Configure the Google Test framework.
 set(TEST_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/test.cpp")
 
 include_directories(${GTEST_INCLUDE_DIRS})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src)
-
-find_library(RABBITMQ_LIBRARY rabbitmq)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
 add_executable(QirTest ${TEST_SOURCE} ../src/connection_handling.cpp)
 
-target_link_libraries(QirTest ${RABBITMQ_LIBRARY} ${GTEST_LIBRARIES})
+target_link_libraries(QirTest
+    rabbitmq::rabbitmq
+    nlohmann_json::nlohmann_json
+    gtest_main)
 
 # Automatically discover and run tests using CTest.
 include(GoogleTest)

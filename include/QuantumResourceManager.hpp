@@ -29,15 +29,15 @@
 
 #include <connection_handling.hpp>
 
-#include <GeneratorRunner.hpp>
-#include <PassRunner.hpp>
-#include <SchedulerRunner.hpp>
-#include <SelectorRunner.hpp>
+#include "GeneratorRunner.hpp"
+#include "PassRunner.hpp"
+#include "SchedulerRunner.hpp"
+#include "SelectorRunner.hpp"
 
-#include <fomac.hpp>
-#include <qdmi.h>
-#include <qdmi_internal.h>
-#include <qinfo.h>
+#include "fomac.hpp"
+#include "qdmi.h"
+#include "qdmi_internal.h"
+#include "qinfo.h"
 
 using llvm::orc::ThreadSafeModule;
 
