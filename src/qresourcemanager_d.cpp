@@ -195,7 +195,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                 OS << module; 
                 OS.flush();
                 modules.push_back(str.data());
-                std::cout << str.data() << std::endl;
+                //std::cout << str.data() << std::endl;
                 raw_svector_ostream ostream(buffer);
                 WriteBitcodeToFile(module, ostream);
 
@@ -248,7 +248,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
 
         for (long i = 0; i < ((long)1 << numbits); i++)
         {
-            std::cout << "\n\t" << raw_numbers[i] << std::endl;
+            //std::cout << "\n\t" << raw_numbers[i] << std::endl;
             results[std::to_string(i)] += raw_numbers[i];
         }
 

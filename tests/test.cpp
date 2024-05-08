@@ -61,6 +61,7 @@ int main(int argc, char *argv[])
 
     // Open the QIR file
     const char *filename = "../../benchmarks/qlm.ll";
+    //const char *filename = "../../benchmarks/wmi.ll";
     std::ifstream file(filename, std::ios::binary);
     if (!file.is_open())
     {
