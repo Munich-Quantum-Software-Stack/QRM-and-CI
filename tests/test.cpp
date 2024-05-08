@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
     rabbitmq_new_connection(&conn, &socket);
 
     // Open the QIR file
-    const char *filename = "../../benchmarks/bell_state.ll";
+    const char *filename = "../../benchmarks/qlm.ll";
     std::ifstream file(filename, std::ios::binary);
     if (!file.is_open())
     {
@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
     json QuantumTask_json = {
         {"task_id", -1},
         {"n_qbits", 0},
-        {"n_shots", 10000},
+        {"n_shots", 100},
         {"circuit_file", ""},
         {"circuit_file_type", "QIR"},
         {"result_destination", ""},
