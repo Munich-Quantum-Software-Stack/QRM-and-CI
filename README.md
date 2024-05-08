@@ -6,12 +6,12 @@ The entry point of the Quantum Resource Manager for selecting and applying LLVM 
 
 1. To clone this repository to your local machine, use the following command:
    ```bash
-   git clone git@github.com:Munich-Quantum-Software-Stack/QRM.git quantum-resource-manager
+   git clone git@github.com:Munich-Quantum-Software-Stack/QRM.git qrm.git
    ```
 
 2. After cloning, make sure you are at the right branch:
    ```bash
-   cd quantum-resource-manager
+   cd qrm.git
    git checkout testing
    ```
 
@@ -37,7 +37,7 @@ To install the Quantum Resource Manager daemon system wide, follow these steps:
 1. Install the required dependencies:
    ```bash
    sudo apt update
-   sudo apt install -y cmake llvm llvm-dev rabbitmq-server g++ curl libgtest-dev nlohmann-json3-dev libjansson-dev libcjson-dev
+   sudo apt install -y cmake llvm llvm-dev rabbitmq-server g++ curl libgtest-dev nlohmann-json3-dev libjansson-dev libcjson-dev libcurl4-openssl-dev
    ```
 
 2. Set the following environment variables:
@@ -45,9 +45,9 @@ To install the Quantum Resource Manager daemon system wide, follow these steps:
    export PASSES=/path/to/pass/libraries
    ```
 
-3. Navigate to the `quantum-resource-manager` directory (if you are not already there):
+3. Navigate to the `qrm.git` directory (if you are not already there):
    ```bash
-   cd quantum-resource-manager/
+   cd qrm.git/
    ```
 
 4. Run `make` to install `qresourcemanager_d`:
@@ -67,9 +67,9 @@ To install the Quantum Resource Manager daemon system wide, follow these steps:
 
 If you ever need to uninstall `qresourcemanager_d`, follow these steps:
 
-1. Navigate to the `quantum-resource-manager` directory (if you are not already there):
+1. Navigate to the `qrm.git` directory (if you are not already there):
    ```bash
-   cd quantum-resource-manager/
+   cd qrm.git/
    ```
 
 2. Run the uninstall target using sudo:
@@ -79,6 +79,7 @@ If you ever need to uninstall `qresourcemanager_d`, follow these steps:
 
 This will remove `qresourcemanager_d` from your system.
 
+<!--
 ## Project Structure
 
 The project structure is the following:
@@ -150,6 +151,7 @@ The project structure is the following:
    ├─ CMakeLists.txt
    └─ test.cpp
 ```
+-->
 
 ## Documentation and Resources
 
@@ -161,7 +163,6 @@ This section provides links to project documentation and additional resources:
 <!--
 - Flowchart:
 ![Alt](flowcharts/flow.png)
--->
 
 ## Building Documentation
 
@@ -194,6 +195,7 @@ You can build the Quantum Resource Manager and generate its documentation locall
    Alternatively, you can manually open the file `documentation/html/index.html` with your preferred web browser.
 
 4. Once the forked branch is merged, the up-to-date documentation can be accessed online [here](https://lrz-qct-qis.gitlabpages.devweb.mwn.de/munich-quantum-compiler/quantum-resource-manager/index.html).
+-->
 
 ## Running Examples
 
@@ -220,12 +222,12 @@ You can run the Quantum Resource Manager daemon and a test client as follows:
       export PASSES=$PASSES:PASSES_LIBRARY_PATH
       ```
 
-2. Navigate to the `quantum-resource-manager` directory (if you are not already there):
+2. Navigate to the `qrm.git` directory (if you are not already there):
    ```bash
-   cd quantum-resource-manager/
+   cd qrm.git/
    ```
 
 3. Run the following command:
    ```bash
-   make test
+   sh test.sh
    ```
