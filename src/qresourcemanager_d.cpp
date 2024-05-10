@@ -98,7 +98,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
     parentQuantumTask.thread_safe_module = std::move(TSM);
 
     // Invoke the target-agnostic selector
-    std::vector<std::string> agnosticPasses = invokeSelector("libselector_agnostic.so");
+    std::vector<std::string> agnosticPasses = invokeTargetAgnosticSelector("libselector_agnostic.so");
 
     if (agnosticPasses.empty())
     {
@@ -164,7 +164,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         }
 
         // Invoke the target-specific selector
-        std::vector<std::string> specificPasses = invokeSelector("libselector_specific.so");
+        std::vector<std::string> specificPasses = invokeTargetSpecificSelector("libselector_specific.so", device);
 
         if (specificPasses.empty())
         {

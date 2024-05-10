@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include <qdmi.h>
 /**
  * @brief The main entry point of the program.
  *
@@ -15,7 +16,7 @@
  *
  * @return std::vector<std::string>
  */
-extern "C" std::vector<std::string> selector(void)
+extern "C" std::vector<std::string> selector(QDMI_Device device)
 {
     char *passesEnv = std::getenv("PASSES");
 
