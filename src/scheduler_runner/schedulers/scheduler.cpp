@@ -23,6 +23,8 @@ std::map<std::string, float> calculate_scores(QuantumTask &task)
 {
     std::map<std::string, float> scores;
 
+    scores = predict(task.thread_safe_module, {"q20"}); // ONLY FOR TEST
+
     // User only wants to use a single QPU
     if (task.preferred_qpus.size() == 1)
     {
@@ -232,9 +234,10 @@ extern "C" int scheduler(std::vector<QuantumTask> *tasks)
         std::string target_device = choose_device(scores);
 
         // Predict the expected execution time for the task on the chosen device
-        std::map<std::string, float> duration_prediction = predict(task.thread_safe_module, {target_device});
+        std::map<std::string, float> duration_prediction =
+            predict(task.thread_safe_module, {target_device});
         // TODO: once we have a trained model, use it for duration prediction
-        //task.duration = duration_prediction[target_device];
+        // task.duration = duration_prediction[target_device];
         task.duration =
             calculate_circuit_duration(task.thread_safe_module, 0.04, 0.6, 15);
 

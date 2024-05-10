@@ -1,7 +1,10 @@
 #include "predictor.hpp"
 #include "eval.hpp"
+#include <fstream>
 #include <iostream>
 #include <map>
+#include <string>
+#include <vector>
 
 /*
  * @brief Predict some figure of merit based on a pretrained ONNX model for each
@@ -79,7 +82,7 @@ std::map<std::string, float> predict(const ThreadSafeModule &TSM,
     {
         input_data[i++] = (float)(value);
     }
-    std::vector<int64_t> input_shape = {1, 53};
+    std::vector<int64_t> input_shape = {1, 52};
     Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
         memory_info, input_data.data(), input_data.size(), input_shape.data(),
         input_shape.size());
@@ -105,24 +108,47 @@ std::map<std::string, float> predict(const ThreadSafeModule &TSM,
         // Declare the session pointer
         Ort::Session *session = nullptr;
 
-        // Initialize the session
-        try
+        std::string model_path;
+        if (devices.size() == 1 && device == "q20")
         {
-            session = new Ort::Session(
-                env, // TODO: remove hardcoded path to the scheduler shared
-                     // library
-                "/home/ubuntu/mqss/qrm.git/include/scheduler_runner/model.onnx",
-                session_options);
+            // Use model trained with genetic selector for the q20 device
+            model_path = "/home/ubuntu/mqss/qrm.git/include/scheduler_runner/"
+                         "q20_genetic_selector.onnx";
         }
-        catch (const Ort::Exception &exception)
+        else
         {
-            throw;
+            model_path = "/home/ubuntu/mqss/qrm.git/include/scheduler_runner/"
+                         "test_model.onnx";
+        }
+
+        std::ifstream file(model_path, std::ios::binary | std::ios::ate);
+        std::streamsize size = file.tellg();
+        file.seekg(0, std::ios::beg);
+
+        std::vector<char> buffer(size);
+        if (file.read(buffer.data(), size))
+        {
+            try
+            {
+                // Initialize the session
+                session = new Ort::Session(env, buffer.data(), buffer.size(),
+                                           session_options);
+            }
+            catch (const std::exception &ex)
+            {
+                std::cerr << "Failed to create Ort::Session: " << ex.what()
+                          << "\n";
+            }
+        }
+        else
+        {
+            std::cerr << "Failed to read model file: " << model_path << "\n";
         }
 
         // Prepare output tensor
         std::vector<const char *> output_node_names = {"variable"};
-        std::array<float, 1> output_data;
-        std::vector<int64_t> output_shape = {1, 1};
+        std::array<float, 6> output_data;
+        std::vector<int64_t> output_shape = {1, 6};
         Ort::Value output_tensor = Ort::Value::CreateTensor<float>(
             memory_info, output_data.data(), output_data.size(),
             output_shape.data(), output_shape.size());

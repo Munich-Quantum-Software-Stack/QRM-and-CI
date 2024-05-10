@@ -220,7 +220,8 @@ evaluate_supermarq_plus(const ThreadSafeModule &TSM,
 }
 
 /*
- * @brief Calculate the duration of a quantum circuit based on the gate times along its critical path
+ * @brief Calculate the duration of a quantum circuit based on the gate times
+ * along its critical path
  * @param TSM The quantum circuit to evaluate
  * @param single_qubit_gate_time The time taken for a single qubit gate
  * @param multi_qubit_gate_time The time taken for a multi qubit gate
