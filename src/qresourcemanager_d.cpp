@@ -133,7 +133,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
     std::map<std::string, int> results;
     for (auto &childQuantumTask : childQuantumTasks)
     {
-        QDMI_Job job;
+        QDMI_Job job = (QDMI_Job)malloc(sizeof(struct QDMI_Job_impl_d));
         QDMI_Library lib;
         QDMI_Fragment frag;
 
@@ -254,6 +254,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
 
         free(raw_numbers);
         free(frag);
+        free(job);
         //free(device);
     }
 
