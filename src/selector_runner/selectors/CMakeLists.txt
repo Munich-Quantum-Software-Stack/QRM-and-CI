@@ -54,13 +54,15 @@ set(SELECTORS_SOURCE_FILES
 #    selector_all.cpp
 #    selector_manual.cpp
     selector_ga.cpp
+    selector_specific.cpp 
+    selector_agnostic.cpp
 #    selector_hillclimb.cpp
 )
 
 # Compile each selector as a shared object
 foreach(src_file ${SELECTORS_SOURCE_FILES})
     get_filename_component(src_name ${src_file} NAME_WE) 
-    add_library(${src_name} MODULE ${src_file})
+    add_library(${src_name} SHARED ${src_file})
     target_link_libraries(${src_name} PRIVATE
         QirPassRunner
         qdmi

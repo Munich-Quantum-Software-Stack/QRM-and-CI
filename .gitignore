@@ -1,7 +1,7 @@
 .DS_Store
 uninstall.cmake
 
-token.txt
+tokens/
 doxygen/
 build/
 docs/build/

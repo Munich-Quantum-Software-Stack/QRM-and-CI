@@ -54,18 +54,15 @@ struct QuantumTask
     std::string circuit_file_type;
     std::string result_destination;
     std::string preferred_qpu;
-    std::string scheduled_qpu;
+    QDMI_Device scheduled_qpu;
     int priority;
     int optimisation_level;
     bool no_modify;
     bool transpiler_flag;
     int result_type;
     std::string submit_time;
-    std::string circuit_qiskit;
+    std::string qir;
     std::string additional_information;
-    std::string change_generator;
-    std::string change_selector;
-    std::string change_scheduler;
     ThreadSafeModule thread_safe_module;
 };
 

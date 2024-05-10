@@ -406,7 +406,8 @@ void evaluate_ind(NSGA2Type *nsga2Params, individual *ind,
     }
 
     // std::cout << "[DEBUG] after loop: " << TSM << std::endl;
-    invokeTargetSpecificPasses(TSM, passes, nsga2Params->device /*, fVerbose*/);
+    //invokeTargetSpecificPasses(TSM, passes, nsga2Params->device /*, fVerbose*/);
+    invokePasses(TSM, passes);
 
     ind->obj[0] = evaluate_gates(TSM);
     ind->obj[1] = evaluate_depth(TSM);

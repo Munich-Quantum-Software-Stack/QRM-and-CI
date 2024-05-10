@@ -6,12 +6,13 @@
 
 //using json = nlohmann::json;
 using llvm::orc::ThreadSafeModule;
+using llvm::orc::ThreadSafeContext;
 
 #define CHECK_ERR(a, b)                                                        \
     {                                                                          \
         if (a != QDMI_SUCCESS)                                                 \
         {                                                                      \
-            std::cout << std::endl << "[Error]: " << a << " at " << b;         \
+            std::cout << std::endl << "   [qresourcemanager_d]..Warning: " << b << " returned with status " << a << std::endl;         \
         }                                                                      \
     }
 
@@ -53,24 +54,21 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
     task.circuit_file_type = QuantumTask_json["circuit_file_type"];
     task.result_destination = QuantumTask_json["result_destination"];
     task.preferred_qpu = QuantumTask_json["preferred_qpu"];
-    task.scheduled_qpu = QuantumTask_json["scheduled_qpu"];
     task.priority = QuantumTask_json["priority"];
     task.optimisation_level = QuantumTask_json["optimisation_level"];
     task.no_modify = QuantumTask_json["no_modify"];
     task.transpiler_flag = QuantumTask_json["transpiler_flag"];
     task.result_type = QuantumTask_json["result_type"];
     task.submit_time = QuantumTask_json["submit_time"];
-    if (!QuantumTask_json.contains("circuit_qiskit"))
+    if (!QuantumTask_json.contains("qir"))
     {
         std::cout
-            << "   [qresourcemanager_d]..Warning: circuit_qiskit not defined"
+            << "   [qresourcemanager_d]..Warning: Generic QIR missing"
             << std::endl;
         return QuantumTask();
     }
-    task.circuit_qiskit = QuantumTask_json["circuit_qiskit"];
+    task.qir = QuantumTask_json["qir"];
     task.additional_information = QuantumTask_json["additional_information"];
-    task.change_selector = QuantumTask_json["change_selector"];
-    task.change_scheduler = QuantumTask_json["change_scheduler"];
     task.thread_safe_module = ThreadSafeModule();
 
     return task;
@@ -85,20 +83,36 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
  * @param receivedSelector TODO
  */
 void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
-                         const QuantumTask &parentQuantumTask)
+                         QuantumTask &parentQuantumTask)
 {
+    int err = 1;
+    auto start = std::chrono::steady_clock::now();
 
-    // TODO THE TARGET-AGNOSTIC OPTIMZATION
-    //      BEFORE CIRCUIT CUTTING
-    // invokeTargetAgnosticPasses(parentQuantumTask.circuit_qiskit, passes);
+    // Insert LLVM::ThreadSafeModule to parentQuantumTask
+    ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
+    SMDiagnostic error;
+    std::string circuit = parentQuantumTask.qir;
+    auto M = parseIR(MemoryBufferRef(circuit, "QIR (LRZ)"), error,
+                      *TSCtx.getContext());
+    ThreadSafeModule TSM = ThreadSafeModule(std::move(M), std::move(TSCtx));
+    parentQuantumTask.thread_safe_module = std::move(TSM);
+
+    // Invoke the target-agnostic selector
+    std::vector<std::string> agnosticPasses = invokeSelector("libselector_agnostic.dylib");
+
+    if (agnosticPasses.empty())
+    {
+        std::cout << "   [qresourcemanager_d]..Warning: "
+                  << "No passes were selected" << std::endl;
+        return;
+    }
+
+    // Invoke target-agnostic passes
+    invokePasses(parentQuantumTask.thread_safe_module, agnosticPasses);
 
     // Invoke the generator
-    std::string generator = parentQuantumTask.change_generator == ""
-                                ? "libgenerator_cutter.so"
-                                : parentQuantumTask.change_generator;
-
     std::vector<QuantumTask> childQuantumTasks =
-        invokeGenerator(parentQuantumTask, generator);
+        invokeGenerator(parentQuantumTask, "libgenerator_cutter.dylib");
 
     if (childQuantumTasks.size() == 0)
     {
@@ -109,28 +123,23 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         return;
     }
 
+    // Invoke the scheduler
+    err = invokeScheduler("libscheduler_round_robin.dylib", &childQuantumTasks);
+    CHECK_ERR(err, "invokeScheduler");
+
     // Compile and execute each generated sub-circuit
-    int err;
     std::vector<std::string> modules;
     std::vector<std::string> targets;
     std::map<std::string, int> results;
-    auto start = std::chrono::steady_clock::now();
     for (auto &childQuantumTask : childQuantumTasks)
     {
         QDMI_Job job;
         QDMI_Library lib;
         QDMI_Fragment frag;
 
-        std::cout << std::endl;
+        //std::cout << std::endl;
 
-        // Invoke the scheduler
-        std::string scheduler = childQuantumTask.change_scheduler == ""
-                                    ? "libscheduler_round_robin.so"
-                                    : childQuantumTask.change_scheduler;
-
-        QDMI_Device device = invokeScheduler(scheduler, childQuantumTask);
-
-        // childQuantumTask.setTargetDevice(device);
+        QDMI_Device device = childQuantumTask.scheduled_qpu;
 
         if (device == NULL)
         {
@@ -141,7 +150,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
             return;
         }
 
-        FOMAC_print_coupling_mappings(device);
+        //FOMAC_print_coupling_mappings(device);
 
         const char *lastSlash = std::strrchr(device->library.libname, '/');
         if (lastSlash != nullptr)
@@ -154,23 +163,19 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
             return;
         }
 
-        // Invoke the selector
-        std::string selector = childQuantumTask.change_selector == ""
-                                   ? "libselector_all.so"
-                                   : childQuantumTask.change_selector;
-        std::vector<std::string> passes = invokeSelector(
-            selector, childQuantumTask.thread_safe_module, device);
+        // Invoke the target-specific selector
+        std::vector<std::string> specificPasses = invokeSelector("libselector_specific.dylib");
 
-        if (passes.empty())
+        if (specificPasses.empty())
         {
             std::cout << "   [qresourcemanager_d]..Warning: "
                       << "No passes were selected" << std::endl;
             return;
         }
 
-        // Invoke the passes
-        invokeTargetSpecificPasses(childQuantumTask.thread_safe_module, passes,
-                                   device);
+        // Invoke target-specific passes
+        invokePasses(childQuantumTask.thread_safe_module, specificPasses, device);
+
         // Create a fragment
         frag = (QDMI_Fragment)malloc(sizeof(struct QDMI_Fragment_d));
         if (frag == NULL)
@@ -187,9 +192,10 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         childQuantumTask.thread_safe_module.withModuleDo(
             [&](Module &module)
             {
-                OS << module;
+                OS << module; 
                 OS.flush();
                 modules.push_back(str.data());
+                //std::cout << str.data() << std::endl;
                 raw_svector_ostream ostream(buffer);
                 WriteBitcodeToFile(module, ostream);
 
@@ -201,24 +207,29 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                     return;
                 }
 
-                void *qirmod = static_cast<void *>(buffer.data());
+                void* qirmod = static_cast<void *>(buffer.data());
                 frag->sizebuffer = buffer.size();
                 err = QDMI_control_pack_qir(device, qirmod, &frag);
+                CHECK_ERR(err, "QDMI_control_pack_qir");
             });
 
         // Submit the adapted QIR to the target platform
         job->task_id = childQuantumTask.task_id;
-        // TODO Handle err
         err = QDMI_control_submit(device, &frag, childQuantumTask.n_shots,
                                   device->library.info, &job);
         CHECK_ERR(err, "QDMI_control_submit");
 
+        // Wait for the results to be ready
+        QDMI_Status status;
+        err = QDMI_control_wait(device, &job, &status);
+        CHECK_ERR(err, "QDMI_control_wait");
+
         // Get the results back
         int numbits = 0;
-        // TODO Handle err
-        QDMI_Status status;
         err = QDMI_control_readout_size(device, &status, &numbits);
-        int *raw_numbers = new int[1 << numbits];
+        CHECK_ERR(err, "QDMI_control_readout_size");
+        int* raw_numbers = new int[1 << numbits];
+        memset(raw_numbers, 0, sizeof(int) * (1 << numbits));
         if (numbits == 0)
         {
             std::cout << "   [qresourcemanager_d]..Warning: "
@@ -227,20 +238,28 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
             return;
         }
 
-        // TODO Handle err
-        err = QDMI_control_readout_raw_num(device, &status, job->task_id,
-                                           raw_numbers);
+        err = QDMI_control_readout_raw_num(
+            device, 
+            &status, 
+            job->task_id, 
+            raw_numbers
+        );
+        CHECK_ERR(err, "QDMI_control_readout_raw_num");
 
         for (long i = 0; i < ((long)1 << numbits); i++)
-            results[std::to_string(i)] = raw_numbers[i];
+        {
+            //std::cout << "\n\t" << raw_numbers[i] << std::endl;
+            results[std::to_string(i)] += raw_numbers[i];
+        }
 
-        delete[] raw_numbers;
+        free(raw_numbers);
         free(frag);
-        free(device);
+        //free(device);
     }
 
     auto end = std::chrono::steady_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end - start;
+    std::chrono::duration<double, std::milli> elapsed_milliseconds = end - start;
+    std::cout << "   [qresourcemanager_d]..Elapsed milliseconds: " << elapsed_milliseconds.count() << std::endl;
 
     // Create JSON string to send back to the Quantum Daemon
     nlohmann::json QuantumResult_json = {
@@ -251,7 +270,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         {"executed_qpu", targets},
         {"executed_circuit", modules},
         {"additional_information", ""},
-        {"execution_time", elapsed_seconds.count()},
+        {"execution_time", elapsed_milliseconds.count()},
     };
 
     std::string QuantumResult_str = QuantumResult_json.dump();
@@ -262,7 +281,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                  QDQueue);                  // queue
 
     std::cout
-        << "   [qresourcemanager_d]..Adapted QIR sent to the Quantum Daemon"
+        << "   [qresourcemanager_d]..Executed QIR circuits sent back to the Quantum Daemon"
         << std::endl;
 }
 
@@ -304,7 +323,7 @@ void signalHandler(int signum)
  */
 int main(int argc, char *argv[])
 {
-    // setbuf(stdout, NULL);
+    //setbuf(stdout, NULL);
 
     if (argc != 1 && argc != 2 && argc != 3)
     {
@@ -339,40 +358,40 @@ int main(int argc, char *argv[])
     }
 
     // Fork the process to create a daemon
-    // pid_t pid = fork();
+    //pid_t pid = fork();
 
-    // if (pid < 0)
+    //if (pid < 0)
     //{
-    //     std::cerr << "   [qresourcemanager_d]..Failed to fork" << std::endl;
-    //     return 1;
-    // }
+    //    std::cerr << "   [qresourcemanager_d]..Failed to fork" << std::endl;
+    //    return 1;
+    //}
 
     std::string filePath;
 
     if (stream == "log")
         filePath = std::string(argv[2]) + "/logs/qresourcemanager_d.log";
 
-    // if (pid > 0)
+    //if (pid > 0)
     //{
-    //     std::cout
-    //         << "   [qresourcemanager_d]..To stop this daemon type: kill -15 "
-    //         << pid << std::endl;
-    //     if (stream == "log")
-    //         std::cout << "   [qresourcemanager_d]..The log can be found in "
-    //                   << filePath << std::endl;
+    //    std::cout
+    //        << "   [qresourcemanager_d]..To stop this daemon type: kill -15 "
+    //        << pid << std::endl;
+    //    if (stream == "log")
+    //        std::cout << "   [qresourcemanager_d]..The log can be found in "
+    //                  << filePath << std::endl;
 
     //    return 0;
     //}
 
     //// Create a new session and become the session leader
-    // setsid();
+    //setsid();
 
     //// Change the working directory to root to avoid locking the current
     //// directory
-    // chdir("/");
+    //chdir("/");
 
     //// Set up a signal handler for graceful termination
-    // signal(SIGTERM, signalHandler);
+    //signal(SIGTERM, signalHandler);
 
     // Set the output stream
     if (stream == "log")
@@ -420,8 +439,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    std::cout << "   [qresourcemanager_d]..Listening on queue " << QRMQueue
-              << std::endl;
+    //std::cout << "   [qresourcemanager_d]..Listening on queue " << QRMQueue
+    //          << std::endl;
 
     // Start the QDMI session
     int err;
@@ -449,14 +468,14 @@ int main(int argc, char *argv[])
             //// Create a new thread that executes 'handleQuantumDaemon' to run
             //// the received scheduler, and the received selector targeting
             //// the received QIR
-            // std::thread QuantumDaemonThread(handleQuantumDaemon,
-            //     std::ref(conn),
-            //     QDQueue,
-            //     parentQuantumTask
+            //std::thread QuantumDaemonThread(handleQuantumDaemon,
+            //    std::ref(conn),
+            //    QDQueue, 
+            //    parentQuantumTask
             //);
 
             //// Detach from this thread once done
-            // QuantumDaemonThread.detach();
+            //QuantumDaemonThread.detach();
 
             handleQuantumDaemon(conn, QDQueue, parentQuantumTask);
         }

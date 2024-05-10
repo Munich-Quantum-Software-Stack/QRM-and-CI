@@ -41,52 +41,62 @@ extern "C" std::vector<std::string> selector(void)
 
     // Append the desired passes
     std::vector<std::string> passes{
-        passesPath + "/libQirQMapPass.dylib",
-        passesPath + "/libQirDivisionByZeroPass.dylib",
-        //passesPath + "/libQirNormalizeArgAnglePass.dylib",
-        passesPath + "/libQirXCnotXReductionPass.dylib",
+        // B
+        passesPath + "/libQirBarrierBeforeFinalMeasurementsPass.dylib",
+        // C
+        passesPath + "/libQirCNotToHCZHDecompositionPass.dylib",
         passesPath + "/libQirCommuteCnotRxPass.dylib",
         passesPath + "/libQirCommuteRxCnotPass.dylib",
         passesPath + "/libQirCommuteCnotXPass.dylib",
         passesPath + "/libQirCommuteXCnotPass.dylib",
         passesPath + "/libQirCommuteCnotZPass.dylib",
         passesPath + "/libQirCommuteZCnotPass.dylib",
-        passesPath + "/libQirAnnotateUnsupportedGatesPass.dylib",
-        passesPath + "/libQirPlaceIrreversibleGatesInMetadataPass.dylib",
-        // passesPath + "/libQirU3ToRzRyRzDecompositionPass.dylib",
-        // passesPath + "/libQirRzToRxRyRxDecompositionPass.dylib", TODO Bug?
-        passesPath + "/libQirCNotToHCZHDecompositionPass.dylib",
-        passesPath + "/libQirSwapToCnotsDecompositionPass.dylib",
         passesPath + "/libQirCZToHCnotHDecompositionPass.dylib",
-        // passesPath + "/libQirU3DecompositionPass.dylib",
-        // passesPath + "/libQirXYXDecompositionPass.dylib",
-        // passesPath + "/libQirZXZDecompositionPass.dylib",
-        // passesPath + "/libQirZYZDecompositionPass.dylib",
-        passesPath + "/libQirFunctionAnnotatorPass.dylib",
-        passesPath + "/libQirRedundantGatesCancellationPass.dylib",
-        passesPath + "/libQirGroupingPass.dylib",
+        // D
         passesPath + "/libQirDeferMeasurementPass.dylib",
-        //passesPath + "/libQirBarrierBeforeFinalMeasurementsPass.dylib",
-        passesPath + "/libQirRemoveBasicBlocksWithSingleNonConditionalBranchIns"
-                     "tsPass.dylib",
-        passesPath + "/libQirQubitRemapPass.dylib",
-        passesPath + "/libQirResourceAnnotationPass.dylib",
-        // passesPath + "/libQirNullRotationCancellationPass.dylib",
-        // passesPath + "/libQirMergeRotationsPass.dylib",
-        // passesPath + "/libQirDoubleCnotCancellationPass.dylib",
+        // F
+        passesPath + "/libQirFunctionAnnotatorPass.dylib",
+        passesPath + "/libQirFunctionReplacementPass.dylib",
+        // G
+        passesPath + "/libQirGroupingPass.dylib",
+        // H
         passesPath + "/libQirHadamardAndXGateSwitchPass.dylib",
         passesPath + "/libQirHadamardAndYGateSwitchPass.dylib",
         passesPath + "/libQirHadamardAndZGateSwitchPass.dylib",
-        passesPath + "/libQirXGateAndHadamardSwitchPass.dylib",
-        passesPath + "/libQirYGateAndHadamardSwitchPass.dylib",
-        passesPath + "/libQirZGateAndHadamardSwitchPass.dylib",
-        passesPath + "/libQirSToSDaggerPass.dylib",
-        passesPath + "/libQirSDaggerToSPass.dylib",
-        passesPath + "/libQirReverseCnotPass.dylib",
-        passesPath + "/libQirSwapAndCnotReplacementPass.dylib",
-        passesPath + "/libQirFunctionReplacementPass.dylib",
+        passesPath + "/libQirHXHToZPass.dylib",
+        passesPath + "/libQirHZHToXPass.dylib",
+        // M
+        passesPath + "/libQirMergeRotationsPass.dylib",
+        // N
+        passesPath + "/libQirNormalizeArgAnglePass.dylib",
+        passesPath + "/libQirNullRotationCancellationPass.dylib",
+        // P
+        passesPath + "/libQirPlaceIrreversibleGatesInMetadataPass.dylib",
+        passesPath + "/libQirPauliGateAndHadamardSwitchPass.dylib",
+        // Q
+        passesPath + "/libQirQubitRemapPass.dylib",
+        // R
+        passesPath + "/libQirRedundantGatesCancellationPass.dylib",
+        passesPath + "/libQirRemoveBasicBlocksWithSingleNonConditionalBranchInstsPass.dylib",
         passesPath + "/libQirReplaceConstantBranchesPass.dylib",
-        passesPath + "/libQirRemoveNonEntrypointFunctionsPass.dylib",
+        passesPath + "/libQirResourceAnnotationPass.dylib",
+        passesPath + "/libQirReverseCnotPass.dylib",
+        passesPath + "/libQirRzToRxRyRxDecompositionPass.dylib",
+        // S
+        passesPath + "/libQirSDaggerToSPass.dylib",
+        passesPath + "/libQirSToSDaggerPass.dylib",
+        passesPath + "/libQirSwapAndCnotReplacementPass.dylib",
+        passesPath + "/libQirSwapToCnotsDecompositionPass.dylib",
+        // X
+        passesPath + "/libQirXCnotXReductionPass.dylib",
+        passesPath + "/libQirXGateAndHadamardSwitchPass.dylib",
+        passesPath + "/libQirXYXDecompositionPass.dylib",
+        // Y
+        passesPath + "/libQirYGateAndHadamardSwitchPass.dylib",
+        // Z
+        passesPath + "/libQirZGateAndHadamardSwitchPass.dylib",
+        passesPath + "/libQirZXZDecompositionPass.dylib",
+        passesPath + "/libQirZYZDecompositionPass.dylib",
     };
 
     std::cout << "   [Selector]............Returning list of passes to the "

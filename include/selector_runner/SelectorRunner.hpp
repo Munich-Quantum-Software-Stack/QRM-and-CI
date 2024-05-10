@@ -20,16 +20,6 @@
 #include <unistd.h>
 #include <vector>
 
-#include <qdmi.h>
-
-#include <llvm/ExecutionEngine/Orc/ThreadSafeModule.h>
-#include <llvm/IR/Module.h>
-
-using namespace llvm;
-using llvm::orc::ThreadSafeModule;
-
-std::vector<std::string> invokeSelector(const std::string &nameSelector,
-                                        ThreadSafeModule &TSM, 
-                                        QDMI_Device &device);
+std::vector<std::string> invokeSelector(const std::string &nameSelector);
 
 #endif // SELECTORRUNNER_HPP

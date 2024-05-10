@@ -154,35 +154,30 @@ class QirPassRunner
     static QirPassRunner &getInstance();
 
     /**
-     * @brief Fills the private vector 'passes_' with the names of the
+     * @brief Fills the private vector 'agnosticPasses_' with the names of the
      * passes compiled as shared objects (.so) Use example:
      *
      *     QirPassRunner &QPR = QirPassRunner::getInstance();
-     *     QPR.append("libNamePass.so");
+     *     QPR.appendAgnostic("libNamePass.so");
      *
      * @param pass Name of the pass compiled as a shared object
      */
-    void append(std::string pass);
+    void appendAgnostic(std::string pass);
 
     /**
-     * @brief Invokes each of the passes listed in the private vector
-     * 'passes_'. Use example:
+     * @brief Fills the private vector 'specificPasses_' with the names of the
+     * passes compiled as shared objects (.so) Use example:
      *
      *     QirPassRunner &QPR = QirPassRunner::getInstance();
-     *     QPR.append("libName1Pass.so");
-     *     QPR.append("libName2Pass.so");
-     *     QPR.append("libName3Pass.so");
-     *     QPR.run(*module, MAM);
+     *     QPR.appendSpecific("libNamePass.so");
      *
-     * @param module The module of the submitted QIR.
-     * @param MAM The module analysis manager.
-     * @param dev The QDMI device.
+     * @param pass Name of the pass compiled as a shared object
      */
-    void run(Module &module, ModuleAnalysisManager &MAM, QDMI_Device dev);
-    
+    void appendSpecific(std::string pass);
+
     /**
-     * @brief Invokes each of the passes listed in the private vector
-     * 'passes_'. Use example:
+     * @brief Invokes each of the target-agnostic passes listed in the private vector
+     * 'agnosticPasses_'. Use example:
      *
      *     QirPassRunner &QPR = QirPassRunner::getInstance();
      *     QPR.append("libName1Pass.so");
@@ -194,6 +189,22 @@ class QirPassRunner
      * @param MAM The module analysis manager.
      */
     void run(Module &module, ModuleAnalysisManager &MAM);
+
+    /**
+     * @brief Invokes each of the target-specific passes listed in the private vector
+     * 'specificPasses_'. Use example:
+     *
+     *     QirPassRunner &QPR = QirPassRunner::getInstance();
+     *     QPR.append("libName1Pass.so");
+     *     QPR.append("libName2Pass.so");
+     *     QPR.append("libName3Pass.so");
+     *     QPR.run(*module, MAM, dev);
+     *
+     * @param module The module of the submitted QIR.
+     * @param MAM The module analysis manager.
+     * @param dev The QDMI device.
+     */
+    void run(Module &module, ModuleAnalysisManager &MAM, QDMI_Device dev);
 
     /**
      * @brief Returns the private metadata of 'QirPassRunner', that is,
@@ -232,8 +243,11 @@ class QirPassRunner
     // Private constructor of the 'QirPassRunner' class
     QirPassRunner();
 
-    // List of passes to be applied
-    std::vector<std::string> passes_;
+    // List of target-agnostic passes to be applied
+    std::vector<std::string> agnosticPasses_;
+
+    // List of target-specific passes to be applied
+    std::vector<std::string> specificPasses_;
 
     // Metadata reachable by all passes and the Pass Runner daemon
     QirMetadata qirMetadata_;

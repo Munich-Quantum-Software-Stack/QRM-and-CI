@@ -14,7 +14,7 @@
  * @param pathSelector Path to the selector to be invoked
  * @return std::vector<std::string>
  */
-std::vector<std::string> invokeSelector(const std::string &nameSelector, ThreadSafeModule &TSM, QDMI_Device &device)
+std::vector<std::string> invokeSelector(const std::string &nameSelector)
 {
     std::string pathSelector;
     char buffer[PATH_MAX];
@@ -45,7 +45,7 @@ std::vector<std::string> invokeSelector(const std::string &nameSelector, ThreadS
     }
 
     // Dynamic loading and linking of the shared library
-    typedef std::vector<std::string> (*SelectorFunction)(ThreadSafeModule &, QDMI_Device &);
+    typedef std::vector<std::string> (*SelectorFunction)();
     SelectorFunction selector =
         reinterpret_cast<SelectorFunction>(dlsym(lib_handle, "selector"));
 
@@ -60,5 +60,5 @@ std::vector<std::string> invokeSelector(const std::string &nameSelector, ThreadS
     }
 
     // Call the selector function
-    return selector(TSM, device);
+    return selector();
 }

@@ -53,28 +53,33 @@ void QirPassRunner::clearMetadata()
 QirMetadata &QirPassRunner::getMetadata() { return qirMetadata_; }
 
 /**
- *  Inserts a pass in the private vector 'passes_' of the
+ *  Inserts a pass in the private vector 'specificPasses_' of the
  * 'QirPassRunner' class
  */
-void QirPassRunner::append(std::string pass) { passes_.push_back(pass); }
+void QirPassRunner::appendSpecific(std::string pass) { specificPasses_.push_back(pass); }
 
 /**
- * @brief  Applies all passes in the private vector 'passes_' to the
+ *  Inserts a pass in the private vector 'agnosticPasses_' of the
+ * 'QirPassRunner' class
+ */
+void QirPassRunner::appendAgnostic(std::string pass) { agnosticPasses_.push_back(pass); }
+
+/**
+ * @brief  Applies all target-agnostic passes in the private vector 'agnosticPasses_' to the
  * QIR parsed into an LLVM module 'module'
  * @param module The module of the submitted QIR.
  * @param MAM The module analysis manager.
- * @param dev The QDMI device.
  */
 void /*PreservedAnalyses*/
-QirPassRunner::run(Module &module, ModuleAnalysisManager &MAM, QDMI_Device dev)
+QirPassRunner::run(Module &module, ModuleAnalysisManager &MAM)
 {
     // TODO HOW DO WE HANDLE 'PreservedAnalyses'?
     // PreservedAnalyses PA;
 
-    while (!passes_.empty())
+    while (!agnosticPasses_.empty())
     {
         // Get the name of the pass compiled as a shared library
-        auto pass = passes_.back();
+        auto pass = agnosticPasses_.back();
 
         // Load the library
         void *lib_handle = dlopen(pass.c_str(), RTLD_LAZY);
@@ -85,7 +90,7 @@ QirPassRunner::run(Module &module, ModuleAnalysisManager &MAM, QDMI_Device dev)
                          "shared library: "
                       << pass << dlerror() << std::endl;
 
-            passes_.pop_back();
+            agnosticPasses_.pop_back();
             continue;
         }
 
@@ -95,12 +100,12 @@ QirPassRunner::run(Module &module, ModuleAnalysisManager &MAM, QDMI_Device dev)
         size_t lastDot = passName.find_last_of('.');
         std::string passNameWithoutExt = passName.substr(0, lastDot);
 
-        std::cout << "   [Pass Runner].........Applying pass: "
+        std::cout << "   [Pass Runner].........Applying target-agnostic pass: "
                   << passNameWithoutExt << std::endl;
-        
+
         // Pointer to 'loadQirPass' function returning a pointer to the
-        // 'PassModule' object
-        using passLoader = PassModule *(*)();
+        // 'AgnosticPassModule' object
+        using passLoader = AgnosticPassModule *(*)();
 
         // Dynamic loading and linking of the shared library
         passLoader loadQirPass =
@@ -113,12 +118,87 @@ QirPassRunner::run(Module &module, ModuleAnalysisManager &MAM, QDMI_Device dev)
                          "of pass: "
                       << pass << std::endl;
 
-            passes_.pop_back();
+            agnosticPasses_.pop_back();
             dlclose(lib_handle);
             continue;
         }
 
-        PassModule *QirPass = loadQirPass();
+        AgnosticPassModule *QirPass = loadQirPass();
+
+        // Apply the pass to the LLVM module 'module'
+        /*PA =*/QirPass->run(module, MAM);
+
+        // Free memory
+        delete QirPass;
+        dlclose(lib_handle);
+
+        agnosticPasses_.pop_back();
+    }
+
+    // return PA;
+}
+
+/**
+ * @brief  Applies all target-specific passes in the private vector 'specificPasses_' to the
+ * QIR parsed into an LLVM module 'module'
+ * @param module The module of the submitted QIR.
+ * @param MAM The module analysis manager.
+ * @param dev The QDMI device.
+ */
+void /*PreservedAnalyses*/
+QirPassRunner::run(Module &module, ModuleAnalysisManager &MAM, QDMI_Device dev)
+{
+    // TODO HOW DO WE HANDLE 'PreservedAnalyses'?
+    // PreservedAnalyses PA;
+
+    while (!specificPasses_.empty())
+    {
+        // Get the name of the pass compiled as a shared library
+        auto pass = specificPasses_.back();
+
+        // Load the library
+        void *lib_handle = dlopen(pass.c_str(), RTLD_LAZY);
+
+        if (!lib_handle)
+        {
+            std::cout << "   [Pass Runner].........Warning: Could not load "
+                         "shared library: "
+                      << pass << dlerror() << std::endl;
+
+            specificPasses_.pop_back();
+            continue;
+        }
+
+        // Format the name of the pass and print it on screen
+        size_t lastSlash = pass.find_last_of('/');
+        std::string passName = pass.substr(lastSlash + 4);
+        size_t lastDot = passName.find_last_of('.');
+        std::string passNameWithoutExt = passName.substr(0, lastDot);
+
+        std::cout << "   [Pass Runner].........Applying target-specific pass: "
+                  << passNameWithoutExt << std::endl;
+
+        // Pointer to 'loadQirPass' function returning a pointer to the
+        // 'SpecificPassModule' object
+        using passLoader = SpecificPassModule *(*)();
+
+        // Dynamic loading and linking of the shared library
+        passLoader loadQirPass =
+            reinterpret_cast<passLoader>(dlsym(lib_handle, "loadQirPass"));
+
+        if (!loadQirPass)
+        {
+            std::cout << "   [Pass Runner].........Warning: Could not get "
+                         "factory function "
+                         "of pass: "
+                      << pass << std::endl;
+
+            specificPasses_.pop_back();
+            dlclose(lib_handle);
+            continue;
+        }
+
+        SpecificPassModule *QirPass = loadQirPass();
 
         // Apply the pass to the LLVM module 'module'
         /*PA =*/QirPass->run(module, MAM, dev);
@@ -127,7 +207,7 @@ QirPassRunner::run(Module &module, ModuleAnalysisManager &MAM, QDMI_Device dev)
         delete QirPass;
         dlclose(lib_handle);
 
-        passes_.pop_back();
+        specificPasses_.pop_back();
     }
 
     // return PA;
