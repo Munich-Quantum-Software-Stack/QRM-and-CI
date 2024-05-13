@@ -23,7 +23,13 @@ std::map<std::string, float> calculate_scores(QuantumTask &task)
 {
     std::map<std::string, float> scores;
 
-    scores = predict(task.thread_safe_module, {"q20"}); // ONLY FOR TEST
+    // ONLY FOR GA TEST
+    std::vector<std::string> ga_models = {
+        "q20_ga_critical_depth",     "q20_ga_depth",
+        "q20_ga_entanglement_ratio", "q20_ga_number_of_gates",
+        "q20_ga_parallelism",
+    };
+    scores = predict(task.thread_safe_module, ga_models);
 
     // User only wants to use a single QPU
     if (task.preferred_qpus.size() == 1)

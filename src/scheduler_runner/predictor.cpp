@@ -4,17 +4,18 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <unistd.h>
 #include <vector>
 
 /*
  * @brief Predict some figure of merit based on a pretrained ONNX model for each
- * device
+ * model
  * @param TSM The quantum circuit to evaluate
- * @param devices The devices to predict the figure of merit for
- * @return The predicted figure of merit for each device
+ * @param models The trained models to predict some figure of merit
+ * @return The predicted figure of merit for each model
  */
 std::map<std::string, float> predict(const ThreadSafeModule &TSM,
-                                     const std::vector<std::string> devices)
+                                     const std::vector<std::string> models)
 {
     // Prepare circuit feature vector for model input
     std::map<std::string, int> gate_counts = {{"__quantum__qis__U3__body", 0},
@@ -70,7 +71,7 @@ std::map<std::string, float> predict(const ThreadSafeModule &TSM,
         evaluate_supermarq_plus(TSM, gate_counts);
 
     // Prepare input tensor
-    std::array<float, 53> input_data;
+    std::array<float, 52> input_data;
     int i = 0;
     // Fill input_data with gate_counts values
     for (const auto &pair : gate_counts)
@@ -102,53 +103,45 @@ std::map<std::string, float> predict(const ThreadSafeModule &TSM,
     // Create a map to store the results
     std::map<std::string, float> results;
 
-    // Loop over all devices
-    for (const std::string &device : devices)
+    // Loop over all models
+    for (const std::string &model : models)
     {
         // Declare the session pointer
         Ort::Session *session = nullptr;
 
-        std::string model_path;
-        if (devices.size() == 1 && device == "q20")
-        {
-            // Use model trained with genetic selector for the q20 device
-            model_path = "/home/ubuntu/mqss/qrm.git/include/scheduler_runner/"
-                         "q20_genetic_selector.onnx";
-        }
-        else
-        {
-            model_path = "/home/ubuntu/mqss/qrm.git/include/scheduler_runner/"
-                         "test_model.onnx";
-        }
+        std::string model_path; // Import the model for desired figure of merit
+        model_path =
+            "include/scheduler_runner/predictor_models/" + model + ".onnx";
 
         std::ifstream file(model_path, std::ios::binary | std::ios::ate);
         std::streamsize size = file.tellg();
         file.seekg(0, std::ios::beg);
 
-        std::vector<char> buffer(size);
-        if (file.read(buffer.data(), size))
+        try
         {
-            try
+            std::vector<char> buffer(size);
+            if (file.read(buffer.data(), size))
             {
                 // Initialize the session
                 session = new Ort::Session(env, buffer.data(), buffer.size(),
                                            session_options);
             }
-            catch (const std::exception &ex)
+            else
             {
-                std::cerr << "Failed to create Ort::Session: " << ex.what()
-                          << "\n";
+                throw std::runtime_error("Failed to read model file: " +
+                                         model_path);
             }
         }
-        else
+        catch (const std::exception &ex)
         {
-            std::cerr << "Failed to read model file: " << model_path << "\n";
+            std::cerr << "Error during model import: " << ex.what()
+                      << std::endl;
         }
 
         // Prepare output tensor
         std::vector<const char *> output_node_names = {"variable"};
-        std::array<float, 6> output_data;
-        std::vector<int64_t> output_shape = {1, 6};
+        std::array<float, 1> output_data;
+        std::vector<int64_t> output_shape = {1, 1};
         Ort::Value output_tensor = Ort::Value::CreateTensor<float>(
             memory_info, output_data.data(), output_data.size(),
             output_shape.data(), output_shape.size());
@@ -164,13 +157,13 @@ std::map<std::string, float> predict(const ThreadSafeModule &TSM,
                      output_tensors.size());
         float *floatarr = output_tensors[0].GetTensorMutableData<float>();
 
-        // Add the device string and model score to the map
-        results[device] = floatarr[0];
+        // Add the model string and model score to the map
+        results[model] = floatarr[0];
 
         // Delete the session after use
         delete session;
     }
 
-    // Return the map of device strings and model scores
+    // Return the map of model strings and model scores
     return results;
 }
