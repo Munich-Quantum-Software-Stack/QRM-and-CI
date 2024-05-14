@@ -82,7 +82,7 @@ generator(const QuantumTask &parentQuantumTask)
 
     // Parse generic QIR into an LLVM module
     ThreadSafeContext TSCtx1(std::make_unique<LLVMContext>());
-    ThreadSafeContext TSCtx2(std::make_unique<LLVMContext>());
+    // ThreadSafeContext TSCtx2(std::make_unique<LLVMContext>());
 
     SMDiagnostic error;
     std::string circuit = parentQuantumTask.circuit_qiskit;
@@ -90,14 +90,14 @@ generator(const QuantumTask &parentQuantumTask)
     auto M1 = parseIR(MemoryBufferRef(circuit, "QIR (LRZ)"), error,
                       *TSCtx1.getContext());
 
-    auto M2 = parseIR(MemoryBufferRef(circuit, "QIR (LRZ)"), error,
-                      *TSCtx2.getContext());
+    // auto M2 = parseIR(MemoryBufferRef(circuit, "QIR (LRZ)"), error,
+    //                   *TSCtx2.getContext());
 
     childQuantumTasks.push_back(
         createQuantumTask(M1, TSCtx1, parentQuantumTask, 0));
 
-    childQuantumTasks.push_back(
-        createQuantumTask(M2, TSCtx2, parentQuantumTask, 1));
+    // childQuantumTasks.push_back(
+    //     createQuantumTask(M2, TSCtx2, parentQuantumTask, 1));
 
     std::cout << "   [Generator]...........Returning generated "
               << "sub-circuits to the Generator Runner" << std::endl;

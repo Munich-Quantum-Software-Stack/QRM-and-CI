@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
     std::string benchmark_dir = "../../../MQT_under_20";
     std::string default_results_dir = "../../../logs";
     std::string final_results_dir =
-        "../../../experiments/int/twopoint_rndmut/int_u20_obj5_gen64_pop64";
+        "../../../experiments/int/interleaf_cyclemut/int_u20_obj5_gen32_pop32";
 
     for (const auto &entry : std::filesystem::directory_iterator(benchmark_dir))
         if (entry.is_regular_file() && entry.path().extension() == ".ll")
@@ -154,9 +154,18 @@ int main(int argc, char *argv[])
                 std::cout << "                      L ...execution_time: "
                           << quantumResult.execution_time << " s." << std::endl;
                 std::cout << "                      L ...executed_circuit(s): ";
+
+                // std::remove("/home/ubuntu/logs/optimised_circuit.ll");
+                // std::ofstream cir_file;
+                // cir_file.open("/home/ubuntu/logs/optimised_circuit.ll");
+
                 for (const auto &qir : quantumResult.executed_circuit)
                     std::cout << std::endl << qir;
+
+                // cir_file.close();
+
                 std::cout << std::endl << "Results: " << std::endl;
+
                 for (const auto &result : quantumResult.results)
                     std::cout << "\t" << result.first << ": " << result.second
                               << std::endl;

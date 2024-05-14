@@ -128,8 +128,8 @@ void intInterleafCross(NSGA2Type *nsga2Params, individual *parent1,
                        individual *parent2, individual *child1,
                        individual *child2);
 void intTwoPointCross(NSGA2Type *nsga2Params, individual *parent1,
-                       individual *parent2, individual *child1,
-                       individual *child2);
+                      individual *parent2, individual *child1,
+                      individual *child2);
 void bincross(NSGA2Type *nsga2Params, individual *parent1, individual *parent2,
               individual *child1, individual *child2);
 
@@ -174,6 +174,12 @@ void mutation_pop(NSGA2Type *nsga2Params, population *pop);
 void mutation_ind(NSGA2Type *nsga2Params, individual *ind);
 void bin_mutate_ind(NSGA2Type *nsga2Params, individual *ind);
 void int_mutate_ind(NSGA2Type *nsga2Params, individual *ind);
+void swapMutation(NSGA2Type *nsga2Params, individual *ind);
+void insertionMutation(NSGA2Type *nsga2Params, individual *ind);
+void scrambleMutation(NSGA2Type *nsga2Params, individual *ind);
+void inversionMutation(NSGA2Type *nsga2Params, individual *ind);
+void displacementMutation(NSGA2Type *nsga2Params, individual *ind);
+void cycleMutation(NSGA2Type *nsga2Params, individual *ind);
 void real_mutate_ind(NSGA2Type *nsga2Params, individual *ind);
 
 void test_problem(double *xreal, double *xbin, int **gene, double *obj,
@@ -208,8 +214,9 @@ NSGA2Type ReadParameters(int sizeChrom, int nobj, QDMI_Device &device);
 int InitNSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
               const char *local_path, bool fVerbose,
               const std::vector<std::string> designSpace);
-std::vector<std::string> NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM, bool fVerbose,
-          const std::vector<std::string> designSpace);
+std::vector<std::string> NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
+                               bool fVerbose,
+                               const std::vector<std::string> designSpace);
 void print_nsga2Params(NSGA2Type *nsga2Params);
 
 #endif // NSGA2_HPP

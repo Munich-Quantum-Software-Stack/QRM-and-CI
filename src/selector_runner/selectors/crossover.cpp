@@ -17,9 +17,9 @@ void crossover(NSGA2Type *nsga2Params, individual *parent1, individual *parent2,
     }
     if (nsga2Params->nint != 0)
     {
-        //intcross(nsga2Params, parent1, parent2, child1, child2);
-        //intInterleafCross(nsga2Params, parent1, parent2, child1, child2);
-        intTwoPointCross(nsga2Params, parent1, parent2, child1, child2);
+        // intcross(nsga2Params, parent1, parent2, child1, child2);
+        intInterleafCross(nsga2Params, parent1, parent2, child1, child2);
+        // intTwoPointCross(nsga2Params, parent1, parent2, child1, child2);
     }
     if (nsga2Params->nbin != 0)
     {
@@ -194,11 +194,13 @@ void intcross(NSGA2Type *nsga2Params, individual *parent1, individual *parent2,
                         c1 = yu;
                     if (c2 > yu)
                         c2 = yu;
-                    
-                    if (c1 > 35) {
+
+                    if (c1 > 35)
+                    {
                         c1 = 35;
                     }
-                    if (c2 > 35) {
+                    if (c2 > 35)
+                    {
                         c2 = 35;
                     }
 
@@ -246,7 +248,7 @@ void intInterleafCross(NSGA2Type *nsga2Params, individual *parent1,
     if (randomperc() <= nsga2Params->pcross_int)
     {
         nsga2Params->nintcross++;
-    for (i = 0; i < nsga2Params->nint; i++)
+        for (i = 0; i < nsga2Params->nint; i++)
         {
             if (i % 2 == 0)
             {
@@ -272,38 +274,39 @@ void intInterleafCross(NSGA2Type *nsga2Params, individual *parent1,
 }
 
 /* Routine for two point integer crossover */
-void intTwoPointCross(NSGA2Type *nsga2Params, individual *parent1, individual *parent2,
-              individual *child1, individual *child2)
+void intTwoPointCross(NSGA2Type *nsga2Params, individual *parent1,
+                      individual *parent2, individual *child1,
+                      individual *child2)
 {
-   /*
-    int i;
-    if (randomperc() <= nsga2Params->pcross_int)
-    {
-        nsga2Params->nintcross++;
-    for (i = 0; i < nsga2Params->nint; i++)
-        {
-            if (i % 2 == 0)
-            {
-                child1->xint[i] = parent1->xint[i];
-                child2->xint[i] = parent2->xint[i];
-            }
-            else
-            {
-                child1->xint[i] = parent2->xint[i];
-                child2->xint[i] = parent1->xint[i];
-            }
-        }
-    }
-    else
-    {
-        for (i = 0; i < nsga2Params->nint; i++)
-        {
-            child1->xint[i] = parent1->xint[i];
-            child2->xint[i] = parent2->xint[i];
-        }
-    }
-    return;
-*/
+    /*
+     int i;
+     if (randomperc() <= nsga2Params->pcross_int)
+     {
+         nsga2Params->nintcross++;
+     for (i = 0; i < nsga2Params->nint; i++)
+         {
+             if (i % 2 == 0)
+             {
+                 child1->xint[i] = parent1->xint[i];
+                 child2->xint[i] = parent2->xint[i];
+             }
+             else
+             {
+                 child1->xint[i] = parent2->xint[i];
+                 child2->xint[i] = parent1->xint[i];
+             }
+         }
+     }
+     else
+     {
+         for (i = 0; i < nsga2Params->nint; i++)
+         {
+             child1->xint[i] = parent1->xint[i];
+             child2->xint[i] = parent2->xint[i];
+         }
+     }
+     return;
+ */
     int i, j;
     double rand;
     int temp, site1, site2;
@@ -313,7 +316,7 @@ void intTwoPointCross(NSGA2Type *nsga2Params, individual *parent1, individual *p
         if (rand <= nsga2Params->pcross_int)
         {
             nsga2Params->nintcross++;
-            
+
             site1 = rnd(0, nsga2Params->nint - 1);
             site2 = rnd(0, nsga2Params->nint - 1);
             if (site1 > site2)
@@ -322,7 +325,7 @@ void intTwoPointCross(NSGA2Type *nsga2Params, individual *parent1, individual *p
                 site1 = site2;
                 site2 = temp;
             }
-   
+
             for (j = 0; j < site1; j++)
             {
                 child1->xint[i] = parent1->xint[i];
@@ -335,8 +338,8 @@ void intTwoPointCross(NSGA2Type *nsga2Params, individual *parent1, individual *p
             }
             for (j = site2; j < nsga2Params->nint; j++)
             {
-            child1->xint[i] = parent1->xint[i];
-            child2->xint[i] = parent2->xint[i];
+                child1->xint[i] = parent1->xint[i];
+                child2->xint[i] = parent2->xint[i];
             }
         }
         else
@@ -347,7 +350,7 @@ void intTwoPointCross(NSGA2Type *nsga2Params, individual *parent1, individual *p
                 child2->xint[i] = parent2->xint[i];
             }
         }
-   }
+    }
     return;
 }
 

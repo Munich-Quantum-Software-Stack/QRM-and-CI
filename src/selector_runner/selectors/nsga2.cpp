@@ -32,8 +32,8 @@ NSGA2Type ReadParameters(int sizeChrom, int nobj, QDMI_Device &device)
     srand(time(NULL));
 
     nsga2Params.seed = (float)rand() / (float)(RAND_MAX); // Seed value
-    nsga2Params.popsize = 64;      // Population size (multiple of 4)
-    nsga2Params.ngen = 64;        // Number of generations
+    nsga2Params.popsize = 32;     // Population size (multiple of 4)
+    nsga2Params.ngen = 32;        // Number of generations
     nsga2Params.nobj = nobj;      // Number of objectives
     nsga2Params.ncon = 0;         // Number of constraints
     nsga2Params.nreal = 0;        // Number of real variables
@@ -133,6 +133,7 @@ int InitNSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
     std::cout << "[DEBUG] After assert" << std::endl;
 
     fprintf(fpt1, "# This file contains the data of initial population\n");
+    std::cout << "[DEBUG] After assert11" << std::endl;
     fprintf(fpt2, "# This file contains the data of final population\n");
     fprintf(fpt3, "# This file contains the data of final feasible population "
                   "(if found)\n");
@@ -140,6 +141,7 @@ int InitNSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
     fprintf(fpt5, "# This file contains information about inputs as read by "
                   "the program\n");
 
+    std::cout << "[DEBUG] After fprintfs" << std::endl;
     fprintf(fpt5, "\n Population size                              = %d",
             nsga2Params->popsize);
     fprintf(fpt5, "\n Number of generations                       = %d",
@@ -251,8 +253,9 @@ int InitNSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
     return 0;
 }
 
-std::vector<std::string> NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM, bool fVerbose,
-          const std::vector<std::string> designSpace)
+std::vector<std::string> NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
+                               bool fVerbose,
+                               const std::vector<std::string> designSpace)
 {
     int i;
     char buff[100];
@@ -300,14 +303,16 @@ std::vector<std::string> NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM, bo
 
     individual best_individual = parent_pop->ind[0];
 
-    for (i = 1; i < nsga2Params->popsize; i++) {
+    for (i = 1; i < nsga2Params->popsize; i++)
+    {
         if (check_dominance(nsga2Params, &(parent_pop->ind[i]),
-            &(best_individual)) == 1)
+                            &(best_individual)) == 1)
         {
             best_individual = parent_pop->ind[i];
         }
-    } 
+    }
 
+    // evaluate_ind(nsga2Params, &best_individual, TSM, designSpace, true);
     std::vector<std::string> result;
 
     for (i = 0; i < nsga2Params->nint; i++)

@@ -16,6 +16,7 @@
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
 #include <llvm/ExecutionEngine/Orc/ThreadSafeModule.h>
 #include <llvm/IR/Module.h>
+#include <llvm/Support/raw_ostream.h>
 
 using llvm::orc::ThreadSafeContext;
 using llvm::orc::ThreadSafeModule;
@@ -395,27 +396,41 @@ void evaluate_ind(NSGA2Type *nsga2Params, individual *ind,
 
     int i, j;
 
-    std::cout << "EVAL 1\n";
     for (j = 0; j < nsga2Params->nint; j++)
     {
+        if (ind->xint[j] == -1)
+            continue;
         passes.push_back(designSpace[ind->xint[j]]);
     }
-    std::cout << "EVAL 2\n";
 
-    std::unique_ptr<Module> copiedModule = CloneModule(*TSM.getModuleUnlocked());
+    std::unique_ptr<Module> copiedModule =
+        CloneModule(*TSM.getModuleUnlocked());
     ThreadSafeModule copiedTSM(std::move(copiedModule), TSM.getContext());
-    invokeTargetSpecificPasses(copiedTSM, passes, nsga2Params->device /*, fVerbose*/);
+    invokeTargetSpecificPasses(copiedTSM, passes,
+                               nsga2Params->device /*, fVerbose*/);
 
-    ind->obj[0] = evaluate_gates(copiedTSM);
-    ind->obj[1] = evaluate_depth(copiedTSM);
-    ind->obj[2] = evaluate_entanglement_ratio(copiedTSM);
-    ind->obj[3] = evaluate_critical_depth(copiedTSM);
-    ind->obj[4] = evaluate_parallelism(copiedTSM);
+    if (fVerbose)
+    {
+        std::remove("/home/ubuntu/logs/optimised_circuit.ll");
+        std::error_code EC;
+        raw_fd_ostream File("/home/ubuntu/logs/optimised_circuit.ll", EC,
+                            sys::fs::OF_Text);
+        copiedTSM.getModuleUnlocked()->print(File, nullptr, false, false);
+    }
+    else
+    {
 
-    ind->constr_violation = 0.0;
+        ind->obj[0] = evaluate_gates(copiedTSM);
+        ind->obj[1] = evaluate_depth(copiedTSM);
+        ind->obj[2] = evaluate_entanglement_ratio(copiedTSM);
+        ind->obj[3] = evaluate_critical_depth(copiedTSM);
+        ind->obj[4] = evaluate_parallelism(copiedTSM);
 
-    if (nsga2Params->ncon != 0)
-        for (j = 0; j < nsga2Params->ncon; j++)
-            if (ind->constr[j] < 0.0)
-                ind->constr_violation += ind->constr[j];
+        ind->constr_violation = 0.0;
+
+        if (nsga2Params->ncon != 0)
+            for (j = 0; j < nsga2Params->ncon; j++)
+                if (ind->constr[j] < 0.0)
+                    ind->constr_violation += ind->constr[j];
+    }
 }
