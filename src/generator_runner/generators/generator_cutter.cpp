@@ -10,6 +10,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <random>
 
 #include "llvm.hpp"
 #include <QuantumResourceManager.hpp>
@@ -90,8 +91,14 @@ generator(const QuantumTask &parentQuantumTask)
     //auto M2 = parseIR(MemoryBufferRef(circuit, "QIR (LRZ)"), error,
     //                  *TSCtx2.getContext());
 
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int> dis(std::numeric_limits<int>::min(), 
+                                           std::numeric_limits<int>::max());
+    int childtaskid = dis(gen);
+
     childQuantumTasks.push_back(
-        createQuantumTask(M1, TSCtx1, parentQuantumTask, 0));
+        createQuantumTask(M1, TSCtx1, parentQuantumTask, childtaskid));
 
     //childQuantumTasks.push_back(
     //    createQuantumTask(M2, TSCtx2, parentQuantumTask, 1));

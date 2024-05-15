@@ -195,7 +195,8 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                 OS << module; 
                 OS.flush();
                 modules.push_back(str.data());
-                //std::cout << str.data() << std::endl;
+                //std::cout << "   [qresourcemanager_d]..Packing QIR: " << std::endl
+                //          << str.data() << std::endl;
                 raw_svector_ostream ostream(buffer);
                 WriteBitcodeToFile(module, ostream);
 

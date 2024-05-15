@@ -108,14 +108,21 @@ run: #install
 	fi; \
 	qresourcemanager_d screen
 
-kill_daemons:
-	#if [ ! -n "$$CI" ]; then \
-	#	bash scripts/kill_daemons.sh; \
-	#fi
-
-test: #kill_daemons run
+test_qlm:
 	cd build/ && \
-    ctest -C Release -VV run_tests
+    ctest -C Release -V -R test_qlm
+
+test_ibm:
+	cd build/ && \
+    ctest -C Release -V -R test_ibm
+
+test_wmi_real:
+	cd build/ && \
+    ctest -C Release -V -R test_wmi_real
+
+test_wmi_sim:
+	cd build/ && \
+    ctest -C Release -V -R test_wmi_sim
 
 pre-commit:
 	pre-commit run --all-files

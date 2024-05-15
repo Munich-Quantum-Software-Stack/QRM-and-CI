@@ -17,13 +17,13 @@ entry:
 
 declare void @__quantum__rt__initialize(i8*)
 
-declare void @__quantum__qis__h__body(%Qubit*) #1
+declare void @__quantum__qis__h__body(%Qubit*)
 
-declare void @__quantum__qis__cnot__body(%Qubit*, %Qubit*) #1
+declare void @__quantum__qis__cnot__body(%Qubit*, %Qubit*)
 
 declare void @__quantum__qis__mz__body(%Qubit*, %Result*) #1
 
 declare void @__quantum__rt__array_record_output(i64, i8*)
 
 attributes #0 = { "entry_point" "num_required_qubits"="2" "num_required_results"="2" }
-attributes #1 = { "unsupported" }
+attributes #1 = { "irreversible" }

@@ -60,8 +60,7 @@ int main(int argc, char *argv[])
     rabbitmq_new_connection(&conn, &socket);
 
     // Open the QIR file
-    const char *filename = "../../benchmarks/qlm.ll";
-    //const char *filename = "../../benchmarks/wmi.ll";
+    const char *filename = "../../benchmarks/wmi_real.ll";
     std::ifstream file(filename, std::ios::binary);
     if (!file.is_open())
     {
@@ -92,11 +91,11 @@ int main(int argc, char *argv[])
     json QuantumTask_json = {
         {"task_id", -1},
         {"n_qbits", 0},
-        {"n_shots", 100},
+        {"n_shots", 128},
         {"circuit_file", ""},
         {"circuit_file_type", "QIR"},
         {"result_destination", ""},
-        {"preferred_qpu", "Q7"},
+        {"preferred_qpu", "/libbackend_wmi_real.so"},
         {"priority", 0},
         {"optimisation_level", 0},
         {"no_modify", false},

@@ -38,16 +38,30 @@ extern "C" int scheduler(std::vector<QuantumTask> *childQuantumTasks)
 
     for (auto &childQuantumTask : *childQuantumTasks)
     {
-        QDMI_Device device = devices.back();
+        QDMI_Device target_device = NULL;
 
-        const char *libname = strrchr(device->library.libname, '/');
+        for (auto device : devices)
+        {
+            const char *device_libname = strrchr(device->library.libname, '/');
+
+            if (device_libname == childQuantumTask.preferred_qpu)
+            {
+                target_device = device;
+                break;
+            }
+        }
+
+        if (!target_device)
+            target_device = devices.back();
+
+        const char *target_libname = strrchr(target_device->library.libname, '/');
 
         std::cout << "   [Scheduler]...........Setting "
-                  << libname << " as target device "
+                  << target_libname << " as target device "
                   << "for job with ID " << childQuantumTask.task_id
                   << std::endl;
 
-        childQuantumTask.scheduled_qpu = device;
+        childQuantumTask.scheduled_qpu = target_device;
     }
 
     return 0; 
