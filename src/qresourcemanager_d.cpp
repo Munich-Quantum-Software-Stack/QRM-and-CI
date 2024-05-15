@@ -85,7 +85,7 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str)
 void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                          QuantumTask &parentQuantumTask)
 {
-    int err = 1;
+    int err;
     auto start = std::chrono::steady_clock::now();
 
     // Insert LLVM::ThreadSafeModule to parentQuantumTask
@@ -137,8 +137,6 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         QDMI_Library lib;
         QDMI_Fragment frag;
 
-        //std::cout << std::endl;
-
         QDMI_Device device = childQuantumTask.scheduled_qpu;
 
         if (device == NULL)
@@ -149,8 +147,6 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                       << "be created." << std::endl;
             return;
         }
-
-        //FOMAC_print_coupling_mappings(device);
 
         const char *lastSlash = std::strrchr(device->library.libname, '/');
         if (lastSlash != nullptr)
@@ -214,16 +210,16 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                 err = QDMI_control_pack_qir(device, qirmod, &frag);
                 CHECK_ERR(err, "QDMI_control_pack_qir");
 
-                for (auto &function : module)
-                {
-                    if (function.hasFnAttribute("entry_point"))
-                    {
-                        auto attr = function.getFnAttribute("num_required_qubits");
-                        auto strnqubits = static_cast<std::string>(attr.getValueAsString());
-                        nqubits = std::stoi(strnqubits);
-                        break;
-                    }
-                }
+                //for (auto &function : module)
+                //{
+                //    if (function.hasFnAttribute("entry_point"))
+                //    {
+                //        auto attr = function.getFnAttribute("num_required_qubits");
+                //        auto strnqubits = static_cast<std::string>(attr.getValueAsString());
+                //        nqubits = std::stoi(strnqubits);
+                //        break;
+                //    }
+                //}
             });
 
         // Submit the adapted QIR to the target platform
@@ -265,14 +261,15 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
 
         for (long i = 0; i < ((long)1 << nqubits); i++)
         {
-            //std::cout << "\n\t" << raw_numbers[i] << std::endl;
-            results[std::to_string(i)] += raw_numbers[i];
+            //std::cout << "\t" << raw_numbers[i] << std::endl;
+            if (raw_numbers[i] > 0)
+                results[std::to_string(i)] += raw_numbers[i];
         }
 
         free(raw_numbers);
         free(frag);
         free(job);
-        //free(device);
+        free(device);
     }
 
     auto end = std::chrono::steady_clock::now();
@@ -457,9 +454,6 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    //std::cout << "   [qresourcemanager_d]..Listening on queue " << QRMQueue
-    //          << std::endl;
-
     // Start the QDMI session
     int err;
     QInfo info;
@@ -468,10 +462,12 @@ int main(int argc, char *argv[])
     CHECK_ERR(err, "QInfo_create");
 
     err = QDMI_session_init(info, &session);
-    // CHECK_ERR(err, "QDMI_session_init");
+    CHECK_ERR(err, "QDMI_session_init");
 
     while (true)
     {
+        std::cout << "   [qresourcemanager_d]..Waiting for a new job" << std::endl;
+
         // Receive a QuantumTask
         auto *task = receive_message(&conn,     // conn
                                      QRMQueue); // queue
