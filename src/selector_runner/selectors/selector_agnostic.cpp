@@ -41,8 +41,8 @@ extern "C" std::vector<std::string> selector(void)
 
     // Append the desired passes
     std::vector<std::string> passes{
-        // B
-        passesPath + "/libQirBarrierBeforeFinalMeasurementsPass.so",
+        //// B
+        //passesPath + "/libQirBarrierBeforeFinalMeasurementsPass.so",
         // C
         passesPath + "/libQirCNotToHCZHDecompositionPass.so",
         passesPath + "/libQirCommuteCnotRxPass.so",
@@ -57,8 +57,8 @@ extern "C" std::vector<std::string> selector(void)
         // F
         passesPath + "/libQirFunctionAnnotatorPass.so",
         passesPath + "/libQirFunctionReplacementPass.so",
-        // G
-        passesPath + "/libQirGroupingPass.so",
+        //// G
+        //passesPath + "/libQirGroupingPass.so",
         // H
         passesPath + "/libQirHadamardAndXGateSwitchPass.so",
         passesPath + "/libQirHadamardAndYGateSwitchPass.so",
@@ -74,7 +74,7 @@ extern "C" std::vector<std::string> selector(void)
         passesPath + "/libQirPlaceIrreversibleGatesInMetadataPass.so",
         passesPath + "/libQirPauliGateAndHadamardSwitchPass.so",
         // Q
-        passesPath + "/libQirQubitRemapPass.so",
+        //passesPath + "/libQirQubitRemapPass.so",
         // R
         passesPath + "/libQirRedundantGatesCancellationPass.so",
         passesPath + "/libQirRemoveBasicBlocksWithSingleNonConditionalBranchInstsPass.so",

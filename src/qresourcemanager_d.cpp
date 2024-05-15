@@ -189,6 +189,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         SmallVector<char, 0> buffer;
         std::string str;
         raw_string_ostream OS(str);
+        int nqubits = 0;
         childQuantumTask.thread_safe_module.withModuleDo(
             [&](Module &module)
             {
@@ -212,6 +213,17 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                 frag->sizebuffer = buffer.size();
                 err = QDMI_control_pack_qir(device, qirmod, &frag);
                 CHECK_ERR(err, "QDMI_control_pack_qir");
+
+                for (auto &function : module)
+                {
+                    if (function.hasFnAttribute("entry_point"))
+                    {
+                        auto attr = function.getFnAttribute("num_required_qubits");
+                        auto strnqubits = static_cast<std::string>(attr.getValueAsString());
+                        nqubits = std::stoi(strnqubits);
+                        break;
+                    }
+                }
             });
 
         // Submit the adapted QIR to the target platform
@@ -226,18 +238,22 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         CHECK_ERR(err, "QDMI_control_wait");
 
         // Get the results back
-        int numbits = 0;
-        err = QDMI_control_readout_size(device, &status, &numbits);
-        CHECK_ERR(err, "QDMI_control_readout_size");
-        int* raw_numbers = new int[1 << numbits];
-        memset(raw_numbers, 0, sizeof(int) * (1 << numbits));
-        if (numbits == 0)
+        if (nqubits == 0)
         {
-            std::cout << "   [qresourcemanager_d]..Warning: "
-                      << "The results could not be fetched" << std::endl;
+            err = QDMI_control_readout_size(device, &status, &nqubits);
+            CHECK_ERR(err, "QDMI_control_readout_size");
 
-            return;
+            if (nqubits == 0)
+            {
+                std::cout << "   [qresourcemanager_d]..Warning: "
+                          << "The results could not be fetched" << std::endl;
+
+                return;
+            }
         }
+
+        int* raw_numbers = new int[1 << nqubits];
+        memset(raw_numbers, 0, sizeof(int) * (1 << nqubits));
 
         err = QDMI_control_readout_raw_num(
             device, 
@@ -247,7 +263,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
         );
         CHECK_ERR(err, "QDMI_control_readout_raw_num");
 
-        for (long i = 0; i < ((long)1 << numbits); i++)
+        for (long i = 0; i < ((long)1 << nqubits); i++)
         {
             //std::cout << "\n\t" << raw_numbers[i] << std::endl;
             results[std::to_string(i)] += raw_numbers[i];
