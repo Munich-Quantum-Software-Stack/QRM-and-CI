@@ -1,5 +1,6 @@
 /* Routine for evaluating population members  */
 
+#include <cmath>
 #include <iostream>
 #include <math.h>
 #include <stdio.h>
@@ -8,6 +9,7 @@
 #include "PassRunner.hpp"
 
 #include "nsga2.hpp"
+#include "predictor.hpp"
 #include "rand.hpp"
 
 #include <llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h>
@@ -396,6 +398,7 @@ void evaluate_ind(NSGA2Type *nsga2Params, individual *ind,
 
     int i, j;
 
+    std::cout << "EVAL 1\n";
     for (j = 0; j < nsga2Params->nint; j++)
     {
         if (ind->xint[j] == -1)
@@ -405,6 +408,7 @@ void evaluate_ind(NSGA2Type *nsga2Params, individual *ind,
         }
         passes.push_back(designSpace[ind->xint[j]]);
     }
+    std::cout << "EVAL 2\n";
 
     std::unique_ptr<Module> copiedModule =
         CloneModule(*TSM.getModuleUnlocked());
@@ -428,6 +432,26 @@ void evaluate_ind(NSGA2Type *nsga2Params, individual *ind,
         ind->obj[2] = evaluate_entanglement_ratio(copiedTSM);
         ind->obj[3] = evaluate_critical_depth(copiedTSM);
         ind->obj[4] = evaluate_parallelism(copiedTSM);
+
+        std::vector<std::string> ga_models = {
+            "q20_ga_number_of_gates",    "q20_ga_depth",
+            "q20_ga_entanglement_ratio", "q20_ga_critical_depth",
+            "q20_ga_parallelism",
+        };
+
+        std::map<std::string, float> score;
+
+        score = predict(TSM, ga_models);
+
+        if (ind->obj[0] <= round(score[ga_models[0]]) &&
+            ind->obj[1] <= round(score[ga_models[1]]) &&
+            ind->obj[2] <= score[ga_models[2]] &&
+            ind->obj[3] <= score[ga_models[3]] &&
+            ind->obj[4] <= score[ga_models[4]])
+
+        {
+            nsga2Params->cont_search = false;
+        }
 
         ind->constr_violation = 0.0;
 

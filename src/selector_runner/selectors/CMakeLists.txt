@@ -1,6 +1,23 @@
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Set RPATH for the shared libraries in this directory
 set(CMAKE_INSTALL_RPATH "${INSTALL_PATH}/lib")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+find_library(ONNXRUNTIME_LIBRARY NAMES onnxruntime PATHS /home/ubuntu/onnxruntime/build/Linux/Release)
+
+find_path(ONNX_RUNTIME_SESSION_INCLUDE_DIRS onnxruntime_cxx_api.h HINTS /home/ubuntu/onnxruntime/include/onnxruntime/core/session)
+
+#find_library(ONNX_RUNTIME_LIB onnxruntime HINTS /usr/local/lib)
+
+#if(NOT ONNX_RUNTIME_LIB)
+#  message(FATAL_ERROR "ONNX library not found")
+#endif()
+
+#message(${ONNX_RUNTIME_SESSION_INCLUDE_DIRS})
+if(NOT ONNX_RUNTIME_SESSION_INCLUDE_DIRS)
+  message(FATAL_ERROR "ONNX library not found")
+endif()
 
 add_library(nsga2 SHARED
     nsga2.cpp
@@ -19,10 +36,14 @@ add_library(nsga2 SHARED
     report.cpp
     sort.cpp
     tourselect.cpp
+
+    eval_patrick.cpp
+    predictor.cpp
+
 )
 
-target_include_directories(nsga2 PRIVATE ${CMAKE_INSTALL_PREFIX}/include/pass_runner)
-target_link_directories(nsga2 PRIVATE qdmi)
+target_include_directories(nsga2 PRIVATE ${CMAKE_INSTALL_PREFIX}/include/pass_runner /home/ubuntu/qrm.git/build/_deps/qdmi-src/include /home/ubuntu/qrm.git/build/_deps/qinfo-src/include "/home/ubuntu/onnxruntime/include")
+target_link_directories(nsga2 PRIVATE qdmi ${ONNXRUNTIME_LIBRARY})
 
 install(TARGETS nsga2
     DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
@@ -62,6 +83,7 @@ foreach(src_file ${SELECTORS_SOURCE_FILES})
         fomac
         nsga2
         hillclimb
+        ${ONNXRUNTIME_LIBRARY}
     )
 
     # Set include directories for the library

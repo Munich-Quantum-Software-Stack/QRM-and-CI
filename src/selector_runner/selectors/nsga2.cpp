@@ -5,6 +5,8 @@
 
 #include "nsga2.hpp"
 #include "rand.hpp"
+//#include "predictor.hpp"
+#include <map>
 
 using llvm::orc::ThreadSafeModule;
 
@@ -41,6 +43,7 @@ NSGA2Type ReadParameters(int sizeChrom, int nobj, QDMI_Device &device)
     nsga2Params.nbin = 0;      // Number of binary variables
     nsga2Params.nsim = 0;      // Number of simulations
     nsga2Params.device = device;
+    nsga2Params.cont_search = true;
 
     assert(nsga2Params.seed > 0.0 && nsga2Params.seed < 1.0);
     assert(nsga2Params.popsize >= 4 && (nsga2Params.popsize % 4) == 0);
@@ -259,8 +262,18 @@ std::vector<std::string> NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
 {
     int i;
     char buff[100];
+    int gen = 0;
 
-    for (i = 2; i <= nsga2Params->ngen; i++)
+    /*
+    std::vector<std::string> ga_models = {
+        "q20_ga_critical_depth",     "q20_ga_depth",
+        "q20_ga_entanglement_ratio", "q20_ga_number_of_gates",
+        "q20_ga_parallelism",
+    };
+    std::map<std::string, float> scores;
+    */
+
+    while (nsga2Params->cont_search && gen < nsga2Params->ngen)
     {
         selection(nsga2Params, parent_pop, child_pop);
         std::cout << "DEBUG A\n";
@@ -286,6 +299,14 @@ std::vector<std::string> NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
         fflush(fpt4);
 
         report_feasible(nsga2Params, parent_pop, fpt6);
+        gen++;
+        /*
+        scores = predict(TSM, ga_models);
+        for (auto &model : ga_models) {
+            if (scores[model] <= 0.1)
+                flag_continue = false;
+        }
+        */
     }
     std::cout << "DEBUG F\n";
 

@@ -46,6 +46,9 @@ if(NOT LLVM_CONFIG_DIR)
   )
 endif()
 
+find_library(ONNXRUNTIME_LIBRARY NAMES onnxruntime PATHS /home/ubuntu/onnxruntime/build/Linux/Release)
+
+
 # Include LLVMConfig.cmake
 list(APPEND CMAKE_PREFIX_PATH "${LLVM_CONFIG_DIR}")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${LLVM_CONFIG_DIR}")
@@ -62,7 +65,9 @@ include_directories(
   "${CMAKE_CURRENT_SOURCE_DIR}/include/selector_runner"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/scheduler_runner"
   "${CMAKE_INSTALL_PREFIX}/include"
-  ${LLVM_INCLUDE_DIRS})
+  ${LLVM_INCLUDE_DIRS}
+    "/home/ubuntu/onnxruntime/include"
+  )
 
 # Build shared libraries
 add_library(GeneratorRunner SHARED src/generator_runner/GeneratorRunner.cpp)
@@ -70,12 +75,17 @@ add_library(SchedulerRunner SHARED src/scheduler_runner/SchedulerRunner.cpp)
 add_library(PassRunner      SHARED src/pass_runner/PassRunner.cpp)
 add_library(SelectorRunner  SHARED src/selector_runner/SelectorRunner.cpp)
 add_library(QirPassRunner   SHARED src/pass_runner/QirPassRunner.cpp)
+add_library(predictor       SHARED src/selector_runner/selectors/predictor.cpp)
+add_library(eval_patrick            SHARED src/selector_runner/selectors/eval_patrick.cpp)
+
 
 target_link_libraries(GeneratorRunner PRIVATE qdmi qinfo fomac)
 target_link_libraries(SchedulerRunner PRIVATE qdmi qinfo fomac)
 target_link_libraries(PassRunner      PRIVATE qdmi qinfo fomac)
-target_link_libraries(SelectorRunner  PRIVATE qdmi qinfo fomac)
+target_link_libraries(SelectorRunner  PRIVATE qdmi qinfo fomac predictor)
 target_link_libraries(QirPassRunner   PRIVATE qdmi qinfo fomac)
+target_link_libraries(predictor       PRIVATE ${ONNXRUNTIME_LIBRARY} LLVM eval_patrick)
+
 
 set(EXECUTABLE_NAME
     "qresourcemanager_d"
@@ -84,6 +94,8 @@ set(EXECUTABLE_NAME
 # Build the executable
 set(SOURCES src/qresourcemanager_d.cpp src/connection_handling.cpp)
 set(PUBLIC_QRM_HEADERS
+	"src/selector_runner/selectors/predictor.hpp"
+	"src/selector_runner/selectors/eval_patrick.hpp"
     "include/connection_handling.hpp"
     "include/QuantumResourceManager.hpp"
     "include/pass_runner/PassModule.hpp"
@@ -126,6 +138,8 @@ target_link_libraries(${EXECUTABLE_NAME} PRIVATE
   PassRunner
   SelectorRunner
   QirPassRunner
+  predictor
+  ${ONNXRUNTIME_LIBRARY}
 )
 
 # Include header files
