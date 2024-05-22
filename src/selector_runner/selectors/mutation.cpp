@@ -27,8 +27,8 @@ void mutation_ind(NSGA2Type *nsga2Params, individual *ind)
     }
     if (nsga2Params->nint != 0)
     {
-        int_mutate_ind(nsga2Params, ind);
-        // swapMutation(nsga2Params, ind);
+        // int_mutate_ind(nsga2Params, ind);
+        swapMutation(nsga2Params, ind);
         // insertionMutation(nsga2Params, ind);
         // scrambleMutation(nsga2Params, ind);
         // inversionMutation(nsga2Params, ind);

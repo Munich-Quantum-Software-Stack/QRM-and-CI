@@ -18,8 +18,8 @@ void crossover(NSGA2Type *nsga2Params, individual *parent1, individual *parent2,
     if (nsga2Params->nint != 0)
     {
         // intcross(nsga2Params, parent1, parent2, child1, child2);
-        intInterleafCross(nsga2Params, parent1, parent2, child1, child2);
-        // intTwoPointCross(nsga2Params, parent1, parent2, child1, child2);
+        // intInterleafCross(nsga2Params, parent1, parent2, child1, child2);
+        intTwoPointCross(nsga2Params, parent1, parent2, child1, child2);
         // partiallyMappedCrossover(nsga2Params, parent1, parent2, child1,
         // child2); cycleCrossover(nsga2Params, parent1, parent2, child1,
         // child2);
@@ -314,7 +314,7 @@ void intTwoPointCross(NSGA2Type *nsga2Params, individual *parent1,
             child1->xint[i] = parent1->xint[i];
             child2->xint[i] = parent2->xint[i];
         }
-        else
+        } else
         {
             for (i = 0; i < nsga2Params->nint; i++)
             {
@@ -322,7 +322,6 @@ void intTwoPointCross(NSGA2Type *nsga2Params, individual *parent1,
                 child2->xint[i] = parent2->xint[i];
             }
         }
-        //}
         return;
     }
 
