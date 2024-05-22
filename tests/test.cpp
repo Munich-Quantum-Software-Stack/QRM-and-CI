@@ -64,8 +64,8 @@ int main(int argc, char *argv[])
     // const char *filename = "../../benchmarks/test.ll";
     std::string benchmark_dir = "../../../MQT_under_20";
     std::string default_results_dir = "../../../logs";
-    std::string final_results_dir =
-        "../../../experiments/int/interleaf_cyclemut/int_u20_obj5_gen32_pop32";
+    std::string final_results_dir = "../../../experiments/int/twopoint_swapmut/"
+                                    "int_u20_obj5_gen128_pop128_len300";
 
     for (const auto &entry : std::filesystem::directory_iterator(benchmark_dir))
         if (entry.is_regular_file() && entry.path().extension() == ".ll")

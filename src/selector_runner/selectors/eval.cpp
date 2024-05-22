@@ -399,7 +399,10 @@ void evaluate_ind(NSGA2Type *nsga2Params, individual *ind,
     for (j = 0; j < nsga2Params->nint; j++)
     {
         if (ind->xint[j] == -1)
+        {
+            std::cout << "-1 FOUND!!!!!\n";
             continue;
+        }
         passes.push_back(designSpace[ind->xint[j]]);
     }
 

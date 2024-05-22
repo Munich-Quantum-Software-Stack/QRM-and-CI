@@ -32,14 +32,14 @@ NSGA2Type ReadParameters(int sizeChrom, int nobj, QDMI_Device &device)
     srand(time(NULL));
 
     nsga2Params.seed = (float)rand() / (float)(RAND_MAX); // Seed value
-    nsga2Params.popsize = 32;     // Population size (multiple of 4)
-    nsga2Params.ngen = 32;        // Number of generations
-    nsga2Params.nobj = nobj;      // Number of objectives
-    nsga2Params.ncon = 0;         // Number of constraints
-    nsga2Params.nreal = 0;        // Number of real variables
-    nsga2Params.nint = sizeChrom; // Number of integer variables
-    nsga2Params.nbin = 0;         // Number of binary variables
-    nsga2Params.nsim = 0;         // Number of simulations
+    nsga2Params.popsize = 128; // Population size (multiple of 4)
+    nsga2Params.ngen = 128;    // Number of generations
+    nsga2Params.nobj = nobj;   // Number of objectives
+    nsga2Params.ncon = 0;      // Number of constraints
+    nsga2Params.nreal = 0;     // Number of real variables
+    nsga2Params.nint = 108;    // Number of integer variables
+    nsga2Params.nbin = 0;      // Number of binary variables
+    nsga2Params.nsim = 0;      // Number of simulations
     nsga2Params.device = device;
 
     assert(nsga2Params.seed > 0.0 && nsga2Params.seed < 1.0);
@@ -287,11 +287,13 @@ std::vector<std::string> NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
 
         report_feasible(nsga2Params, parent_pop, fpt6);
     }
+    std::cout << "DEBUG F\n";
 
     // printf("\n\n Generations finished, now reporting solutions");
 
     report_pop(nsga2Params, parent_pop, fpt2);
     report_feasible(nsga2Params, parent_pop, fpt3);
+    std::cout << "DEBUG G\n";
 
     if (nsga2Params->nint != 0)
     {
@@ -300,7 +302,7 @@ std::vector<std::string> NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
         fprintf(fpt5, "\n Number of mutation of int variable  = %d",
                 nsga2Params->nintmut);
     }
-
+    std::cout << "DEBUG H\n";
     individual best_individual = parent_pop->ind[0];
 
     for (i = 1; i < nsga2Params->popsize; i++)
@@ -312,14 +314,18 @@ std::vector<std::string> NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
         }
     }
 
+    std::cout << "DEBUG I\n";
     // evaluate_ind(nsga2Params, &best_individual, TSM, designSpace, true);
     std::vector<std::string> result;
 
     for (i = 0; i < nsga2Params->nint; i++)
     {
+        if (best_individual.xint[i] == -1)
+            continue;
         result.push_back(designSpace[best_individual.xint[i]]);
     }
 
+    std::cout << "DEBUG J\n";
     // Closing the files and freeing up memories...
     fflush(fpt1);
     fflush(fpt2);
@@ -335,6 +341,7 @@ std::vector<std::string> NSGA2(NSGA2Type *nsga2Params, ThreadSafeModule &TSM,
     fclose(fpt5);
     fclose(fpt6);
 
+    std::cout << "DEBUG K\n";
     if (nsga2Params->choice != 0)
         pclose(gp);
 
