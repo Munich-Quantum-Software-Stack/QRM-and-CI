@@ -41,7 +41,7 @@ extern "C" std::vector<std::string> selector(void)
 
     // Append the desired passes
     std::vector<std::string> passes{
-        //// B
+        // B
         //passesPath + "/libQirBarrierBeforeFinalMeasurementsPass.so",
         // C
         passesPath + "/libQirCNotToHCZHDecompositionPass.so",
@@ -52,8 +52,8 @@ extern "C" std::vector<std::string> selector(void)
         passesPath + "/libQirCommuteCnotZPass.so",
         passesPath + "/libQirCommuteZCnotPass.so",
         passesPath + "/libQirCZToHCnotHDecompositionPass.so",
-        // D
-        passesPath + "/libQirDeferMeasurementPass.so",
+        //// D
+        //passesPath + "/libQirDeferMeasurementPass.so",
         // F
         passesPath + "/libQirFunctionAnnotatorPass.so",
         passesPath + "/libQirFunctionReplacementPass.so",

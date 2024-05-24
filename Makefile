@@ -124,6 +124,10 @@ test_wmi_sim:
 	cd build/ && \
     ctest -C Release -V -R test_wmi_sim
 
+#test_planqc:
+#	cd build/ && \
+#    ctest -C Release -V -R test_planqc
+
 pre-commit:
 	pre-commit run --all-files
 

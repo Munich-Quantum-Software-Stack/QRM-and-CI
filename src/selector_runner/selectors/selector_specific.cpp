@@ -41,7 +41,7 @@ extern "C" std::vector<std::string> selector(void)
 
     // Append the desired passes
     std::vector<std::string> passes{
-        //passesPath + "/libQirQMapPass.so",
+        passesPath + "/libQirQMapPass.so",
         passesPath + "/libQirAnnotateUnsupportedGatesPass.so",
     };
 

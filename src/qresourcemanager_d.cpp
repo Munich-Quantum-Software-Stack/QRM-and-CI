@@ -192,7 +192,8 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                 OS << module; 
                 OS.flush();
                 modules.push_back(str.data());
-                //std::cout << "   [qresourcemanager_d]..Packing QIR: " << std::endl
+                //std::cout << "   [qresourcemanager_d]..Packing QIR: " 
+                //          << std::endl << std::endl
                 //          << str.data() << std::endl;
                 raw_svector_ostream ostream(buffer);
                 WriteBitcodeToFile(module, ostream);
@@ -209,17 +210,6 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                 frag->sizebuffer = buffer.size();
                 err = QDMI_control_pack_qir(device, qirmod, &frag);
                 CHECK_ERR(err, "QDMI_control_pack_qir");
-
-                //for (auto &function : module)
-                //{
-                //    if (function.hasFnAttribute("entry_point"))
-                //    {
-                //        auto attr = function.getFnAttribute("num_required_qubits");
-                //        auto strnqubits = static_cast<std::string>(attr.getValueAsString());
-                //        nqubits = std::stoi(strnqubits);
-                //        break;
-                //    }
-                //}
             });
 
         // Submit the adapted QIR to the target platform

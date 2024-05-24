@@ -1,4 +1,5 @@
+#/home/ubuntu/qdmi.git/build/libbackend_planqc.so
 /home/ubuntu/bin/lib/libbackend_ibm.so
+/home/ubuntu/bin/lib/libbackend_qlm.so
 /home/ubuntu/bin/lib/libbackend_wmi_real.so
 /home/ubuntu/bin/lib/libbackend_wmi_sim.so
-/home/ubuntu/bin/lib/libbackend_qlm.so
