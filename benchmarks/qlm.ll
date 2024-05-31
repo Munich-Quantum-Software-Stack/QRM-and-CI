@@ -4,7 +4,7 @@ source_filename = "QIR_Module"
 %Qubit = type opaque
 %Result = type opaque
 
-define void @EntryPoint() #0 {
+define i64 @EntryPoint() #0 {
 entry:
   call void @__quantum__rt__initialize(i8* null)
   call void @__quantum__qis__h__body(%Qubit* null)
@@ -12,7 +12,7 @@ entry:
   ;call void @__quantum__qis__mz__body(%Qubit* null, %Result* null)
   ;call void @__quantum__qis__mz__body(%Qubit* inttoptr (i64 1 to %Qubit*), %Result* inttoptr (i64 1 to %Result*))
   call void @__quantum__rt__array_record_output(i64 2, i8* null)
-  ret void
+  ret i64 0
 }
 
 declare void @__quantum__rt__initialize(i8*)
