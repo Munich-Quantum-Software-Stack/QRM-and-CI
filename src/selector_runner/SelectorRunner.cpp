@@ -14,7 +14,8 @@
  * @param pathSelector Path to the selector to be invoked
  * @return std::vector<std::string>
  */
-std::vector<std::string> invokeSelector(const std::string &nameSelector)
+std::vector<std::string>
+invokeTargetAgnosticSelector(const std::string &nameSelector)
 {
     std::string pathSelector;
     char buffer[PATH_MAX];
@@ -61,4 +62,61 @@ std::vector<std::string> invokeSelector(const std::string &nameSelector)
 
     // Call the selector function
     return selector();
+}
+
+/**
+ * @brief TODO
+ * @param pathSelector Path to the selector to be invoked
+ * @param device QDMI_Device for which selector should choose passes
+ * @return std::vector<std::string>
+ */
+std::vector<std::string>
+invokeTargetSpecificSelector(const std::string &nameSelector,
+                             QDMI_Device device)
+{
+    std::string pathSelector;
+    char buffer[PATH_MAX];
+
+    ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
+    if (len != -1)
+    {
+        buffer[len] = '\0';
+        pathSelector = std::string(buffer);
+        size_t lastSlash = pathSelector.find_last_of("/\\");
+        pathSelector = pathSelector.substr(0, lastSlash) + "/lib/";
+    }
+    pathSelector.append(nameSelector);
+
+    std::cout << "   [Selector Runner].....Invoking selector: " << nameSelector
+              << std::endl;
+
+    // Load the selector as a shared library
+    void *lib_handle = dlopen(pathSelector.c_str(), RTLD_LAZY);
+
+    if (!lib_handle)
+    {
+        std::cerr << "   [Selector Runner]...Error loading selector as a "
+                     "shared library: "
+                  << dlerror() << std::endl;
+
+        return std::vector<std::string>();
+    }
+
+    // Dynamic loading and linking of the shared library
+    typedef std::vector<std::string> (*SelectorFunction)(QDMI_Device);
+    SelectorFunction selector =
+        reinterpret_cast<SelectorFunction>(dlsym(lib_handle, "selector"));
+
+    if (!selector)
+    {
+        std::cerr << "   [Selector Runner]...Error finding function in shared "
+                     "library: "
+                  << dlerror() << std::endl;
+
+        dlclose(lib_handle);
+        return std::vector<std::string>();
+    }
+
+    // Call the selector function
+    return selector(device);
 }

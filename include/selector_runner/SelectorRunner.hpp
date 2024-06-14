@@ -20,6 +20,12 @@
 #include <unistd.h>
 #include <vector>
 
-std::vector<std::string> invokeSelector(const std::string &nameSelector);
+#include <qdmi.h>
+
+std::vector<std::string>
+invokeTargetAgnosticSelector(const std::string &nameSelector);
+std::vector<std::string>
+invokeTargetSpecificSelector(const std::string &nameSelector,
+                             QDMI_Device device);
 
 #endif // SELECTORRUNNER_HPP
