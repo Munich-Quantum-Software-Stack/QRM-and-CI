@@ -4,7 +4,11 @@
  */
 
 #include "PassRunner.hpp"
+#include <PassModule.hpp>
+#include <string>
+#include <dlfcn.h>
 
+using namespace llvm;
 using llvm::orc::ThreadSafeModule;
 
 /**
@@ -38,17 +42,33 @@ void invokePasses(ThreadSafeModule &TSM,
 
             // Create an instance of the QirPassRunner and append to it all the
             // received passes
-            QirPassRunner &QPR = QirPassRunner::getInstance();
+            //QirPassRunner &QPR = QirPassRunner::getInstance();
             ModuleAnalysisManager MAM;
 
-            for (std::string libPass : passes)
-                QPR.appendAgnostic(libPass);
+            //for (std::string libPass : passes)
+            //    QPR.appendAgnostic(libPass);
 
             // Run QIR passes
-            QPR.run(module, MAM);
+            //QPR.run(module, MAM);
 
             // Free memory
-            QPR.clearMetadata();
+            //QPR.clearMetadata();
+            using passLoader = AgnosticPassModule *(*)();
+            for(std::string pass : passes){
+
+                void *lib_handle = dlopen(pass.c_str(), RTLD_LAZY);
+                passLoader loadQirPass =
+                    reinterpret_cast<passLoader>(dlsym(lib_handle, "loadQirPass"));
+                if(!loadQirPass){
+                    continue;
+                }
+                AgnosticPassModule *QirPass = loadQirPass();
+                QirPass->run(module, MAM);
+
+            }
+
+
+
         });
 }
 
@@ -84,6 +104,7 @@ void invokePasses(ThreadSafeModule &TSM,
 
             // Create an instance of the QirPassRunner and append to it all the
             // received passes
+            /*
             QirPassRunner &QPR = QirPassRunner::getInstance();
             ModuleAnalysisManager MAM;
 
@@ -95,5 +116,7 @@ void invokePasses(ThreadSafeModule &TSM,
 
             // Free memory
             QPR.clearMetadata();
+
+            */
         });
 }

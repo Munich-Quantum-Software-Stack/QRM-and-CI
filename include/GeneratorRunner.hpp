@@ -21,14 +21,13 @@
 #include <vector>
 
 #include <PassRunner.hpp>
-#include <QuantumResourceManager.hpp>
 
 using namespace llvm;
 using llvm::orc::ThreadSafeModule;
 
 struct QuantumTask;
 
-std::vector<QuantumTask> invokeGenerator(const QuantumTask &parentQuantumTask,
+std::vector<QuantumTask> invokeGenerator(QuantumTask& parentQuantumTask,
                                          const std::string &nameGenerator);
 
 #endif // GENERATORRUNNER_HPP

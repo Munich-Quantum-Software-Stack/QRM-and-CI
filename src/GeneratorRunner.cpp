@@ -3,6 +3,7 @@
  * @brief TODO
  */
 
+#include "QuantumTask.hpp"
 #include <GeneratorRunner.hpp>
 
 using llvm::orc::ThreadSafeModule;
@@ -16,9 +17,13 @@ using llvm::orc::ThreadSafeModule;
  * @param pathGenerator Path to the generator to be invoked
  * @return std::vector<std::string>
  */
-std::vector<QuantumTask> invokeGenerator(const QuantumTask &parentQuantumTask,
+std::vector<QuantumTask> invokeGenerator(QuantumTask& parentQuantumTask,
                                          const std::string &nameGenerator)
-{
+{   
+
+    char *generator_path = getenv("GENERATOR_PATH");
+    std::string pathGenerator = std::string(generator_path);
+    /*
     std::string pathGenerator;
     char buffer[PATH_MAX];
 
@@ -30,6 +35,8 @@ std::vector<QuantumTask> invokeGenerator(const QuantumTask &parentQuantumTask,
         size_t lastSlash = pathGenerator.find_last_of("/\\");
         pathGenerator = pathGenerator.substr(0, lastSlash) + "/lib/";
     }
+
+*/
     pathGenerator.append(nameGenerator);
 
     std::cout << "   [Generator Runner]....Invoking generator: "
@@ -48,7 +55,7 @@ std::vector<QuantumTask> invokeGenerator(const QuantumTask &parentQuantumTask,
     }
 
     // Dynamic loading and linking of the shared library
-    typedef std::vector<QuantumTask> (*GeneratorFunction)(const QuantumTask &);
+    typedef std::vector<QuantumTask> (*GeneratorFunction)(QuantumTask &);
 
     GeneratorFunction generator =
         reinterpret_cast<GeneratorFunction>(dlsym(lib_handle, "generator"));
@@ -64,6 +71,10 @@ std::vector<QuantumTask> invokeGenerator(const QuantumTask &parentQuantumTask,
         return {};
     }
 
+    std::vector<QuantumTask> childrenTasks = generator(parentQuantumTask);
+
+
+
     // Call the generator function
-    return generator(parentQuantumTask);
+    return childrenTasks;
 }

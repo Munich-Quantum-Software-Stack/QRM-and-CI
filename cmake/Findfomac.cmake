@@ -7,3 +7,7 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(fomac)
+
+FetchContent_GetProperties(fomac)
+
+set(FOMAC_INCLUDE_DIRS "${fomac_SOURCE_DIR}/include")

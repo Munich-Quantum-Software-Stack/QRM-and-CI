@@ -36,35 +36,12 @@
 
 #include <fomac.hpp>
 #include <qdmi.h>
-#include <qdmi_internal.h>
 #include <qinfo.h>
+#include <QuantumTask.hpp>
+#include <scheduler.hpp>
 
 using llvm::orc::ThreadSafeModule;
 
-/**
- * @todo Document this
- */
-struct QuantumTask
-{
-    int task_id;
-    int parent_id;
-    int n_qbits;
-    int n_shots;
-    std::string circuit_file;
-    std::string circuit_file_type;
-    std::string result_destination;
-    std::string preferred_qpu;
-    QDMI_Device scheduled_qpu;
-    int priority;
-    int optimisation_level;
-    bool no_modify;
-    bool transpiler_flag;
-    int result_type;
-    std::string submit_time;
-    std::string qir;
-    std::string additional_information;
-    ThreadSafeModule thread_safe_module;
-};
 
 QuantumTask JSONToQuantumTask(const char *QuantumTask_str);
 void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,

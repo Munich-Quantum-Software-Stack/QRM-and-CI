@@ -15,19 +15,17 @@
  * @return QuantumTask
  */
 int invokeScheduler(const std::string &nameScheduler,
-                    std::vector<QuantumTask> *childQuantumTasks)
+                    std::vector<QuantumTask> *childQuantumTasks, 
+                    Device2SubmitterType device2Submitter)
 {
-    std::string pathScheduler;
-    char buffer[PATH_MAX];
+    //std::string pathScheduler;
+    //char buffer[PATH_MAX];
 
-    ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
-    if (len != -1)
-    {
-        buffer[len] = '\0';
-        pathScheduler = std::string(buffer);
-        size_t lastSlash = pathScheduler.find_last_of("/\\");
-        pathScheduler = pathScheduler.substr(0, lastSlash) + "/lib/";
-    }
+    //ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
+
+    char *scheduler_path = getenv("SCHEDULER_PATH");
+    std::string pathScheduler = std::string(scheduler_path);
+    
     pathScheduler.append(nameScheduler);
 
     std::cout << "   [Scheduler Runner]....Invoking scheduler: "
@@ -47,7 +45,7 @@ int invokeScheduler(const std::string &nameScheduler,
     }
 
     // Dynamic loading and linking of the shared library
-    typedef int (*SchedulerFunction)(std::vector<QuantumTask> *);
+    typedef int (*SchedulerFunction)(Device2SubmitterType, std::vector<QuantumTask> *);
     SchedulerFunction scheduler =
         reinterpret_cast<SchedulerFunction>(dlsym(lib_handle, "scheduler"));
 
@@ -60,6 +58,7 @@ int invokeScheduler(const std::string &nameScheduler,
         dlclose(lib_handle);
     }
 
+
     // Call the scheduler function
-    return scheduler(childQuantumTasks);
+    return scheduler(device2Submitter, childQuantumTasks);
 }

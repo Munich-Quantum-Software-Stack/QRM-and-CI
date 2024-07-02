@@ -16,17 +16,10 @@
  */
 std::vector<std::string> invokeSelector(const std::string &nameSelector)
 {
-    std::string pathSelector;
-    char buffer[PATH_MAX];
+   
+    char *selector_path = getenv("SELECTOR_PATH");
+    std::string pathSelector = std::string(selector_path);
 
-    ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
-    if (len != -1)
-    {
-        buffer[len] = '\0';
-        pathSelector = std::string(buffer);
-        size_t lastSlash = pathSelector.find_last_of("/\\");
-        pathSelector = pathSelector.substr(0, lastSlash) + "/lib/";
-    }
     pathSelector.append(nameSelector);
 
     std::cout << "   [Selector Runner].....Invoking selector: " << nameSelector

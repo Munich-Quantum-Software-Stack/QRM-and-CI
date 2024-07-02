@@ -6,7 +6,6 @@
 #ifndef PASSRUNNER_HPP
 #define PASSRUNNER_HPP
 
-#include "QirPassRunner.hpp"
 
 #include <algorithm>
 #include <csignal>
@@ -26,6 +25,9 @@
 #include <thread>
 #include <unistd.h>
 #include <vector>
+#include <llvm.hpp>
+#include <qdmi.h>
+
 
 using llvm::orc::ThreadSafeModule;
 

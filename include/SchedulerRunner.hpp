@@ -28,11 +28,11 @@
 #include <unistd.h>
 #include <vector>
 
-#include <QuantumResourceManager.hpp>
+#include <scheduler.hpp>
 
-struct QuantumTask;
 
 int invokeScheduler(const std::string &nameScheduler,
-                            std::vector<QuantumTask> *childQuantumTasks);
+                    std::vector<QuantumTask> *childQuantumTasks, 
+                    Device2SubmitterType device2Submitter);
 
 #endif // SCHEDULERRUNNER_HPP
