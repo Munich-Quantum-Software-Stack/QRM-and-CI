@@ -1,0 +1,42 @@
+# Uninstall target
+message("Uninstalling...")
+
+set(EXECUTABLE_NAME "@EXECUTABLE_NAME@")
+set(CMAKE_INSTALL_PREFIX "@CMAKE_INSTALL_PREFIX@")
+
+get_filename_component(TOPLEVEL "${CMAKE_CURRENT_LIST_FILE}" DIRECTORY)
+get_filename_component(TOPLEVEL "${TOPLEVEL}" DIRECTORY)
+
+message(STATUS "Uninstalling ${CMAKE_INSTALL_PREFIX}/${EXECUTABLE_NAME}")
+message(STATUS "Uninstalling QRM")
+message(STATUS "              L Generators")
+message(STATUS "              L Schedulers")
+message(STATUS "              L Selectors")
+message(STATUS "Uninstalling FOMACs")
+message(STATUS "Uninstalling QDMI")
+message(STATUS "              L Backends")
+message(STATUS "Uninstalling ${TOPLEVEL}/docs/build directory")
+
+execute_process(COMMAND ${CMAKE_COMMAND} -E remove
+                        ${CMAKE_INSTALL_PREFIX}/${EXECUTABLE_NAME})
+file(
+  GLOB_RECURSE LIB_CONTENTS
+  LIST_DIRECTORIES true
+  ${CMAKE_INSTALL_PREFIX}/lib/*)
+foreach(item ${LIB_CONTENTS})
+  if(NOT "${item}" STREQUAL "${CMAKE_INSTALL_PREFIX}/lib/passes")
+    message(STATUS "Uninstalling ${item}")
+    execute_process(COMMAND ${CMAKE_COMMAND} -E remove ${item})
+  endif()
+endforeach()
+file(
+  GLOB_RECURSE INCLUDE_CONTENTS
+  LIST_DIRECTORIES true
+  ${CMAKE_INSTALL_PREFIX}/include/*)
+foreach(item ${INCLUDE_CONTENTS})
+  if(NOT "${item}" STREQUAL "${CMAKE_INSTALL_PREFIX}/include/QirPassRunner.hpp")
+    execute_process(COMMAND ${CMAKE_COMMAND} -E remove ${item})
+  endif()
+endforeach()
+execute_process(COMMAND ${CMAKE_COMMAND} -E remove_directory
+                        ${CMAKE_INSTALL_PREFIX}/cmake)

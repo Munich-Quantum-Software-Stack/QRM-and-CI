@@ -1,0 +1,37 @@
+/**
+ * @file SchedulerRunner.hpp
+ * @brief TODO
+ */
+
+#ifndef SCHEDULERRUNNER_HPP
+#define SCHEDULERRUNNER_HPP
+
+#include "llvm.hpp"
+
+#include <QuantumResourceManager.hpp>
+#include <algorithm>
+#include <arpa/inet.h>
+#include <csignal>
+#include <dlfcn.h>
+#include <fcntl.h>
+#include <fomac.hpp>
+#include <fstream>
+#include <iostream>
+#include <mutex>
+#include <netinet/in.h>
+#include <qdmi.h>
+#include <signal.h>
+#include <string>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <thread>
+#include <unistd.h>
+#include <vector>
+
+struct QuantumTask;
+
+int invokeScheduler(const std::string &nameScheduler,
+                    std::vector<QuantumTask> *childQuantumTasks);
+
+#endif // SCHEDULERRUNNER_HPP
