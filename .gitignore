@@ -43,3 +43,4 @@ build
 *.a
 *.lib
 git-emoji-commit.sh
+temp
