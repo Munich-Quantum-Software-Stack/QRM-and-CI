@@ -121,7 +121,11 @@ cd  "${BUILD_DIR}" || { echo "Failed to navigate back to the original directory.
 echo "Configuring the QRM repository CMake..."
 cmake .. \
   -DBUILD_WITH_DOCS=ON \
-  -DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}
+  -DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}\
+  -DMLIR_DIR="${MLIR_DIR}" \
+  -DClang_DIR="${CLANG_DIR}" \
+  -DLLVM_DIR="${LLVM_DIR}" \
+  -DCUDAQ_SOURCE_DIR="${CUDAQ_DIR}"
 
 if [ $? -ne 0 ]; then
   echo "CMake configuration failed."
