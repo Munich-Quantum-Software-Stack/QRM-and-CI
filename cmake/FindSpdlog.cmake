@@ -10,3 +10,14 @@ FetchContent_Declare(
 
 # Make sure spdlog is downloaded and available
 FetchContent_MakeAvailable(spdlog)
+
+if(TARGET spdlog)
+  install(
+    TARGETS spdlog
+    EXPORT spdlogConfig
+    LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+    INCLUDES
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
+endif()
