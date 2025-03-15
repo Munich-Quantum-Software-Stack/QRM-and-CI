@@ -2,9 +2,9 @@
  * @file qresourcemanager_d.cpp
  * @brief TODO
  */
-#include "mqss/Utils/Logger.hpp"
+#include "mqss/QuantumResourceManager.hpp"
 
-#include <QuantumResourceManager.hpp>
+#include "mqss/Utils/Logger.hpp"
 
 using json = nlohmann::json;
 
@@ -19,12 +19,11 @@ amqp_connection_state_t conn;
  */
 QuantumTask JSONToQuantumTask(const char *QuantumTask_str) {
   QuantumTask task;
-
+  auto logger = Logger::getLogger();
   json QuantumTask_json = json::parse(QuantumTask_str);
 
   if (!QuantumTask_json.contains("task_id")) {
-    std::cout << "   [qresourcemanager_d]..Warning: task_id not defined"
-              << std::endl;
+    logger->warn("task_id not defined in json file");
     return QuantumTask();
   }
   task.task_id = QuantumTask_json["task_id"];
@@ -45,14 +44,12 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str) {
   task.result_type = QuantumTask_json["result_type"];
   task.submit_time = QuantumTask_json["submit_time"];
   if (!QuantumTask_json.contains("quake")) {
-    std::cout << "   [qresourcemanager_d]..Warning: Generic QIR missing"
-              << std::endl;
+    logger->warn("MLIR circuit missing!");
     return QuantumTask();
   }
   task.quake = QuantumTask_json["quake"];
   task.additional_information = QuantumTask_json["additional_information"];
   //    task.thread_safe_module = ThreadSafeModule();
-
   return task;
 }
 
@@ -101,23 +98,17 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
  * @param signum Number of the interrupt signal
  */
 void signalHandler(int signum) {
+  auto logger = Logger::getLogger();
   if (signum == SIGTERM) {
     int err;
-
-    std::cerr << "   [qresourcemanager_d]..Stopping the QRM daemon"
-              << std::endl;
-
+    logger->error("Stopping the QRM daemon");
     // Close the connections
-    std::cerr << "   [qresourcemanager_d]..Closing connections to RabbitMQ"
-              << std::endl;
+    logger->error("Closing connections to RabbitMQ");
     close_connections(&conn);
-
     // Finalize the QDMI session
-    std::cerr << "   [qresourcemanager_d]..Finalizing QDMI session"
-              << std::endl;
+    logger->error("Finalizing QDMI session");
     // err = QDMI_session_finalize(session);
     // CHECK_ERR(err, "QDMI_session_finalize");
-
     exit(0);
   }
 }
