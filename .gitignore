@@ -3,7 +3,7 @@
 *.swn
 *.swm
 build
-
+clean.sh
 CMakeLists.txt.user
 CMakeCache.txt
 CMakeFiles
