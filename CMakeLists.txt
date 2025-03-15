@@ -5,7 +5,7 @@ project(
   DESCRIPTION "Quantum Resource Manager")
 
 # Set the C++ standard
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 # Set the installation directory for the daemon
 # if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
@@ -27,7 +27,7 @@ find_package(nlohmann_json REQUIRED)
 # Find the Threads package
 find_package(Threads REQUIRED)
 find_package(rabbitmq-c REQUIRED)
-
+find_package(MLIRPasses REQUIRED)
 # Set LLVM_ENABLE_THREADS to ON set(LLVM_ENABLE_THREADS ON)
 
 # Find LLVMConfig.cmake
@@ -41,6 +41,28 @@ include_directories(
   "${CMAKE_CURRENT_SOURCE_DIR}/include/mqss/QuantumResourceManager")
 
 add_subdirectory(src)
+
+# ###################### CUDAQ settings ###################################
+set(CUDAQ_MAIN_INCLUDE_DIR "${CUDAQ_SOURCE_DIR}/include")
+
+set(CUDAQ_BINARY_DIR "${CUDAQ_SOURCE_DIR}/build")
+set(CUDAQ_CMAKE_DIR "${CUDAQ_SOURCE_DIR}/cmake")
+set(CUDAQ_INCLUDE_DIR "${CUDAQ_SOURCE_DIR}/build/include")
+set(CUDAQ_LIBRARY_DIR "${CUDAQ_SOURCE_DIR}/build/lib")
+set(CUDAQ_TOOLS_DIR "${CUDAQ_SOURCE_DIR}/build/bin")
+set(CUDAQ_MLIR_RUNTIME_PATH "${CUDAQ_SOURCE_DIR}/build/lib")
+
+include_directories(BEFORE ${CUDAQ_MAIN_INCLUDE_DIR}
+                    ${CUDAQ_BINARY_DIR}/include ${CUDAQ_SOURCE_DIR}/runtime)
+
+# Validate CUDAQ dependencies
+if(NOT EXISTS ${CUDAQ_BINARY_DIR}/lib/libcudaq-mlir-runtime.so)
+  message(
+    FATAL_ERROR
+      "Invalid CUDAQ dir: ${CUDAQ_SOURCE_DIR}. Cannot find libcudaq.so in build directory."
+  )
+endif()
+# ##############################################################################
 
 # Build shared libraries add_library(GeneratorRunner SHARED
 # src/generator_runner/GeneratorRunner.cpp) add_library(SchedulerRunner SHARED
@@ -114,7 +136,7 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/uninstall.cmake.in"
                "${CMAKE_CURRENT_BINARY_DIR}/uninstall.cmake" IMMEDIATE @ONLY)
 
 add_custom_target(
-  uninstall
+  uninstallQRM
   COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/uninstall.cmake
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 # Setup tests
