@@ -26,6 +26,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 find_package(nlohmann_json REQUIRED)
 # Find the Threads package
 find_package(Threads REQUIRED)
+find_package(rabbitmq-c REQUIRED)
 
 # Set LLVM_ENABLE_THREADS to ON set(LLVM_ENABLE_THREADS ON)
 
@@ -82,8 +83,9 @@ set_target_properties(
 
 # Link the executable with the required libraries
 target_link_libraries(
-  ${EXECUTABLE_NAME} PRIVATE rabbitmq nlohmann_json::nlohmann_json
-                             Threads::Threads mqss-Utils spdlog::spdlog)
+  ${EXECUTABLE_NAME}
+  PRIVATE rabbitmq nlohmann_json::nlohmann_json Threads::Threads mqss-Utils
+          spdlog::spdlog_header_only)
 
 # Include header files
 target_include_directories(
