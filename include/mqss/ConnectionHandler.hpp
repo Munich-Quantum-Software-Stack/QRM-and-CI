@@ -15,7 +15,7 @@
 #include <string.h>
 
 // Define the RabbitMQ server connection information
-#define AMQP_SERVER "rabbitmq" //"localhost"
+#define AMQP_SERVER "127.0.0.1" //"localhost"
 #define AMQP_PORT 5672
 #define AMQP_USER "guest"
 #define AMQP_PASSWORD "guest"
