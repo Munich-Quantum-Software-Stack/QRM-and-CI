@@ -58,7 +58,8 @@ include_directories(
   "${CMAKE_CURRENT_SOURCE_DIR}/include/mqss"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/mqss/Utils"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/mqss/QuantumResourceManager")
-
+add_definitions(${LLVM_DEFINITIONS})
+add_definitions(${MLIR_DEFINITIONS})
 add_subdirectory(src)
 
 # ###################### CUDAQ settings ###################################
@@ -108,11 +109,15 @@ set(PUBLIC_QRM_HEADERS "include/mqss/QuantumResourceManager.hpp"
 # Build the executable
 add_executable(${EXECUTABLE_NAME} ${SOURCES})
 
+# set_target_properties( ${EXECUTABLE_NAME} PROPERTIES VERSION
+# ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR} RUNTIME_OUTPUT_DIRECTORY
+# ${CMAKE_INSTALL_PREFIX} PUBLIC_HEADER "${PUBLIC_QRM_HEADERS}" INSTALL_RPATH
+# "${CMAKE_INSTALL_PREFIX}/lib" BUILD_WITH_INSTALL_RPATH TRUE)
 set_target_properties(
   ${EXECUTABLE_NAME}
   PROPERTIES VERSION ${PROJECT_VERSION}
              SOVERSION ${PROJECT_VERSION_MAJOR}
-             RUNTIME_OUTPUT_DIRECTORY ${CMAKE_INSTALL_PREFIX}
+             RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
              PUBLIC_HEADER "${PUBLIC_QRM_HEADERS}"
              INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib"
              BUILD_WITH_INSTALL_RPATH TRUE)
