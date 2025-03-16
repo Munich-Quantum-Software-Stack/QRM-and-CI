@@ -120,6 +120,8 @@ cd  "${BUILD_DIR}" || { echo "Failed to navigate back to the original directory.
 
 echo "Configuring the QRM repository CMake..."
 cmake .. \
+  -DCMAKE_C_COMPILER=gcc \
+  -DCMAKE_CXX_COMPILER=g++ \
   -DBUILD_WITH_DOCS=ON \
   -DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}\
   -DMLIR_DIR="${MLIR_DIR}" \
@@ -132,7 +134,7 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-# Build the cudaq-mlir-runtime target using Ninja
 echo "Building QRM with ${NUM_JOBS} jobs..."
-make install -j"${NUM_JOBS}"
+make -j"${NUM_JOBS}"
+#make install
 echo "Build of QRM completed successfully!..."
