@@ -5,51 +5,13 @@
 #pragma once
 
 #include "ConnectionHandler.hpp"
-
-#include <algorithm>
-#include <chrono>
-#include <csignal>
-#include <cstdlib>
-#include <cstring>
-#include <fcntl.h>
-#include <fstream>
-#include <iostream>
-#include <map>
-#include <netinet/in.h>
-#include <nlohmann/json.hpp>
-#include <signal.h>
-#include <string>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <thread>
-#include <unistd.h>
-#include <vector>
+#include "QuantumTask.hpp"
 
 /**
  * @todo Document this
  */
-struct QuantumTask {
-  int task_id;
-  int parent_id;
-  int n_qbits;
-  int n_shots;
-  std::string circuit_file;
-  std::string circuit_file_type;
-  std::string result_destination;
-  std::string preferred_qpu;
-  // QDMI_Device scheduled_qpu;
-  int priority;
-  int optimisation_level;
-  bool no_modify;
-  bool transpiler_flag;
-  int result_type;
-  std::string submit_time;
-  std::string quake;
-  std::string additional_information;
-  // ThreadSafeModule thread_safe_module;
-};
+
+using namespace mqss;
 
 QuantumTask JSONToQuantumTask(const char *QuantumTask_str);
 void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
