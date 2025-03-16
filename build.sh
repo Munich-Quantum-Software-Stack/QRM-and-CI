@@ -136,16 +136,3 @@ fi
 echo "Building QRM with ${NUM_JOBS} jobs..."
 make install -j"${NUM_JOBS}"
 echo "Build of QRM completed successfully!..."
-
-
-
-
-
-
-
-
-
-
-echo "Building MQSS Repository Passes with ${NUM_JOBS} jobs..."
-make -j"${NUM_JOBS}"
-echo "Build of MQSS Repository Passes completed successfully!..."
