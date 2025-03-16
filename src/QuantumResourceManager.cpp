@@ -6,20 +6,40 @@
 
 #include "mqss/Utils/Logger.hpp"
 
-using json = nlohmann::json;
+#include <csignal>
+#include <cstdlib>
+#include <iostream>
+#include <nlohmann/json.hpp>
 
+// llvm includes
+#include "llvm/Bitcode/BitcodeReader.h"
+
+#include <llvm/Support/Base64.h>
+// mlir includes
+#include "mlir/ExecutionEngine/OptUtils.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/Parser/Parser.h"
+// cudaq includes
+#include "common/JIT.h"
+#include "common/RuntimeMLIR.h"
+#include "cudaq/Optimizer/CodeGen/Pipelines.h"
+
+using json = nlohmann::json;
+using namespace mlir;
 /**
  * @var conn
  * @brief TODO
  */
 amqp_connection_state_t conn;
 
+bool mlirLLVMInitialized = false;
+
 /**
  * @todo Comment this function
  */
 QuantumTask JSONToQuantumTask(const char *QuantumTask_str) {
   QuantumTask task;
-  auto logger = Logger::getLogger();
+  auto logger = mqss::Logger::getLogger();
   json QuantumTask_json = json::parse(QuantumTask_str);
 
   if (!QuantumTask_json.contains("task_id")) {
@@ -63,13 +83,20 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str) {
  */
 void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                          QuantumTask &parentQuantumTask) {
-  auto logger = Logger::getLogger();
+  auto logger = mqss::Logger::getLogger();
   logger->info("Quantum Daemon");
   int err;
   auto start = std::chrono::steady_clock::now();
   logger->info("Quantum Task:");
   std::cout << parentQuantumTask.quake << std::endl;
-  // Invoke the target-agnostic selector
+  // First getting the mlir context to create the pass managers
+  std::unique_ptr<mlir::MLIRContext> contextPtr = cudaq::initializeMLIR();
+  mlir::MLIRContext &context = *contextPtr;
+  // auto contextPtr = cudaq::initializeMLIR();
+  // mlir::MLIRContext &context = initializeMLIR();
+  //  Invoke the target-agnostic selector
+  PassManager agnosticPassRunner(&context);
+
   // Invoke the generator
   // Invoke the scheduler
   // Compile and execute each generated sub-circuit
@@ -98,17 +125,18 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
  * @param signum Number of the interrupt signal
  */
 void signalHandler(int signum) {
-  auto logger = Logger::getLogger();
-  if (signum == SIGTERM) {
+  auto logger = mqss::Logger::getLogger();
+  if (signum == SIGINT) {
     int err;
-    logger->error("Stopping the QRM daemon");
+    logger->warn("Stopping the QRM daemon");
     // Close the connections
-    logger->error("Closing connections to RabbitMQ");
+    logger->warn("Closing connections to RabbitMQ");
     close_connections(&conn);
     // Finalize the QDMI session
-    logger->error("Finalizing QDMI session");
+    logger->warn("Finalizing QDMI session");
     // err = QDMI_session_finalize(session);
     // CHECK_ERR(err, "QDMI_session_finalize");
+    mqss::Logger::cleanup();
     exit(0);
   }
 }
@@ -121,10 +149,13 @@ void signalHandler(int signum) {
  * @return int
  */
 int main(int argc, char *argv[]) {
-  Logger::init();
+  mqss::Logger::init("QRM-log.txt", "QRM-logger");
   // Get the logger instance
-  auto logger = Logger::getLogger();
+  auto logger = mqss::Logger::getLogger();
   logger->info("Running up the Quantum Resource Manager (QRM)");
+  // Install the signal handler for SIGINT (Ctrl+C)
+  std::signal(SIGINT, signalHandler);
+
   // Log some messages
   //  logger->info("This is an info message.");
   //  logger->warn("This is a warning message.");
@@ -167,5 +198,7 @@ int main(int argc, char *argv[]) {
       logger->error("Error: Failed to receive the task");
     }
   }
+  // Ensure the logger is properly destroyed
+  mqss::Logger::cleanup();
   return 1;
 }
