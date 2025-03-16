@@ -2,10 +2,16 @@ cmake_minimum_required(VERSION 3.22.1)
 project(
   QuantumResourceManager
   VERSION 0.1
-  DESCRIPTION "Quantum Resource Manager")
+  DESCRIPTION "Quantum Resource Manager"
+  LANGUAGES C CXX)
 
 # Set the C++ standard
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED on)
+set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
+set(CMAKE_CXX_FLAGS "-w -fPIC")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -frtti -fexceptions")
 
 # Set the installation directory for the daemon
 # if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
@@ -142,10 +148,11 @@ endif()
 set(LLVM_LIT_ARGS
     "${LIT_ARGS_DEFAULT}"
     CACHE STRING "Default options for lit")
-############################################################################
+# ##############################################################################
 # Find FOMAC package find_package(fomac REQUIRED) Find QDMI package
 # find_package(qdmi REQUIRED) Find QInfo package find_package(qinfo REQUIRED)
 # Find nlohmann_json package
+find_package(fmt REQUIRED)
 find_package(nlohmann_json REQUIRED)
 # Find the Threads package
 find_package(Threads REQUIRED)
@@ -175,7 +182,8 @@ set(CUDAQ_CMAKE_DIR "${CUDAQ_SOURCE_DIR}/cmake")
 set(CUDAQ_INCLUDE_DIR "${CUDAQ_SOURCE_DIR}/build/include")
 set(CUDAQ_LIBRARY_DIR "${CUDAQ_SOURCE_DIR}/build/lib")
 set(CUDAQ_TOOLS_DIR "${CUDAQ_SOURCE_DIR}/build/bin")
-set(CUDAQ_MLIR_RUNTIME_PATH "${CUDAQ_SOURCE_DIR}/build/lib")
+set(CUDAQ_MLIR_RUNTIME_PATH "${CUDAQ_BINARY_DIR}/lib")
+message(STATUS "CUDAQ bin ${CUDAQ_MLIR_RUNTIME_PATH}")
 
 include_directories(BEFORE ${CUDAQ_MAIN_INCLUDE_DIR}
                     ${CUDAQ_BINARY_DIR}/include ${CUDAQ_SOURCE_DIR}/runtime)
@@ -218,62 +226,48 @@ add_executable(${EXECUTABLE_NAME} ${SOURCES})
 # ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR} RUNTIME_OUTPUT_DIRECTORY
 # ${CMAKE_INSTALL_PREFIX} PUBLIC_HEADER "${PUBLIC_QRM_HEADERS}" INSTALL_RPATH
 # "${CMAKE_INSTALL_PREFIX}/lib" BUILD_WITH_INSTALL_RPATH TRUE)
-set_target_properties(
-  ${EXECUTABLE_NAME}
-  PROPERTIES VERSION ${PROJECT_VERSION}
-             SOVERSION ${PROJECT_VERSION_MAJOR}
-             RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-             PUBLIC_HEADER "${PUBLIC_QRM_HEADERS}"
-             INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib"
-             BUILD_WITH_INSTALL_RPATH TRUE)
+# set_target_properties( ${EXECUTABLE_NAME} PROPERTIES VERSION
+# ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR} RUNTIME_OUTPUT_DIRECTORY
+# ${CMAKE_BINARY_DIR}/bin PUBLIC_HEADER "${PUBLIC_QRM_HEADERS}" INSTALL_RPATH
+# "${CMAKE_INSTALL_PREFIX}/lib" BUILD_WITH_INSTALL_RPATH TRUE)
 
-# Include libraries subdirectories
-# add_subdirectory(src/generator_runner/generators)
-# add_subdirectory(src/selector_runner/selectors)
-# add_subdirectory(src/scheduler_runner/schedulers)
-
+set(CUDAQ_TARGETS ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so)
 # Link the executable with the required libraries
 target_link_libraries(
   ${EXECUTABLE_NAME}
-  PRIVATE rabbitmq
-          nlohmann_json::nlohmann_json
-          Threads::Threads
-          mqss-Utils
-          spdlog::spdlog_header_only
-          MLIRIR
-          MLIRPass
-          ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so)
+  PUBLIC rabbitmq
+         nlohmann_json::nlohmann_json
+         Threads::Threads
+         # ${CUDAQ_TARGETS})
+         mqss-Utils
+         MLIRIR
+         MLIRPass
+         MLIRTransforms
+         ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so
+         fmt::fmt)
+# spdlog::spdlog_header_only) LLVMSupport LLVMCore)
 
-# Include header files
-target_include_directories(
-  ${EXECUTABLE_NAME}
-  PRIVATE /usr/local/include # RabbitMQ
-          ${CMAKE_INSTALL_PREFIX}/include
-          ${CMAKE_BINARY_DIR}/_deps/qdmi-src/src # TODO
-  PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-         $<INSTALL_INTERFACE:include>)
-
-# Install the Quantum Resource Manager
-install(
-  TARGETS ${EXECUTABLE_NAME}
-  EXPORT qrmConfig
-  DESTINATION ${CMAKE_INSTALL_PREFIX}
-  PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
-
-install(
-  EXPORT qrmConfig
-  FILE qrmConfig.cmake
-  DESTINATION "${CMAKE_INSTALL_PREFIX}/cmake"
-  NAMESPACE qrm::)
-
+# Include header files target_include_directories( ${EXECUTABLE_NAME} PRIVATE
+# /usr/local/include # RabbitMQ ${CMAKE_INSTALL_PREFIX}/include
+# ${CMAKE_BINARY_DIR}/_deps/qdmi-src/src # TODO PUBLIC
+# $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+# $<INSTALL_INTERFACE:include>)
+#
+# Install the Quantum Resource Manager install( TARGETS ${EXECUTABLE_NAME}
+# EXPORT qrmConfig DESTINATION ${CMAKE_INSTALL_PREFIX} PUBLIC_HEADER DESTINATION
+# ${CMAKE_INSTALL_PREFIX}/include)
+#
+# install( EXPORT qrmConfig FILE qrmConfig.cmake DESTINATION
+# "${CMAKE_INSTALL_PREFIX}/cmake" NAMESPACE qrm::)
+#
 # Uninstall the Quantum Resource Manager
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/uninstall.cmake.in"
-               "${CMAKE_CURRENT_BINARY_DIR}/uninstall.cmake" IMMEDIATE @ONLY)
-
-add_custom_target(
-  uninstallQRM
-  COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/uninstall.cmake
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-# Setup tests
+# configure_file("${CMAKE_CURRENT_SOURCE_DIR}/uninstall.cmake.in"
+# "${CMAKE_CURRENT_BINARY_DIR}/uninstall.cmake" IMMEDIATE @ONLY)
+#
+# add_custom_target( uninstallQRM COMMAND ${CMAKE_COMMAND} -P
+# ${CMAKE_CURRENT_BINARY_DIR}/uninstall.cmake WORKING_DIRECTORY
+# ${CMAKE_CURRENT_BINARY_DIR}) Setup tests
 enable_testing()
 add_subdirectory(tests)
+# Enable FetchContent for integration
+include(FetchContent)
