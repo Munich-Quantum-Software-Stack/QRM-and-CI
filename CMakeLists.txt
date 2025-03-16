@@ -28,13 +28,32 @@ find_package(nlohmann_json REQUIRED)
 find_package(Threads REQUIRED)
 find_package(rabbitmq-c REQUIRED)
 find_package(MLIRPasses REQUIRED)
+# configure the MLIR Passes repo
+set(PASSES_SOURCE_DIR ${MLIRPasses_SOURCE_DIR})
+set(PASSES_INCLUDE_DIR "${PASSES_SOURCE_DIR}/include")
+include_directories(${PASSES_INCLUDE_DIR})
+
 # Set LLVM_ENABLE_THREADS to ON set(LLVM_ENABLE_THREADS ON)
 
-# Find LLVMConfig.cmake
-find_path(LLVM_CONFIG_DIR LLVMConfig.cmake HINTS "${CMAKE_PREFIX_PATH}" ENV
-                                                 LLVM_DIR)
+# Find LLVMConfig.cmake find_path(LLVM_CONFIG_DIR LLVMConfig.cmake HINTS
+# "${CMAKE_PREFIX_PATH}" ENV LLVM_DIR) Find MLIR. (MLIR is usually installed as
+# part of an LLVM distribution.)
+find_package(MLIR REQUIRED CONFIG)
+message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
+
+# Append MLIR's CMake modules.
+list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
+
+# Include the MLIR helper macros.
+include(AddMLIR)
+
+# Include additional LLVM CMake utilities
+include(AddLLVM)
+
 # Add the include paths
 include_directories(
+  ${LLVM_INCLUDE_DIRS}
+  ${MLIR_INCLUDE_DIRS}
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/mqss"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/mqss/Utils"
@@ -106,8 +125,14 @@ set_target_properties(
 # Link the executable with the required libraries
 target_link_libraries(
   ${EXECUTABLE_NAME}
-  PRIVATE rabbitmq nlohmann_json::nlohmann_json Threads::Threads mqss-Utils
-          spdlog::spdlog_header_only)
+  PRIVATE rabbitmq
+          nlohmann_json::nlohmann_json
+          Threads::Threads
+          mqss-Utils
+          spdlog::spdlog_header_only
+          MLIRIR
+          MLIRPass
+          ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so)
 
 # Include header files
 target_include_directories(
