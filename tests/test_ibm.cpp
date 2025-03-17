@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
       {"result_destination", ""},
       {"preferred_qpu", "/libbackend_ibm.so"},
       {"priority", 0},
-      {"optimisation_level", 0},
+      {"optimisation_level", "O3"},
       {"no_modify", false},
       {"transpiler_flag", true},
       {"result_type", 0},
