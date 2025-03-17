@@ -4,6 +4,7 @@
  */
 #include "mqss/QuantumResourceManager.hpp"
 
+#include "mqss/QuantumResourceManager/PassRunner.hpp"
 #include "mqss/Utils/Logger.hpp"
 
 #include <csignal>
@@ -73,6 +74,20 @@ QuantumTask JSONToQuantumTask(const char *QuantumTask_str) {
   return task;
 }
 
+std::tuple<mlir::ModuleOp, mlir::MLIRContext *>
+extractMLIRContext(const std::string &quakeModule) {
+  auto contextPtr = cudaq::initializeMLIR();
+  mlir::MLIRContext &context = *contextPtr.get();
+
+  // Get the quake representation of the kernel
+  auto quakeCode = quakeModule;
+  auto m_module = mlir::parseSourceString<mlir::ModuleOp>(quakeCode, &context);
+  if (!m_module)
+    throw std::runtime_error("Module cannot be parsed");
+
+  return std::make_tuple(m_module.release(), contextPtr.release());
+}
+
 /**
  * @brief TODO
  * @param conn TODO
@@ -89,13 +104,26 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
   auto start = std::chrono::steady_clock::now();
   logger->info("Quantum Task:");
   std::cout << parentQuantumTask.quake << std::endl;
-  // First getting the mlir context to create the pass managers
-  std::unique_ptr<mlir::MLIRContext> contextPtr = cudaq::initializeMLIR();
-  mlir::MLIRContext &context = *contextPtr;
-  // auto contextPtr = cudaq::initializeMLIR();
-  // mlir::MLIRContext &context = initializeMLIR();
-  //  Invoke the target-agnostic selector
-  PassManager agnosticPassRunner(&context);
+  // get the mlir module of the given quantum kernel
+  auto [quakeModule, contextPtr] = extractMLIRContext(parentQuantumTask.quake);
+  // First getting the mlir context to create the pass manager
+  QRM::PassRunner passRunner;
+  passRunner.applyOptimizationLevel(quakeModule,
+                                    parentQuantumTask.optimisation_level);
+  // #ifdef DEBUG
+  std::cout << "Circuit after " << parentQuantumTask.optimisation_level
+            << ":\n";
+  quakeModule->dump();
+  std::vector<std::string> passes = {"canonicalize", "cse"};
+  passRunner.invokePasses(quakeModule, passes);
+  // #ifdef DEBUG
+  std::cout << "Circuit after custom passes:\n";
+  quakeModule->dump();
+  // #endif
+
+  // std::unique_ptr<mlir::MLIRContext> contextPtr = cudaq::initializeMLIR();
+  // mlir::MLIRContext &context = *contextPtr;
+  // PassManager agnosticPassRunner(&context);
 
   // Invoke the generator
   // Invoke the scheduler
