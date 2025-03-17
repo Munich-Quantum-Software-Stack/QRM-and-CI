@@ -150,8 +150,8 @@ set(LLVM_LIT_ARGS
     CACHE STRING "Default options for lit")
 # ##############################################################################
 # Find FOMAC package find_package(fomac REQUIRED) Find QDMI package
-# find_package(qdmi REQUIRED) Find QInfo package find_package(qinfo REQUIRED)
-# Find nlohmann_json package
+find_package(qdmi REQUIRED)
+# Find QInfo package find_package(qinfo REQUIRED) Find nlohmann_json package
 find_package(fmt REQUIRED)
 find_package(nlohmann_json REQUIRED)
 # Find the Threads package
@@ -170,7 +170,8 @@ include_directories(
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/mqss"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/mqss/Utils"
-  "${CMAKE_CURRENT_SOURCE_DIR}/include/mqss/QuantumResourceManager")
+  "${CMAKE_CURRENT_SOURCE_DIR}/include/mqss/QuantumResourceManager"
+  "${CMAKE_CURRENT_SOURCE_DIR}/include/mqss/QuantumResourceManager/PassManager")
 
 add_subdirectory(src)
 
@@ -197,7 +198,7 @@ if(NOT EXISTS ${CUDAQ_BINARY_DIR}/lib/libcudaq-mlir-runtime.so)
 endif()
 # ##############################################################################
 
-# Build shared libraries add_library(GeneratorRunner SHARED
+# Build shared libraries add_library(PassRunner SHARED
 # src/generator_runner/GeneratorRunner.cpp) add_library(SchedulerRunner SHARED
 # src/scheduler_runner/SchedulerRunner.cpp) add_library(SelectorRunner  SHARED
 # src/selector_runner/SelectorRunner.cpp) add_library(PassRunner      SHARED
@@ -239,11 +240,12 @@ target_link_libraries(
          nlohmann_json::nlohmann_json
          Threads::Threads
          # ${CUDAQ_TARGETS})
-         mqss-Utils
+         Utils
          MLIRIR
          MLIRPass
          MLIRTransforms
          ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so
+         PassRunner
          fmt::fmt)
 # spdlog::spdlog_header_only) LLVMSupport LLVMCore)
 
