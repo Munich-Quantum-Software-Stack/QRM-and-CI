@@ -14,7 +14,7 @@ struct QuantumTask {
   std::string preferred_qpu;
   // QDMI_Device scheduled_qpu;
   int priority;
-  int optimisation_level;
+  std::string optimisation_level;
   bool no_modify;
   bool transpiler_flag;
   int result_type;
