@@ -120,15 +120,11 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
   std::cout << "Circuit after custom passes:\n";
   quakeModule->dump();
   // #endif
-
-  // std::unique_ptr<mlir::MLIRContext> contextPtr = cudaq::initializeMLIR();
-  // mlir::MLIRContext &context = *contextPtr;
-  // PassManager agnosticPassRunner(&context);
-
   // Invoke the generator
   // Invoke the scheduler
   // Compile and execute each generated sub-circuit
-  // Invoke the target-specific selector
+  // Invoke the target-specific passes
+  passRunner.invokePasses(quakeModule, passes, "device");
   // Submission
   auto end = std::chrono::steady_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milliseconds = end - start;
