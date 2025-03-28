@@ -68,11 +68,11 @@ int main(int argc, char *argv[]) {
   // Read the file with the generic QIR
   const std::streamsize chunkSize = 1024;
   char bufferQir[chunkSize];
-  std::string genericQir;
+  std::string quake;
 
   while (!file.eof()) {
     file.read(bufferQir, chunkSize);
-    genericQir.append(bufferQir, file.gcount());
+    quake.append(bufferQir, file.gcount());
   }
   file.close();
 
@@ -83,23 +83,28 @@ int main(int argc, char *argv[]) {
   std::strftime(buffer, bufferSize, "%Y-%m-%d %H:%M:%S",
                 std::localtime(&currentTime));
   std::string submit_time(buffer);
-  json QuantumTask_json = {
-      {"task_id", -1},
-      {"n_qbits", 0},
-      {"n_shots", 1024},
-      {"circuit_file", ""},
-      {"circuit_file_type", "QIR"},
-      {"result_destination", ""},
-      {"preferred_qpu", "/libbackend_ibm.so"},
-      {"priority", 0},
-      {"optimisation_level", "O3"},
-      {"no_modify", false},
-      {"transpiler_flag", true},
-      {"result_type", 0},
-      {"submit_time", submit_time},
-      {"quake", genericQir},
-      {"additional_information", ""},
-  };
+  std::vector<std::string> circuit_files;
+  circuit_files.push_back(quake);
+  json QuantumTask_json = {{"task_id", -1},
+                           {"n_qbits", 0},
+                           {"n_shots", 1024},
+                           {"circuit_files", circuit_files},
+                           {"circuit_file_type", "quake"}, // qasm, qir, quake
+                           {"preferred_qpu", "/libbackend_ibm.so"},
+                           {"scheduled_qpu", ""},
+                           {"result_destination", ""},
+                           {"priority", 0},
+                           {"optimisation_level", 3}, // 0, 1, 2, 3
+                           {"no_modify", false},
+                           {"transpiler_flag", true},
+                           {"result_type", 0},
+                           {"submit_time", submit_time},
+                           {"circuits_qiskit", json::array()},
+                           {"additional_information", ""},
+                           {"restricted_resource_names", json::array()},
+                           {"user_identity", ""},
+                           {"token", ""},
+                           {"via_hpc", true}};
 
   std::string QuantumTask_str = QuantumTask_json.dump();
 
