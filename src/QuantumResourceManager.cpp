@@ -11,7 +11,6 @@
 #include <cstdlib>
 #include <iostream>
 #include <nlohmann/json.hpp>
-
 // llvm includes
 #include "llvm/Bitcode/BitcodeReader.h"
 
@@ -21,57 +20,63 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Parser/Parser.h"
 // cudaq includes
+#include "Passes/Transforms.hpp"
 #include "common/JIT.h"
 #include "common/RuntimeMLIR.h"
 #include "cudaq/Optimizer/CodeGen/Pipelines.h"
 
 using json = nlohmann::json;
 using namespace mlir;
+
+namespace mlir {
+void registerPasses() {
+  // Register the passes from the TableGen-generated code
+  registerMQSSOptTransformsPasses();
+}
+} // namespace mlir
+
 /**
  * @var conn
  * @brief TODO
  */
 amqp_connection_state_t conn;
-
-bool mlirLLVMInitialized = false;
-
 /**
  * @todo Comment this function
  */
 QuantumTask JSONToQuantumTask(const char *QuantumTask_str) {
-  QuantumTask task;
+  QuantumTask qt;
   auto logger = mqss::Logger::getLogger();
-  json QuantumTask_json = json::parse(QuantumTask_str);
+  json jsonQT = json::parse(QuantumTask_str);
 
-  if (!QuantumTask_json.contains("task_id")) {
+  if (!jsonQT.contains("task_id")) {
     logger->warn("task_id not defined in json file");
     return QuantumTask();
   }
-  task.task_id = QuantumTask_json["task_id"];
-  if (!QuantumTask_json.contains("parent_id"))
-    task.parent_id = -1;
-  else
-    task.parent_id = QuantumTask_json["parent_id"];
-  task.n_qbits = QuantumTask_json["n_qbits"];
-  task.n_shots = QuantumTask_json["n_shots"];
-  task.circuit_file = QuantumTask_json["circuit_file"];
-  task.circuit_file_type = QuantumTask_json["circuit_file_type"];
-  task.result_destination = QuantumTask_json["result_destination"];
-  task.preferred_qpu = QuantumTask_json["preferred_qpu"];
-  task.priority = QuantumTask_json["priority"];
-  task.optimisation_level = QuantumTask_json["optimisation_level"];
-  task.no_modify = QuantumTask_json["no_modify"];
-  task.transpiler_flag = QuantumTask_json["transpiler_flag"];
-  task.result_type = QuantumTask_json["result_type"];
-  task.submit_time = QuantumTask_json["submit_time"];
-  if (!QuantumTask_json.contains("quake")) {
-    logger->warn("MLIR circuit missing!");
+  jsonQT.at("task_id").get_to(qt.task_id);
+  jsonQT.at("n_qbits").get_to(qt.n_qbits);
+  jsonQT.at("n_shots").get_to(qt.n_shots);
+  if (!jsonQT.contains("circuit_files")) {
+    logger->warn("circuit_files not defined in json file");
     return QuantumTask();
   }
-  task.quake = QuantumTask_json["quake"];
-  task.additional_information = QuantumTask_json["additional_information"];
-  //    task.thread_safe_module = ThreadSafeModule();
-  return task;
+  jsonQT.at("circuit_files").get_to(qt.circuit_files);
+  jsonQT.at("circuit_file_type").get_to(qt.circuit_file_type);
+  jsonQT.at("result_destination").get_to(qt.result_destination);
+  jsonQT.at("preferred_qpu").get_to(qt.preferred_qpu);
+  jsonQT.at("scheduled_qpu").get_to(qt.scheduled_qpu);
+  jsonQT.at("priority").get_to(qt.priority);
+  jsonQT.at("optimisation_level").get_to(qt.optimisation_level);
+  jsonQT.at("no_modify").get_to(qt.no_modify);
+  jsonQT.at("transpiler_flag").get_to(qt.transpiler_flag);
+  jsonQT.at("result_type").get_to(qt.result_type);
+  jsonQT.at("submit_time").get_to(qt.submit_time);
+  jsonQT.at("circuits_qiskit").get_to(qt.circuits_qiskit);
+  jsonQT.at("additional_information").get_to(qt.additional_information);
+  jsonQT.at("restricted_resource_names").get_to(qt.restricted_resource_names);
+  jsonQT.at("user_identity").get_to(qt.user_identity);
+  jsonQT.at("token").get_to(qt.token);
+  jsonQT.at("via_hpc").get_to(qt.via_hpc);
+  return qt;
 }
 
 std::tuple<mlir::ModuleOp, mlir::MLIRContext *>
@@ -99,32 +104,50 @@ extractMLIRContext(const std::string &quakeModule) {
 void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                          QuantumTask &parentQuantumTask) {
   auto logger = mqss::Logger::getLogger();
-  logger->info("Quantum Daemon");
   int err;
   auto start = std::chrono::steady_clock::now();
-  logger->info("Quantum Task:");
-  std::cout << parentQuantumTask.quake << std::endl;
-  // get the mlir module of the given quantum kernel
-  auto [quakeModule, contextPtr] = extractMLIRContext(parentQuantumTask.quake);
+  std::vector<mlir::ModuleOp> mlirCircuits;
+
+  logger->info("Quantum Daemon");
+  logger->info("Quantum Tasks:");
+  // registering mqss passes
+  mlir::registerPasses();
+  for (std::string circuit : parentQuantumTask.circuit_files) {
+    // here parse each quantum task
+    // get the mlir module of the given quantum kernel
+    auto [quakeModule, contextPtr] = extractMLIRContext(circuit);
+    mlirCircuits.push_back(quakeModule);
+    // #ifdef DEBUG
+    quakeModule->dump();
+    // #endif
+  }
   // First getting the mlir context to create the pass manager
   QRM::PassRunner passRunner;
-  passRunner.applyOptimizationLevel(quakeModule,
-                                    parentQuantumTask.optimisation_level);
-  // #ifdef DEBUG
-  std::cout << "Circuit after " << parentQuantumTask.optimisation_level
-            << ":\n";
-  quakeModule->dump();
-  std::vector<std::string> passes = {"canonicalize", "cse"};
-  passRunner.invokePasses(quakeModule, passes);
-  // #ifdef DEBUG
-  std::cout << "Circuit after custom passes:\n";
-  quakeModule->dump();
+  // for(auto quakeModule : mlirCircuits){
+  //   passRunner.applyOptimizationLevel(quakeModule,
+  //                                     parentQuantumTask.optimisation_level);
+  //   // #ifdef DEBUG
+  //   std::cout << "Circuit after " << parentQuantumTask.optimisation_level
+  //           << ":\n";
+  //   quakeModule->dump();
+  // }
+  std::vector<std::string> passes = {"CancellationDoubleCx", "canonicalize",
+                                     "cse"};
+  // std::vector<std::string> passes = {"canonicalize", "cse"};
+  for (auto quakeModule : mlirCircuits) {
+    passRunner.invokePasses(quakeModule, passes);
+    // #ifdef DEBUG
+    std::cout << "Circuit after custom passes:\n";
+    quakeModule->dump();
+  }
   // #endif
   // Invoke the generator
   // Invoke the scheduler
   // Compile and execute each generated sub-circuit
   // Invoke the target-specific passes
-  passRunner.invokePasses(quakeModule, passes, "device");
+  for (auto quakeModule : mlirCircuits) {
+    passRunner.invokePasses(quakeModule, passes, "device");
+  }
   // Submission
   auto end = std::chrono::steady_clock::now();
   std::chrono::duration<double, std::milli> elapsed_milliseconds = end - start;
@@ -139,6 +162,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
       {"additional_information", ""},
       {"execution_time", elapsed_milliseconds.count()},
   };
+  // return the same quantum task but with results
   std::string QuantumResult_str = QuantumResult_json.dump();
   send_message(&conn, QuantumResult_str.c_str(), QDQueue);
 }
