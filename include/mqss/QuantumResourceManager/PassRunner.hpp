@@ -18,7 +18,7 @@ public:
   void invokePasses(ModuleOp circuit, const std::vector<std::string> &passes);
   void invokePasses(ModuleOp circuit, const std::vector<std::string> &passes,
                     std::string device);
-  void applyOptimizationLevel(ModuleOp circuit, const std::string oLevel);
+  void applyOptimizationLevel(ModuleOp circuit, int oLevel);
 
 private:
 };
