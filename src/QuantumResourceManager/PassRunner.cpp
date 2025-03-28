@@ -11,6 +11,9 @@
 #include <functional>
 #include <iostream>
 #include <unordered_map>
+// include generated pass declaration
+#include "Passes/Decompositions.h.inc"
+#include "Passes/Transforms.h.inc"
 
 using namespace mlir;
 using namespace mqss::opt;
@@ -29,7 +32,8 @@ void PassRunner::invokePasses(ModuleOp circuit,
   llvm::raw_string_ostream errOs(errMsg);
   // Add additional passes if necessary
   if (failed(parsePassPipeline(passPipelineRef, pm, errOs))) {
-    llvm::errs() << "Failed to parse pass pipeline: " << passPipeline << "\n";
+    llvm::errs() << "Failed to parse pass pipeline: " << passPipeline << " "
+                 << errOs.str() << "\n";
     return;
   }
   if (mlir::failed(pm.run(circuit)))
@@ -48,13 +52,13 @@ void PassRunner::invokePasses(ModuleOp circuit,
   mlir::PassManager pm(circuit.getContext());
 }
 
-void PassRunner::applyOptimizationLevel(ModuleOp circuit,
-                                        const std::string oLevel) {
+void PassRunner::applyOptimizationLevel(ModuleOp circuit, int oLevel) {
   std::cout << "Invoking Optimization Level" << oLevel << std::endl;
   mlir::PassManager pm(circuit.getContext());
   // Function map
-  std::unordered_map<std::string, std::function<void(mlir::PassManager &)>>
-      functionMap = {{"O1", O1}, {"O2", O2}, {"O3", O3}};
+  std::unordered_map<int, std::function<void(mlir::PassManager &)>>
+      functionMap = {
+          {0, [](mlir::PassManager &) {}}, {1, O1}, {2, O2}, {3, O3}};
   // Lookup and invoke function
   if (auto it = functionMap.find(oLevel); it != functionMap.end())
     it->second(pm); // Call function with mlir::PassManager
