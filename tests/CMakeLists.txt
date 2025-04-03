@@ -5,23 +5,19 @@ project(MyQirTests)
 find_package(GTest REQUIRED)
 include(GoogleTest)
 
-set(TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test_ibm.cpp")
+set(TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test-qrm-simple.cpp")
 
 include_directories(${GTEST_INCLUDE_DIRS})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src)
 
-find_library(RABBITMQ_LIBRARY rabbitmq)
-
-if(NOT RABBITMQ_LIBRARY)
-  message(FATAL_ERROR "RabbitMQ library not found.")
-endif()
+find_package(rabbitmq-c REQUIRED)
 
 foreach(TEST_SOURCE ${TEST_SOURCES})
   get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
   add_executable(
     ${TEST_NAME} ${TEST_SOURCE}
                  ${CMAKE_CURRENT_SOURCE_DIR}/../src/ConnectionHandler.cpp)
-  target_link_libraries(${TEST_NAME} ${RABBITMQ_LIBRARY} ${GTEST_LIBRARIES}
+  target_link_libraries(${TEST_NAME} ${GTEST_LIBRARIES} rabbitmq Common
                         spdlog::spdlog_header_only)
   target_include_directories(
     ${TEST_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mqss
