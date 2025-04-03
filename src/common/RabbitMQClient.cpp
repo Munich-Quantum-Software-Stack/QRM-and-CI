@@ -57,7 +57,8 @@ RabbitMQClient::RabbitMQClient(const std::string &hostname, int port,
   if (amqp_socket_open(socket, hostname.c_str(), port))
     throw std::runtime_error("MQSS: Failed to open TCP socket");
   amqp_rpc_reply_t login_reply =
-      amqp_login(conn, "/", 0, 131072, 0, AMQP_SASL_METHOD_PLAIN, user, pass);
+      amqp_login(conn, "/", 0, 131072, 0, AMQP_SASL_METHOD_PLAIN, user.c_str(),
+                 pass.c_str());
   if (login_reply.reply_type != AMQP_RESPONSE_NORMAL)
     throw std::runtime_error("MQSS: Failed to log in to RabbitMQ");
 
@@ -89,7 +90,6 @@ RabbitMQClient::getMessageFromReplyQueue(const std::string &correlation_id,
   std::cout << "replyQueue: " << reply_queue << std::endl;
   amqp_basic_consume(conn, 1, amqp_cstring_bytes(reply_queue.c_str()),
                      amqp_empty_bytes, 0, 1, 0, amqp_empty_table);
-
   while (true) {
     amqp_rpc_reply_t res;
     amqp_envelope_t envelope;
