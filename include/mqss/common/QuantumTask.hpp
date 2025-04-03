@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+
 namespace mqss {
 struct QuantumTask {
   int task_id;
@@ -27,5 +28,7 @@ struct QuantumTask {
   bool via_hpc;
   // ThreadSafeModule thread_safe_module;
 };
+
+QuantumTask JSONToQuantumTask(const char *QuantumTaskAsString);
 
 } // namespace mqss
