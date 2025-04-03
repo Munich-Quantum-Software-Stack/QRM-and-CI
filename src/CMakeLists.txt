@@ -1,2 +1,3 @@
-add_subdirectory(Utils)
+add_subdirectory(common)
 add_subdirectory(QuantumResourceManager)
+add_subdirectory(RabbitMQConnections)
