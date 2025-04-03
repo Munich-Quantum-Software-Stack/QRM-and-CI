@@ -12,7 +12,7 @@
 #include <cstring>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <string>
 
 // Define the RabbitMQ server connection information
 #define AMQP_SERVER "127.0.0.1" //"localhost"
@@ -22,12 +22,9 @@
 #define AMQP_VHOST "/"
 #define RESPONSESIZE 150
 
-int rabbitmq_new_connection(amqp_connection_state_t *conn,
-                            amqp_socket_t **socket);
-
-void send_message(amqp_connection_state_t *conn, const char *message,
-                  char const *queue);
-
-const char *receive_message(amqp_connection_state_t *conn, char const *queue);
-
-void close_connections(amqp_connection_state_t *conn);
+#define QUEUE_OFFLOADER_LISTENER "OffloaderListener-to-QRM"
+#define QUEUE_QRM_AGNOSTIC_PASS_RUNNER "QRM-To-AgnosticPassRunner"
+#define QUEUE_AGNOSTIC_PASS_RUNNER_GENERATOR "AgnosticPassRunner-To-Scheduler"
+#define QUEUE_SCHEDULER_TRANSPILER "Scheduler-To-Transpiler"
+#define QUEUE_TRANSPILER_SUBMITTER "Transpiler-To-Submitter"
+#define QUEUE_SUBMITTER_QRM "Submitter-To-QRM"
