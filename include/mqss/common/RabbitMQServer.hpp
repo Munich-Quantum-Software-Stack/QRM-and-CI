@@ -15,6 +15,7 @@ public:
   ~RabbitMQServer();
   // this method respond to the same queue
   void publishMessage(const std::string &message);
+  void startToConsume();
   // I guess this allows to publish to specific connections
   void publishMessage(const std::string &reply_to, const std::string &message,
                       const std::string &correlation_id, bool isJson = false);
