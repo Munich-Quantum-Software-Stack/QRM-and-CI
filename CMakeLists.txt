@@ -50,6 +50,17 @@ find_package(nlohmann_json REQUIRED)
 find_package(Threads REQUIRED)
 find_package(rabbitmq-c REQUIRED)
 find_package(MLIRPasses REQUIRED)
+
+set(Boost_USE_STATIC_LIBS ON)
+set(Boost_USE_MULTITHREADED ON)
+set(Boost_USE_STATIC_RUNTIME OFF)
+find_package(Boost REQUIRED)
+message(STATUS "Boost version: ${Boost_VERSION}")
+if(NOT Boost_FOUND)
+  message(FATAL_ERROR "Boost library not found.")
+endif()
+find_package(BoostUUID REQUIRED)
+
 # configure the MLIR Passes repo
 set(PASSES_SOURCE_DIR ${MLIRPasses_SOURCE_DIR})
 set(PASSES_INCLUDE_DIR "${PASSES_SOURCE_DIR}/include")
@@ -140,12 +151,13 @@ target_link_libraries(
   PUBLIC rabbitmq
          nlohmann_json::nlohmann_json
          Threads::Threads
-         # ${CUDAQ_TARGETS})
-         Utils
+         # Boost::boost uuid ${CUDAQ_TARGETS})
+         Common
          MLIRIR
          MLIRPass
          MLIRTransforms
          ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so
+         RabbitMQConnections
          PassRunner
          fmt::fmt)
 # spdlog::spdlog_header_only) LLVMSupport LLVMCore)
