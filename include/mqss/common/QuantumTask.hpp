@@ -1,5 +1,9 @@
 #pragma once
 
+#include "common/RuntimeMLIR.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/Parser/Parser.h"
+
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -38,4 +42,7 @@ struct QuantumTask {
 QuantumTask dumpJsonToQuantumTask(const char *QuantumTaskAsString);
 json dumpQuantumTaskToJson(const QuantumTask &task);
 void dumpQuantumTask(const QuantumTask &quantumTask);
+std::vector<mlir::ModuleOp> getMLIRModules(const QuantumTask &quantumTask);
+std::tuple<mlir::ModuleOp, mlir::MLIRContext *>
+extractMLIRContext(const std::string &quakeModule);
 } // namespace mqss
