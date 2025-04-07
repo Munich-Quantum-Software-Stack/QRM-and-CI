@@ -1,5 +1,7 @@
 #include "mqss/common/RabbitMQServer.hpp"
 
+#include <cstring>
+
 namespace mqss {
 RabbitMQServer::RabbitMQServer(const std::string &hostname, int port,
                                const std::string &queue,
@@ -48,6 +50,7 @@ void RabbitMQServer::publishMessage(const std::string &message, bool isJson) {
   amqp_bytes_t queueBytes = amqp_cstring_bytes(this->queue.c_str());
   amqp_bytes_t msg_bytes = amqp_cstring_bytes(message.c_str());
   amqp_basic_properties_t props;
+  memset(&props, 0, sizeof(props));
   props.content_type = amqp_cstring_bytes("text/plain");
   if (isJson)
     props.content_type = amqp_cstring_bytes("application/json");
@@ -81,9 +84,8 @@ void RabbitMQServer::consumeMessage(std::string &message) {
   amqp_maybe_release_buffers(conn);
   res = amqp_consume_message(conn, &envelope, NULL, 0);
   if (res.reply_type == AMQP_RESPONSE_NORMAL) {
-    std::string message =
-        std::string(static_cast<char *>(envelope.message.body.bytes),
-                    envelope.message.body.len);
+    message = std::string(static_cast<char *>(envelope.message.body.bytes),
+                          envelope.message.body.len);
     amqp_destroy_envelope(&envelope);
   }
 }
