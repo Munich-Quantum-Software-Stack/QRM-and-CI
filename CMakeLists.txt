@@ -85,8 +85,6 @@ include_directories(
   "${CMAKE_CURRENT_SOURCE_DIR}/include/mqss/QuantumResourceManager"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/mqss/QuantumResourceManager/PassManager")
 
-add_subdirectory(src)
-
 # ###################### CUDAQ settings ###################################
 set(CUDAQ_MAIN_INCLUDE_DIR "${CUDAQ_SOURCE_DIR}/include")
 
@@ -108,8 +106,9 @@ if(NOT EXISTS ${CUDAQ_BINARY_DIR}/lib/libcudaq-mlir-runtime.so)
       "Invalid CUDAQ dir: ${CUDAQ_SOURCE_DIR}. Cannot find libcudaq.so in build directory."
   )
 endif()
-# ##############################################################################
 set(CUDAQ_TARGETS ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so)
+# ##############################################################################
+add_subdirectory(src)
 
 set(PUBLIC_QRM_HEADERS "include/mqss/QuantumResourceManager.hpp"
                        "include/mqss/ConnectionHandler.hpp")
