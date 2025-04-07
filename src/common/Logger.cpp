@@ -22,7 +22,7 @@ void Logger::init(const std::string &logFilePath, const std::string &name) {
                                               sinks.end());
 
     // Set the logging pattern
-    logger->set_pattern("%^[QRM::%Y-%m-%d %H:%M:%S] [%l] %v%$");
+    logger->set_pattern("%^[" + name + "::%Y-%m-%d %H:%M:%S] [%l] %v%$");
 
     // Set the default logging level
     logger->set_level(spdlog::level::info);
