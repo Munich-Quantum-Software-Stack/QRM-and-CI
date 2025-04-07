@@ -1,5 +1,7 @@
-#include "mqss/QuantumResourceManager.hpp"
+#include "mqss/ConnectionHandler.hpp"
+#include "mqss/LoggerHandler.hpp"
 #include "mqss/common/Logger.hpp"
+#include "mqss/common/QuantumTask.hpp"
 #include "mqss/common/RabbitMQServer.hpp"
 
 #include <boost/uuid/uuid.hpp>
@@ -57,7 +59,7 @@ void submit(QuantumTask quantumTask) {
 int main(int argc, char *argv[]) {
   // Install the signal handler for SIGINT (Ctrl+C)
   std::signal(SIGINT, signalHandler);
-  mqss::Logger::init("Submitter-log.txt", "Submitter-logger");
+  mqss::Logger::init(FILE_LOGGER_SUBMITTER, LOGGER_SUBMITTER);
   // Get the logger instance
   auto logger = mqss::Logger::getLogger();
   RabbitMQServer queueListener(AMQP_SERVER, AMQP_PORT,

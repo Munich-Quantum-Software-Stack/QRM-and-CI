@@ -2,9 +2,11 @@
  * @file qresourcemanager_d.cpp
  * @brief TODO
  */
-#include "mqss/QuantumResourceManager.hpp"
+#include "mqss/ConnectionHandler.hpp"
+#include "mqss/LoggerHandler.hpp"
 #include "mqss/QuantumResourceManager/PassRunner.hpp"
 #include "mqss/common/Logger.hpp"
+#include "mqss/common/QuantumTask.hpp"
 #include "mqss/common/RabbitMQServer.hpp"
 
 #include <boost/uuid/uuid.hpp>
@@ -107,8 +109,7 @@ void applyTargetSpecificPasses(QuantumTask quantumTask) {
 int main(int argc, char *argv[]) {
   // Install the signal handler for SIGINT (Ctrl+C)
   std::signal(SIGINT, signalHandler);
-  mqss::Logger::init("TargetSpecificPassRunner-log.txt",
-                     "TargetSpecificPassRunner-logger");
+  mqss::Logger::init(FILE_LOGGER_TRANSPILER, LOGGER_TRANSPILER);
   // Get the logger instance
   auto logger = mqss::Logger::getLogger();
   RabbitMQServer queueListener(AMQP_SERVER, AMQP_PORT,
