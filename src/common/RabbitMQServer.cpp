@@ -41,13 +41,18 @@ RabbitMQServer::~RabbitMQServer() {
   amqp_channel_close(this->conn, 1, AMQP_REPLY_SUCCESS);
   amqp_connection_close(this->conn, AMQP_REPLY_SUCCESS);
   amqp_destroy_connection(this->conn);
-  std::cout << "MQSS: RabbitMQ Server shutting down." << std::endl;
+  // std::cout << "MQSS: RabbitMQ Server shutting down." << std::endl;
 }
 
-void RabbitMQServer::publishMessage(const std::string &message) {
+void RabbitMQServer::publishMessage(const std::string &message, bool isJson) {
   amqp_bytes_t queueBytes = amqp_cstring_bytes(this->queue.c_str());
   amqp_bytes_t msg_bytes = amqp_cstring_bytes(message.c_str());
-  amqp_basic_publish(this->conn, 1, amqp_empty_bytes, queueBytes, 0, 0, nullptr,
+  amqp_basic_properties_t props;
+  props.content_type = amqp_cstring_bytes("text/plain");
+  if (isJson)
+    props.content_type = amqp_cstring_bytes("application/json");
+  // sending to queue
+  amqp_basic_publish(conn, 1, amqp_empty_bytes, queueBytes, 0, 0, &props,
                      msg_bytes);
 }
 
@@ -55,17 +60,12 @@ void RabbitMQServer::publishMessage(const std::string &reply_to,
                                     const std::string &message,
                                     const std::string &correlation_id,
                                     bool isJson) {
-  amqp_bytes_t queueBytes = amqp_cstring_bytes(reply_to.c_str());
-  amqp_bytes_t msg_bytes = amqp_cstring_bytes(message.c_str());
-  amqp_basic_publish(conn, 1, amqp_empty_bytes, queueBytes, 0, 0, nullptr,
-                     msg_bytes);
-
   amqp_basic_properties_t props;
   props._flags = AMQP_BASIC_CONTENT_TYPE_FLAG | AMQP_BASIC_CORRELATION_ID_FLAG;
   props.content_type = amqp_cstring_bytes("text/plain");
   if (isJson)
     props.content_type = amqp_cstring_bytes("application/json");
-  std::cout << "Answer correlation id: " << correlation_id << std::endl;
+  // std::cout << "Answer correlation id: " << correlation_id << std::endl;
   props.correlation_id = amqp_cstring_bytes(correlation_id.c_str());
   // sending the response
   amqp_basic_publish(conn, 1, amqp_empty_bytes,
@@ -78,8 +78,8 @@ void RabbitMQServer::consumeMessage(std::string &message) {
   amqp_rpc_reply_t res;
   amqp_envelope_t envelope;
 
-  amqp_maybe_release_buffers(this->conn);
-  res = amqp_consume_message(this->conn, &envelope, nullptr, 0);
+  amqp_maybe_release_buffers(conn);
+  res = amqp_consume_message(conn, &envelope, NULL, 0);
   if (res.reply_type == AMQP_RESPONSE_NORMAL) {
     std::string message =
         std::string(static_cast<char *>(envelope.message.body.bytes),
@@ -91,20 +91,19 @@ void RabbitMQServer::consumeMessage(std::string &message) {
 void RabbitMQServer::consumeMessage(amqp_envelope_t &envelope,
                                     std::string &message, std::string &reply_to,
                                     std::string &correlation_id) {
+  message = ""; // if not success, return empty string
   amqp_rpc_reply_t res;
-  std::cout << "Hrre!" << std::endl;
   // Attempt to get the next message from the queue
   res = amqp_consume_message(conn, &envelope, NULL, 0);
-  std::cout << "Here!" << std::endl;
-  if (res.reply_type != AMQP_RESPONSE_NORMAL)
-    throw std::runtime_error("Error consuming message from " + queue);
-  reply_to = std::string((char *)envelope.message.properties.reply_to.bytes,
-                         envelope.message.properties.reply_to.len);
-  correlation_id =
-      std::string((char *)envelope.message.properties.correlation_id.bytes,
-                  envelope.message.properties.correlation_id.len);
-  // Retrieve and process message
-  message = std::string((char *)envelope.message.body.bytes,
-                        envelope.message.body.len);
+  if (res.reply_type == AMQP_RESPONSE_NORMAL) {
+    reply_to = std::string((char *)envelope.message.properties.reply_to.bytes,
+                           envelope.message.properties.reply_to.len);
+    correlation_id =
+        std::string((char *)envelope.message.properties.correlation_id.bytes,
+                    envelope.message.properties.correlation_id.len);
+    // Retrieve and process message
+    message = std::string((char *)envelope.message.body.bytes,
+                          envelope.message.body.len);
+  }
 }
 } // namespace mqss
