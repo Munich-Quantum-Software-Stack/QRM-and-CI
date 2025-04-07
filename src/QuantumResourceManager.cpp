@@ -2,9 +2,11 @@
  * @file qresourcemanager_d.cpp
  * @brief TODO
  */
-#include "mqss/QuantumResourceManager.hpp"
-
+// #include "mqss/QuantumResourceManager.hpp"
+#include "mqss/ConnectionHandler.hpp"
+#include "mqss/LoggerHandler.hpp"
 #include "mqss/common/Logger.hpp"
+#include "mqss/common/QuantumTask.hpp"
 #include "mqss/common/RabbitMQServer.hpp"
 
 #include <boost/uuid/uuid.hpp>
@@ -21,6 +23,7 @@
 
 using json = nlohmann::json;
 using namespace mqss;
+
 // Enum definition for task states
 enum class TaskStatus { RUNNING, CANCELLED, COMPLETED, UNKNOWN };
 
@@ -89,7 +92,6 @@ void signalHandler(int signum) {
     logger->warn("Stopping the QRM daemon");
     // Close the connections
     logger->warn("Closing connections to RabbitMQ");
-    // close_connections(&conn);
     //  Finalize the QDMI session
     logger->warn("Finalizing QDMI session");
     // err = QDMI_session_finalize(session);
@@ -132,7 +134,7 @@ void processCheckStatusTask(QuantumTask quantumTask,
 int main(int argc, char *argv[]) {
   // Install the signal handler for SIGINT (Ctrl+C)
   std::signal(SIGINT, signalHandler);
-  mqss::Logger::init("QRM-log.txt", "QRM-logger");
+  mqss::Logger::init(FILE_LOGGER_QRM, LOGGER_QRM);
   // Get the logger instance
   auto logger = mqss::Logger::getLogger();
   RabbitMQServer offloaderListener(AMQP_SERVER, AMQP_PORT,
