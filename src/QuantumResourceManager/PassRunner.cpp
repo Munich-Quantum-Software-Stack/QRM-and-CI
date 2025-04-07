@@ -14,7 +14,11 @@
 // include generated pass declaration
 #include "Passes/Decompositions.h.inc"
 #include "Passes/Transforms.h.inc"
-
+// cudaq includes
+#include "cudaq/Frontend/nvqpp/AttributeNames.h"
+#include "cudaq/Optimizer/Transforms/Passes.h"
+// includes in runtime
+#include "common/RuntimeMLIR.h"
 using namespace mlir;
 using namespace mqss::opt;
 
@@ -38,11 +42,13 @@ void PassRunner::invokePasses(ModuleOp circuit,
   }
   if (mlir::failed(pm.run(circuit)))
     std::runtime_error("The pass failed...");
+}
 
-  //  if (mlir::failed(pm.parsePassPipeline(passPipelineRef))) {
-  //    llvm::errs() << "Failed to parse pass pipeline: " << passPipeline <<
-  //    "\n"; return;
-  //  }
+void PassRunner::invokePasses(std::vector<ModuleOp> circuits,
+                              const std::vector<std::string> &passes) {
+  for (auto module : circuits) {
+    invokePasses(module, passes); // later explore a way to parallelize this!
+  }
 }
 
 void PassRunner::invokePasses(ModuleOp circuit,
@@ -50,6 +56,15 @@ void PassRunner::invokePasses(ModuleOp circuit,
                               std::string device) {
   std::cout << "Invoking Target Specific Passes" << std::endl;
   mlir::PassManager pm(circuit.getContext());
+}
+
+void PassRunner::invokePasses(std::vector<ModuleOp> circuits,
+                              const std::vector<std::string> &passes,
+                              std::string device) {
+  for (auto module : circuits) {
+    invokePasses(module, passes,
+                 device); // later explore a way to parallelize this!
+  }
 }
 
 void PassRunner::applyOptimizationLevel(ModuleOp circuit, int oLevel) {
@@ -69,4 +84,35 @@ void PassRunner::applyOptimizationLevel(ModuleOp circuit, int oLevel) {
     std::runtime_error("The pass failed...");
 }
 
+void PassRunner::applyOptimizationLevel(std::vector<ModuleOp> circuits,
+                                        int oLevel) {
+  for (auto module : circuits) {
+    applyOptimizationLevel(module,
+                           oLevel); // later explore a way to parallelize this!
+  }
+}
+
+void PassRunner::transpile(ModuleOp circuit) {
+  using namespace cudaq::opt;
+  std::string basis[] = {
+      "phased_rx",
+      "z(1)",
+  };
+  std::cout << "Transpiling circuit to IQM" << std::endl;
+  mlir::PassManager pm(circuit.getContext());
+  BasisConversionPassOptions options;
+  options.basis = basis;
+  pm.addPass(createBasisConversionPass(options));
+  // pass to canonical form and remove non-used operations
+  pm.addPass(mlir::createCanonicalizerPass());
+  pm.addPass(mlir::createCSEPass());
+  if (mlir::failed(pm.run(circuit)))
+    std::runtime_error("The pass failed...");
+}
+
+void PassRunner::transpile(std::vector<ModuleOp> circuits) {
+  for (auto module : circuits) {
+    transpile(module); // later explore a way to parallelize this!
+  }
+}
 } // namespace QRM
