@@ -1,5 +1,6 @@
 #include "mqss/ConnectionHandler.hpp"
 #include "mqss/common/Logger.hpp"
+#include "mqss/common/QuantumTask.hpp"
 #include "mqss/common/RabbitMQClient.hpp"
 
 #include <boost/uuid/uuid.hpp>
@@ -18,6 +19,7 @@
 #include <vector>
 
 using json = nlohmann::json;
+using namespace mqss;
 
 struct QuantumResult {
   int task_id;
@@ -54,120 +56,114 @@ int main(int argc, char *argv[]) {
   std::cout << "Starting test-qrm-simple" << std::endl;
   mqss::RabbitMQClient client(AMQP_SERVER, AMQP_PORT, QUEUE_OFFLOADER_LISTENER,
                               AMQP_USER, AMQP_PASSWORD);
-  std::string result =
-      client.sendMessageWithReply(QUEUE_OFFLOADER_LISTENER, "hola", false);
-  std::cout << "result " << result << std::endl;
-  // Establish a connection to the RabbitMQ server
-  /*  const char *QDQueue = "queue_daemon";
-    const char *QRMQueue = "queue_manager";
+  std::string filename = "../../benchmarks/Example.qke";
+  std::ifstream file(filename);
+  if (!file) {
+    std::cerr << "Failed to open file." << std::endl;
+    return 1;
+  }
+  std::stringstream bufferFile;
+  bufferFile << file.rdbuf();                  // Read file content into buffer
+  std::string quakeCircuit = bufferFile.str(); // Convert buffer to string
+  // Create JSON string to send to the Quantum Resource Manager
+  std::time_t currentTime = std::time(nullptr);
+  const int bufferSize = 80;
+  char buffer[bufferSize];
+  std::strftime(buffer, bufferSize, "%Y-%m-%d %H:%M:%S",
+                std::localtime(&currentTime));
+  std::string submit_time(buffer);
+  std::vector<std::string> circuit_files;
+  circuit_files.push_back(quakeCircuit);
+  boost::uuids::uuid new_uuid = boost::uuids::nil_uuid();
+  json QuantumTask_json = {{"task_id", boost::uuids::to_string(new_uuid)},
+                           {"n_qbits", 0},
+                           {"n_shots", 1024},
+                           {"circuit_files", circuit_files},
+                           {"circuit_file_type", "quake"}, // qasm, qir, quake
+                           {"preferred_qpu", "libbackend_ibm"},
+                           {"scheduled_qpu", ""},
+                           {"result_destination", ""},
+                           {"priority", 0},
+                           {"optimisation_level", 3}, // 0, 1, 2, 3
+                           {"no_modify", false},
+                           {"transpiler_flag", true},
+                           {"result_type", 0},
+                           {"submit_time", submit_time},
+                           {"circuits_qiskit", json::array()},
+                           {"additional_information", ""},
+                           {"restricted_resource_names", json::array()},
+                           {"user_identity", ""},
+                           {"token", ""},
+                           {"via_hpc", true}};
 
-    amqp_connection_state_t conn;
-    amqp_socket_t *socket = NULL;
-    rabbitmq_new_connection(&conn, &socket);
+  std::string QuantumTask_str = QuantumTask_json.dump();
+  std::string result = client.sendMessageWithReply(QUEUE_OFFLOADER_LISTENER,
+                                                   QuantumTask_str, true);
+  QuantumTask returnedQT = dumpJsonToQuantumTask(result.c_str());
+  std::cout << "I have submitted task wit id: " << returnedQT.task_id
+            << std::endl;
+  // now I check the status of the submitted task
+  for (int i = 0; i < 10; i++) {
+    QuantumTask_str = dumpQuantumTaskToJson(returnedQT).dump();
+    std::string status = client.sendMessageWithReply(QUEUE_OFFLOADER_LISTENER,
+                                                     QuantumTask_str, true);
+    std::cout << "STATUS: " << status << std::endl;
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+  }
 
-    // Open the QIR file
-    const char *filename = "../../benchmarks/Example.qke";
-    std::ifstream file(filename, std::ios::binary);
-    if (!file.is_open()) {
-      std::cerr << "[Quantum Daemon]......Failed to open file with QIR: "
-                << filename << std::endl;
-      return 1;
-    }
+  /*    // delete[] genericQir;
 
-    // Read the file with the generic QIR
-    const std::streamsize chunkSize = 1024;
-    char bufferQir[chunkSize];
-    std::string quake;
-
-    while (!file.eof()) {
-      file.read(bufferQir, chunkSize);
-      quake.append(bufferQir, file.gcount());
-    }
-    file.close();
-
-    // Create JSON string to send to the Quantum Resource Manager
-    std::time_t currentTime = std::time(nullptr);
-    const int bufferSize = 80;
-    char buffer[bufferSize];
-    std::strftime(buffer, bufferSize, "%Y-%m-%d %H:%M:%S",
-                  std::localtime(&currentTime));
-    std::string submit_time(buffer);
-    std::vector<std::string> circuit_files;
-    circuit_files.push_back(quake);
-    json QuantumTask_json = {{"task_id", -1},
-                             {"n_qbits", 0},
-                             {"n_shots", 1024},
-                             {"circuit_files", circuit_files},
-                             {"circuit_file_type", "quake"}, // qasm, qir, quake
-                             {"preferred_qpu", "/libbackend_ibm.so"},
-                             {"scheduled_qpu", ""},
-                             {"result_destination", ""},
-                             {"priority", 0},
-                             {"optimisation_level", 3}, // 0, 1, 2, 3
-                             {"no_modify", false},
-                             {"transpiler_flag", true},
-                             {"result_type", 0},
-                             {"submit_time", submit_time},
-                             {"circuits_qiskit", json::array()},
-                             {"additional_information", ""},
-                             {"restricted_resource_names", json::array()},
-                             {"user_identity", ""},
-                             {"token", ""},
-                             {"via_hpc", true}};
-
-    std::string QuantumTask_str = QuantumTask_json.dump();
-
-    // delete[] genericQir;
-
-    // Send the QuantumTask to the Quantum Resource Manager
-    std::cout << "[Quantum Daemon]......Sending QuantumTask to the QRM"
-              << std::endl;
-
-    send_message(&conn, QuantumTask_str.c_str(), QRMQueue);
-
-    // Receive the response from the daemon
-    const char *results = receive_message(&conn, QDQueue);
-    std::cout << "HERE" << std::endl;
-    // TODO Why do we need such a delay for the output
-    //      stream to work
-    // std::this_thread::sleep_for(std::chrono::milliseconds(150));
-    // std::cout << std::flush;
-    if (results) {
-      std::cout << "HERE" << std::endl;
-      QuantumResult quantumResult = JSONToQuantumResult(results);
-      int count = 0;
-
-      std::cout << "[Quantum Daemon]......Received QuantumResult" << std::endl;
-      // std::cout << "                      L ...task_id: "
-      //           << quantumResult.task_id << std::endl;
-      // std::cout << "                      L ...destination: "
-      //           << quantumResult.destination << std::endl;
-      // std::cout << "                      L ...execution_status: "
-      //           << quantumResult.execution_status << std::endl;
-      // std::cout << "                      L ...executed_qpu(s): {";
-      // for (const auto &qpu : quantumResult.executed_qpu)
-      //     std::cout << " " << qpu;
-      // std::cout << " }" << std::endl;
-      // std::cout << "                      L ...additional_information: "
-      //           << quantumResult.additional_information << std::endl;
-      // std::cout << "                      L ...execution_time: "
-      //           << quantumResult.execution_time << " s." << std::endl;
-      // std::cout << "                      L ...executed_circuit(s): ";
-      // for (const auto &qir : quantumResult.executed_circuit)
-      //     std::cout << std::endl << "Circuit " << ++count << ":"
-      //               << std::endl << qir;
-      // std::cout << std::endl << "Results: " << std::endl;
-      // for (const auto &result : quantumResult.results)
-      //     std::cout << "\t" << result.first << ": " << result.second
-      //               << std::endl;
-      // std::cout << std::endl;
-    } else {
-      std::cout << "[Quantum Daemon]......Error: Failed to receive the results"
+      // Send the QuantumTask to the Quantum Resource Manager
+      std::cout << "[Quantum Daemon]......Sending QuantumTask to the QRM"
                 << std::endl;
-    }
 
-    // Close the connections
-    close_connections(&conn);
-  */
+      send_message(&conn, QuantumTask_str.c_str(), QRMQueue);
+
+      // Receive the response from the daemon
+      const char *results = receive_message(&conn, QDQueue);
+      std::cout << "HERE" << std::endl;
+      // TODO Why do we need such a delay for the output
+      //      stream to work
+      // std::this_thread::sleep_for(std::chrono::milliseconds(150));
+      // std::cout << std::flush;
+      if (results) {
+        std::cout << "HERE" << std::endl;
+        QuantumResult quantumResult = JSONToQuantumResult(results);
+        int count = 0;
+
+        std::cout << "[Quantum Daemon]......Received QuantumResult" <<
+     std::endl;
+        // std::cout << "                      L ...task_id: "
+        //           << quantumResult.task_id << std::endl;
+        // std::cout << "                      L ...destination: "
+        //           << quantumResult.destination << std::endl;
+        // std::cout << "                      L ...execution_status: "
+        //           << quantumResult.execution_status << std::endl;
+        // std::cout << "                      L ...executed_qpu(s): {";
+        // for (const auto &qpu : quantumResult.executed_qpu)
+        //     std::cout << " " << qpu;
+        // std::cout << " }" << std::endl;
+        // std::cout << "                      L ...additional_information: "
+        //           << quantumResult.additional_information << std::endl;
+        // std::cout << "                      L ...execution_time: "
+        //           << quantumResult.execution_time << " s." << std::endl;
+        // std::cout << "                      L ...executed_circuit(s): ";
+        // for (const auto &qir : quantumResult.executed_circuit)
+        //     std::cout << std::endl << "Circuit " << ++count << ":"
+        //               << std::endl << qir;
+        // std::cout << std::endl << "Results: " << std::endl;
+        // for (const auto &result : quantumResult.results)
+        //     std::cout << "\t" << result.first << ": " << result.second
+        //               << std::endl;
+        // std::cout << std::endl;
+      } else {
+        std::cout << "[Quantum Daemon]......Error: Failed to receive the
+     results"
+                  << std::endl;
+      }
+
+      // Close the connections
+      close_connections(&conn);
+    */
   return 0;
 }
