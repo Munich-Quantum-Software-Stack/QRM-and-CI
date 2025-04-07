@@ -1,11 +1,17 @@
 #pragma once
 
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
 
+using json = nlohmann::json;
+
 namespace mqss {
 struct QuantumTask {
-  int task_id;
+  boost::uuids::uuid task_id;
   int n_qbits;
   int n_shots;
   std::vector<std::string> circuit_files;
@@ -29,6 +35,7 @@ struct QuantumTask {
   // ThreadSafeModule thread_safe_module;
 };
 
-QuantumTask JSONToQuantumTask(const char *QuantumTaskAsString);
-
+QuantumTask dumpJsonToQuantumTask(const char *QuantumTaskAsString);
+json dumpQuantumTaskToJson(const QuantumTask &task);
+void dumpQuantumTask(const QuantumTask &quantumTask);
 } // namespace mqss
