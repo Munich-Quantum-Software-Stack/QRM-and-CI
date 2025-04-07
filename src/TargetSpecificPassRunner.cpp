@@ -95,6 +95,9 @@ void applyTargetSpecificPasses(QuantumTask quantumTask) {
   RabbitMQServer forwardQueue(AMQP_SERVER, AMQP_PORT,
                               QUEUE_TRANSPILER_SUBMITTER, AMQP_USER,
                               AMQP_PASSWORD);
+  std::cout << "Received task with id: " << quantumTask.task_id << std::endl;
+  for (auto task : quantumTask.circuit_files)
+    std::cout << task << std::endl;
   json taskJson = dumpQuantumTaskToJson(std::ref(quantumTask));
   forwardQueue.publishMessage(taskJson.dump(), true);
 }
@@ -102,7 +105,7 @@ void applyTargetSpecificPasses(QuantumTask quantumTask) {
 /**
  * @brief The main entry point of the program.
  *
- * The Quantum Resource Manager daemon.
+ * Target Specific Pass Runner.
  *
  * @return int
  */

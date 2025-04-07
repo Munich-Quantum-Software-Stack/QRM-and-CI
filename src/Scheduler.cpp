@@ -52,6 +52,9 @@ void schedule(QuantumTask quantumTask) {
   RabbitMQServer forwardQueue(AMQP_SERVER, AMQP_PORT,
                               QUEUE_SCHEDULER_TRANSPILER, AMQP_USER,
                               AMQP_PASSWORD);
+  std::cout << "Received task with id: " << quantumTask.task_id << std::endl;
+  for (auto task : quantumTask.circuit_files)
+    std::cout << task << std::endl;
   json taskJson = dumpQuantumTaskToJson(quantumTask);
   // the functionaliyt of the pass runner goes here!
   // after processing, move forward the quantum task
@@ -72,9 +75,8 @@ int main(int argc, char *argv[]) {
   queueListener.startToConsume();
   while (true) {
     logger->info("Waiting for a new job...");
-    amqp_envelope_t envelope;
-    std::string message, replyQueue, correlationId;
-    queueListener.consumeMessage(envelope, message, replyQueue, correlationId);
+    std::string message;
+    queueListener.consumeMessage(message);
     QuantumTask quantumTask = dumpJsonToQuantumTask(message.c_str());
     std::string taskId = boost::uuids::to_string(quantumTask.task_id);
     threadsConnections.push_back(std::thread(schedule, std::move(quantumTask)));

@@ -54,6 +54,9 @@ void submit(QuantumTask quantumTask) {
 
   // after processing, move forward the quantum task
   // forwardQueue.publishMessage(taskJson.dump(), true);
+  std::cout << "Received task with id: " << quantumTask.task_id << std::endl;
+  for (auto task : quantumTask.circuit_files)
+    std::cout << task << std::endl;
 }
 
 int main(int argc, char *argv[]) {
@@ -70,9 +73,8 @@ int main(int argc, char *argv[]) {
   queueListener.startToConsume();
   while (true) {
     logger->info("Waiting for a new job...");
-    amqp_envelope_t envelope;
-    std::string message, replyQueue, correlationId;
-    queueListener.consumeMessage(envelope, message, replyQueue, correlationId);
+    std::string message;
+    queueListener.consumeMessage(message);
     QuantumTask quantumTask = dumpJsonToQuantumTask(message.c_str());
     std::string taskId = boost::uuids::to_string(quantumTask.task_id);
     threadsConnections.push_back(std::thread(submit, std::move(quantumTask)));

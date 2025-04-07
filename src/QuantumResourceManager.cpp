@@ -113,9 +113,10 @@ void processTask(QuantumTask quantumTask, const std::string &replyQueue,
   addJobStatus(taskId, TaskStatus::RUNNING);
   replyServer.publishMessage(replyQueue, taskJson.dump(), correlationId, true);
   // now I pass the task to the Quantum Agnostic Pass Runner
-  RabbitMQServer toAgnosticPasses(AMQP_SERVER, AMQP_PORT,
-                                  QUEUE_QRM_AGNOSTIC_PASS_RUNNER, AMQP_USER,
-                                  AMQP_PASSWORD);
+  RabbitMQServer forwardQueue(AMQP_SERVER, AMQP_PORT,
+                              QUEUE_QRM_AGNOSTIC_PASS_RUNNER, AMQP_USER,
+                              AMQP_PASSWORD);
+  forwardQueue.publishMessage(taskJson.dump(), true);
 }
 
 void processCheckStatusTask(QuantumTask quantumTask,

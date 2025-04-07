@@ -153,6 +153,9 @@ void applyTargetAgnosticPasses(QuantumTask quantumTask) {
   RabbitMQServer forwardQueue(AMQP_SERVER, AMQP_PORT,
                               QUEUE_AGNOSTIC_PASS_RUNNER_SCHEDULER, AMQP_USER,
                               AMQP_PASSWORD);
+  std::cout << "Received task with id: " << quantumTask.task_id << std::endl;
+  for (auto task : quantumTask.circuit_files)
+    std::cout << task << std::endl;
   json taskJson = dumpQuantumTaskToJson(quantumTask);
   // the functionaliyt of the pass runner goes here!
   // after processing, move forward the quantum task
