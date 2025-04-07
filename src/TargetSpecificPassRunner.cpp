@@ -98,6 +98,21 @@ void applyTargetSpecificPasses(QuantumTask quantumTask) {
   std::cout << "Received task with id: " << quantumTask.task_id << std::endl;
   for (auto task : quantumTask.circuit_files)
     std::cout << task << std::endl;
+  // the functionaliyt of the pass runner goes here!
+  std::vector<mlir::ModuleOp> modules = getMLIRModules(quantumTask);
+  QRM::PassRunner passRunner;
+  passRunner.transpile(modules);
+  // update the list of string modules
+  std::vector<std::string> updatedCircuits;
+  for (auto module : modules) {
+    // Convert the module to a string
+    std::string moduleOutput;
+    llvm::raw_string_ostream stringStream(moduleOutput);
+    module->print(stringStream);
+    updatedCircuits.push_back(moduleOutput);
+  }
+  quantumTask.circuit_files = updatedCircuits;
+
   json taskJson = dumpQuantumTaskToJson(std::ref(quantumTask));
   forwardQueue.publishMessage(taskJson.dump(), true);
 }
