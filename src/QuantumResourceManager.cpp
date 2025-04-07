@@ -4,167 +4,77 @@
  */
 #include "mqss/QuantumResourceManager.hpp"
 
-#include "mqss/QuantumResourceManager/PassRunner.hpp"
-#include "mqss/Utils/Logger.hpp"
+#include "mqss/common/Logger.hpp"
+#include "mqss/common/RabbitMQServer.hpp"
 
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <csignal>
 #include <cstdlib>
 #include <iostream>
+#include <map>
+#include <mutex>
 #include <nlohmann/json.hpp>
-// llvm includes
-#include "llvm/Bitcode/BitcodeReader.h"
-
-#include <llvm/Support/Base64.h>
-// mlir includes
-#include "mlir/ExecutionEngine/OptUtils.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/Parser/Parser.h"
-// cudaq includes
-#include "Passes/Transforms.hpp"
-#include "common/JIT.h"
-#include "common/RuntimeMLIR.h"
-#include "cudaq/Optimizer/CodeGen/Pipelines.h"
+#include <shared_mutex>
+#include <thread>
 
 using json = nlohmann::json;
-using namespace mlir;
+using namespace mqss;
+// Enum definition for task states
+enum class TaskStatus { RUNNING, CANCELLED, COMPLETED, UNKNOWN };
 
-namespace mlir {
-void registerPasses() {
-  // Register the passes from the TableGen-generated code
-  registerMQSSOptTransformsPasses();
-}
-} // namespace mlir
-
-/**
- * @var conn
- * @brief TODO
- */
-amqp_connection_state_t conn;
-/**
- * @todo Comment this function
- */
-QuantumTask JSONToQuantumTask(const char *QuantumTask_str) {
-  QuantumTask qt;
-  auto logger = mqss::Logger::getLogger();
-  json jsonQT = json::parse(QuantumTask_str);
-
-  if (!jsonQT.contains("task_id")) {
-    logger->warn("task_id not defined in json file");
-    return QuantumTask();
+// Function to convert enum to string (for easy printing)
+const char *to_string(TaskStatus status) {
+  switch (status) {
+  case TaskStatus::RUNNING:
+    return "RUNNING";
+  case TaskStatus::CANCELLED:
+    return "CANCELLED";
+  case TaskStatus::COMPLETED:
+    return "COMPLETED";
+  case TaskStatus::UNKNOWN:
+    return "UNKNOWN";
+  default:
+    return "UNKNOWN";
   }
-  jsonQT.at("task_id").get_to(qt.task_id);
-  jsonQT.at("n_qbits").get_to(qt.n_qbits);
-  jsonQT.at("n_shots").get_to(qt.n_shots);
-  if (!jsonQT.contains("circuit_files")) {
-    logger->warn("circuit_files not defined in json file");
-    return QuantumTask();
-  }
-  jsonQT.at("circuit_files").get_to(qt.circuit_files);
-  jsonQT.at("circuit_file_type").get_to(qt.circuit_file_type);
-  jsonQT.at("result_destination").get_to(qt.result_destination);
-  jsonQT.at("preferred_qpu").get_to(qt.preferred_qpu);
-  jsonQT.at("scheduled_qpu").get_to(qt.scheduled_qpu);
-  jsonQT.at("priority").get_to(qt.priority);
-  jsonQT.at("optimisation_level").get_to(qt.optimisation_level);
-  jsonQT.at("no_modify").get_to(qt.no_modify);
-  jsonQT.at("transpiler_flag").get_to(qt.transpiler_flag);
-  jsonQT.at("result_type").get_to(qt.result_type);
-  jsonQT.at("submit_time").get_to(qt.submit_time);
-  jsonQT.at("circuits_qiskit").get_to(qt.circuits_qiskit);
-  jsonQT.at("additional_information").get_to(qt.additional_information);
-  jsonQT.at("restricted_resource_names").get_to(qt.restricted_resource_names);
-  jsonQT.at("user_identity").get_to(qt.user_identity);
-  jsonQT.at("token").get_to(qt.token);
-  jsonQT.at("via_hpc").get_to(qt.via_hpc);
-  return qt;
 }
 
-std::tuple<mlir::ModuleOp, mlir::MLIRContext *>
-extractMLIRContext(const std::string &quakeModule) {
-  auto contextPtr = cudaq::initializeMLIR();
-  mlir::MLIRContext &context = *contextPtr.get();
+std::map<boost::uuids::uuid,
+         std::pair<std::string, std::unordered_map<int, int>>>
+    finishedJobs;
+std::map<boost::uuids::uuid, TaskStatus> statusQuantumJobs;
+std::shared_mutex jobsMutex;
+// Start threads to consume from each queue concurrently
+std::vector<std::thread> threadsConnections;
 
-  // Get the quake representation of the kernel
-  auto quakeCode = quakeModule;
-  auto m_module = mlir::parseSourceString<mlir::ModuleOp>(quakeCode, &context);
-  if (!m_module)
-    throw std::runtime_error("Module cannot be parsed");
-
-  return std::make_tuple(m_module.release(), contextPtr.release());
+void joinThreadsConnections() {
+  for (auto &thread : threadsConnections)
+    if (thread.joinable())
+      thread.join();
 }
 
-/**
- * @brief TODO
- * @param conn TODO
- * @param QDQueue TODO
- * @param receivedQirModule TODO
- * @param receivedScheduler TODO
- * @param receivedSelector TODO
- */
-void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
-                         QuantumTask &parentQuantumTask) {
-  auto logger = mqss::Logger::getLogger();
-  int err;
-  auto start = std::chrono::steady_clock::now();
-  std::vector<mlir::ModuleOp> mlirCircuits;
+void addJobStatus(const boost::uuids::uuid &uuid, TaskStatus status) {
+  std::unique_lock<std::shared_mutex> lock(
+      jobsMutex); // Exclusive lock for writing
+  statusQuantumJobs[uuid] = status;
+}
 
-  logger->info("Quantum Daemon");
-  logger->info("Quantum Tasks:");
-  // registering mqss passes
-  mlir::registerPasses();
-  for (std::string circuit : parentQuantumTask.circuit_files) {
-    // here parse each quantum task
-    // get the mlir module of the given quantum kernel
-    auto [quakeModule, contextPtr] = extractMLIRContext(circuit);
-    mlirCircuits.push_back(quakeModule);
-    // #ifdef DEBUG
-    quakeModule->dump();
-    // #endif
+// Thread-safe function to check if a task exists
+bool jobStatusExists(const boost::uuids::uuid &uuid) {
+  std::lock_guard<std::shared_mutex> lock(jobsMutex); // Locking the mutex
+  return statusQuantumJobs.find(uuid) !=
+         statusQuantumJobs.end(); // Safe check for existence
+}
+
+TaskStatus getJobStatus(const boost::uuids::uuid &taskId) {
+  std::shared_lock<std::shared_mutex> lock(
+      jobsMutex); // Shared lock for reading
+  auto it = statusQuantumJobs.find(taskId);
+  if (it != statusQuantumJobs.end()) {
+    return it->second; // Return the task
   }
-  // First getting the mlir context to create the pass manager
-  QRM::PassRunner passRunner;
-  // for(auto quakeModule : mlirCircuits){
-  //   passRunner.applyOptimizationLevel(quakeModule,
-  //                                     parentQuantumTask.optimisation_level);
-  //   // #ifdef DEBUG
-  //   std::cout << "Circuit after " << parentQuantumTask.optimisation_level
-  //           << ":\n";
-  //   quakeModule->dump();
-  // }
-  std::vector<std::string> passes = {"CancellationDoubleCx", "canonicalize",
-                                     "cse"};
-  // std::vector<std::string> passes = {"canonicalize", "cse"};
-  for (auto quakeModule : mlirCircuits) {
-    passRunner.invokePasses(quakeModule, passes);
-    // #ifdef DEBUG
-    std::cout << "Circuit after custom passes:\n";
-    quakeModule->dump();
-  }
-  // #endif
-  // Invoke the generator
-  // Invoke the scheduler
-  // Compile and execute each generated sub-circuit
-  // Invoke the target-specific passes
-  for (auto quakeModule : mlirCircuits) {
-    passRunner.invokePasses(quakeModule, passes, "device");
-  }
-  // Submission
-  auto end = std::chrono::steady_clock::now();
-  std::chrono::duration<double, std::milli> elapsed_milliseconds = end - start;
-  // Create JSON string to send back to the Quantum Daemon
-  json QuantumResult_json = {
-      {"task_id", -1},
-      //{"results", results},
-      {"destination", ""},
-      {"execution_status", true},
-      //{"executed_qpu", targets},
-      //{"executed_circuit", modules},
-      {"additional_information", ""},
-      {"execution_time", elapsed_milliseconds.count()},
-  };
-  // return the same quantum task but with results
-  std::string QuantumResult_str = QuantumResult_json.dump();
-  send_message(&conn, QuantumResult_str.c_str(), QDQueue);
+  return TaskStatus::UNKNOWN;
 }
 
 /**
@@ -179,74 +89,85 @@ void signalHandler(int signum) {
     logger->warn("Stopping the QRM daemon");
     // Close the connections
     logger->warn("Closing connections to RabbitMQ");
-    close_connections(&conn);
-    // Finalize the QDMI session
+    // close_connections(&conn);
+    //  Finalize the QDMI session
     logger->warn("Finalizing QDMI session");
     // err = QDMI_session_finalize(session);
     // CHECK_ERR(err, "QDMI_session_finalize");
+    joinThreadsConnections();
     mqss::Logger::cleanup();
     exit(0);
   }
 }
 
-/**
- * @brief The main entry point of the program.
- *
- * The Quantum Resource Manager daemon.
- *
- * @return int
- */
+void processTask(QuantumTask quantumTask, const std::string &replyQueue,
+                 const std::string &correlationId, boost::uuids::uuid taskId) {
+  RabbitMQServer replyServer(AMQP_SERVER, AMQP_PORT, QUEUE_OFFLOADER_LISTENER,
+                             AMQP_USER, AMQP_PASSWORD);
+  quantumTask.task_id = taskId;
+  // dumpQuantumTask(quantumTask);
+  json taskJson = dumpQuantumTaskToJson(std::ref(quantumTask));
+  // register job
+  addJobStatus(taskId, TaskStatus::RUNNING);
+  replyServer.publishMessage(replyQueue, taskJson.dump(), correlationId, true);
+  // now I pass the task to the Quantum Agnostic Pass Runner
+  RabbitMQServer toAgnosticPasses(AMQP_SERVER, AMQP_PORT,
+                                  QUEUE_QRM_AGNOSTIC_PASS_RUNNER, AMQP_USER,
+                                  AMQP_PASSWORD);
+}
+
+void processCheckStatusTask(QuantumTask quantumTask,
+                            const std::string &replyQueue,
+                            const std::string &correlationId) {
+  RabbitMQServer replyServer(AMQP_SERVER, AMQP_PORT, QUEUE_OFFLOADER_LISTENER,
+                             AMQP_USER, AMQP_PASSWORD);
+  TaskStatus statusJob = getJobStatus(quantumTask.task_id);
+  nlohmann::json statusJson = {{"status", to_string(statusJob)}};
+  replyServer.publishMessage(replyQueue, statusJson.dump(), correlationId,
+                             true);
+  // at this point I have to pass the task to the queue connecting to the
+  // agnostic pass runner
+}
+
 int main(int argc, char *argv[]) {
+  // Install the signal handler for SIGINT (Ctrl+C)
+  std::signal(SIGINT, signalHandler);
   mqss::Logger::init("QRM-log.txt", "QRM-logger");
   // Get the logger instance
   auto logger = mqss::Logger::getLogger();
+  RabbitMQServer offloaderListener(AMQP_SERVER, AMQP_PORT,
+                                   QUEUE_OFFLOADER_LISTENER, AMQP_USER,
+                                   AMQP_PASSWORD);
   logger->info("Running up the Quantum Resource Manager (QRM)");
-  // Install the signal handler for SIGINT (Ctrl+C)
-  std::signal(SIGINT, signalHandler);
-
-  // Log some messages
-  //  logger->info("This is an info message.");
-  //  logger->warn("This is a warning message.");
-  //  logger->error("This is an error message.");
-  //  logger->debug("This a debug message");
-  //  logger->trace("This is a trace message");
-
-  // Establish a connection to the RabbitMQ server
-  const char *QDQueue = "queue_daemon";
-  const char *QRMQueue = "queue_manager";
-  amqp_socket_t *socket = NULL;
-  rabbitmq_new_connection(&conn, &socket);
-
-  // Declare the Quantum Daemon queue
-  amqp_queue_declare(conn, 1, amqp_cstring_bytes(QDQueue), 0, 1, 0, 0,
-                     amqp_empty_table);
-  // Declare the Quantum Resource Manager queue
-  amqp_queue_declare(conn, 1, amqp_cstring_bytes(QRMQueue), 0, 1, 0, 0,
-                     amqp_empty_table);
-  amqp_rpc_reply_t consume_reply = amqp_get_rpc_reply(conn);
-
-  if (consume_reply.reply_type != AMQP_RESPONSE_NORMAL) {
-    logger->error("Error starting to consume messages");
-    return 1;
-  }
-
-  // Start the QDMI session
-  int err;
-
+  // tell the offloaderListener to start to consume
+  offloaderListener.startToConsume();
   while (true) {
     logger->info("Waiting for a new job...");
-    // Receive a QuantumTask
-    auto *task = receive_message(&conn,     // conn
-                                 QRMQueue); // queue
-    if (task) {
-      QuantumTask parentQuantumTask = JSONToQuantumTask(task);
-      logger->info("Received a QuantumTask");
-      handleQuantumDaemon(conn, QDQueue, parentQuantumTask);
+    amqp_envelope_t envelope;
+    std::string message, replyQueue, correlationId;
+    offloaderListener.consumeMessage(envelope, message, replyQueue,
+                                     correlationId);
+    boost::uuids::random_generator generator;
+    QuantumTask quantumTask = dumpJsonToQuantumTask(message.c_str());
+    if (quantumTask.task_id == boost::uuids::nil_uuid()) {
+      // Generate a new UUID
+      boost::uuids::uuid newTaskId = generator();
+      threadsConnections.push_back(
+          std::thread(processTask, std::move(quantumTask), replyQueue,
+                      correlationId, newTaskId));
+      logger->info("Processing new task with id: {}",
+                   boost::uuids::to_string(newTaskId));
     } else {
-      logger->error("Error: Failed to receive the task");
+      boost::uuids::uuid taskId = quantumTask.task_id;
+      threadsConnections.push_back(std::thread(processCheckStatusTask,
+                                               std::move(quantumTask),
+                                               replyQueue, correlationId));
+      logger->info("Checking status of task with id: {}",
+                   boost::uuids::to_string(taskId));
     }
   }
   // Ensure the logger is properly destroyed
+  joinThreadsConnections();
   mqss::Logger::cleanup();
   return 1;
 }
