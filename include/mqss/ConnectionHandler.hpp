@@ -24,7 +24,7 @@
 
 #define QUEUE_OFFLOADER_LISTENER "OffloaderListener-to-QRM"
 #define QUEUE_QRM_AGNOSTIC_PASS_RUNNER "QRM-To-AgnosticPassRunner"
-#define QUEUE_AGNOSTIC_PASS_RUNNER_GENERATOR "AgnosticPassRunner-To-Scheduler"
+#define QUEUE_AGNOSTIC_PASS_RUNNER_SCHEDULER "AgnosticPassRunner-To-Scheduler"
 #define QUEUE_SCHEDULER_TRANSPILER "Scheduler-To-Transpiler"
 #define QUEUE_TRANSPILER_SUBMITTER "Transpiler-To-Submitter"
 #define QUEUE_SUBMITTER_QRM "Submitter-To-QRM"
