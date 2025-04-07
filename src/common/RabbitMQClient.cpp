@@ -112,6 +112,7 @@ RabbitMQClient::getMessageFromReplyQueue(const std::string &correlation_id,
     std::string message = std::string((char *)envelope.message.body.bytes,
                                       envelope.message.body.len);
     amqp_destroy_envelope(&envelope);
+    amqp_queue_delete(conn, 1, amqp_cstring_bytes(reply_queue.c_str()), 0, 0);
     return message;
   }
   return "";
