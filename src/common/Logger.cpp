@@ -1,7 +1,6 @@
 #include "mqss/common/Logger.hpp"
 
 namespace mqss {
-
 // Initialize the static logger instance
 std::shared_ptr<spdlog::logger> Logger::logger = nullptr;
 std::once_flag Logger::init_flag;
@@ -46,5 +45,4 @@ void Logger::cleanup() {
     logger = nullptr;         // Reset the logger pointer
   }
 }
-
 } // namespace mqss
