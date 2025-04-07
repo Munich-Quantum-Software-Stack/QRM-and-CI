@@ -2,6 +2,29 @@
 
 #include <iostream>
 
+std::tuple<mlir::ModuleOp, mlir::MLIRContext *>
+mqss::extractMLIRContext(const std::string &quakeModule) {
+  auto contextPtr = cudaq::initializeMLIR();
+  mlir::MLIRContext &context = *contextPtr.get();
+
+  // Get the quake representation of the kernel
+  auto quakeCode = quakeModule;
+  auto m_module = mlir::parseSourceString<mlir::ModuleOp>(quakeCode, &context);
+  if (!m_module)
+    throw std::runtime_error("Module cannot be parsed");
+  return std::make_tuple(m_module.release(), contextPtr.release());
+}
+
+std::vector<mlir::ModuleOp>
+mqss::getMLIRModules(const QuantumTask &quantumTask) {
+  std::vector<mlir::ModuleOp> result;
+  for (auto circuit : quantumTask.circuit_files) {
+    auto [quakeModule, contextPtr] = extractMLIRContext(circuit);
+    result.push_back(quakeModule);
+  }
+  return result;
+}
+
 void mqss::dumpQuantumTask(const QuantumTask &quantumTask) {
   std::cout << "task_id " << quantumTask.task_id << std::endl;
   std::cout << "n_qbits " << quantumTask.n_qbits << std::endl;
