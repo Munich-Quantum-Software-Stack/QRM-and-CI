@@ -52,20 +52,7 @@ void registerPasses() {
 }
 } // namespace mlir
 
-std::tuple<mlir::ModuleOp, mlir::MLIRContext *>
-extractMLIRContext(const std::string &quakeModule) {
-  auto contextPtr = cudaq::initializeMLIR();
-  mlir::MLIRContext &context = *contextPtr.get();
-
-  // Get the quake representation of the kernel
-  auto quakeCode = quakeModule;
-  auto m_module = mlir::parseSourceString<mlir::ModuleOp>(quakeCode, &context);
-  if (!m_module)
-    throw std::runtime_error("Module cannot be parsed");
-  return std::make_tuple(m_module.release(), contextPtr.release());
-}
-
-void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
+/*void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
                          QuantumTask &parentQuantumTask) {
   auto logger = mqss::Logger::getLogger();
   int err;
@@ -74,12 +61,12 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
 
   logger->info("Quantum Daemon");
   logger->info("Quantum Tasks:");
-  // registering mqss passes
-  mlir::registerPasses();
+
+
   for (std::string circuit : parentQuantumTask.circuit_files) {
     // here parse each quantum task
     // get the mlir module of the given quantum kernel
-    auto [quakeModule, contextPtr] = extractMLIRContext(circuit);
+    //auto [quakeModule, contextPtr] = extractMLIRContext(circuit);
     mlirCircuits.push_back(quakeModule);
     // #ifdef DEBUG
     quakeModule->dump();
@@ -105,10 +92,6 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
     quakeModule->dump();
   }
   // #endif
-  // Invoke the generator
-  // Invoke the scheduler
-  // Compile and execute each generated sub-circuit
-  // Invoke the target-specific passes
   for (auto quakeModule : mlirCircuits) {
     passRunner.invokePasses(quakeModule, passes, "device");
   }
@@ -129,7 +112,7 @@ void handleQuantumDaemon(amqp_connection_state_t &conn, char const *QDQueue,
   // return the same quantum task but with results
   std::string QuantumResult_str = QuantumResult_json.dump();
   // send_message(&conn, QuantumResult_str.c_str(), QDQueue);
-}
+}*/
 
 /**
  * @brief Function for the graceful termination of this daemon closing
@@ -156,9 +139,25 @@ void applyTargetAgnosticPasses(QuantumTask quantumTask) {
   std::cout << "Received task with id: " << quantumTask.task_id << std::endl;
   for (auto task : quantumTask.circuit_files)
     std::cout << task << std::endl;
-  json taskJson = dumpQuantumTaskToJson(quantumTask);
   // the functionaliyt of the pass runner goes here!
+  std::vector<mlir::ModuleOp> modules = getMLIRModules(quantumTask);
+  QRM::PassRunner passRunner;
+  passRunner.applyOptimizationLevel(modules, quantumTask.optimisation_level);
+  std::vector<std::string> passes = {"canonicalize", "cse"};
+  passRunner.invokePasses(modules, passes);
+  // update the list of string modules
+  std::vector<std::string> updatedCircuits;
+  for (auto module : modules) {
+    // Convert the module to a string
+    std::string moduleOutput;
+    llvm::raw_string_ostream stringStream(moduleOutput);
+    module->print(stringStream);
+    updatedCircuits.push_back(moduleOutput);
+  }
+  quantumTask.circuit_files = updatedCircuits;
+
   // after processing, move forward the quantum task
+  json taskJson = dumpQuantumTaskToJson(quantumTask);
   forwardQueue.publishMessage(taskJson.dump(), true);
 }
 
@@ -179,6 +178,8 @@ int main(int argc, char *argv[]) {
   RabbitMQServer queueListener(AMQP_SERVER, AMQP_PORT,
                                QUEUE_QRM_AGNOSTIC_PASS_RUNNER, AMQP_USER,
                                AMQP_PASSWORD);
+  // registering mqss passes
+  mlir::registerPasses();
   logger->info("Running up the Target Agnostic Pass Runner");
   queueListener.startToConsume();
   while (true) {
