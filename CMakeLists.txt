@@ -118,7 +118,7 @@ add_executable("qresourcemanager_d" src/QuantumResourceManager.cpp)
 # Link the executable with the required libraries
 target_link_libraries(
   "qresourcemanager_d" PUBLIC rabbitmq nlohmann_json::nlohmann_json
-                              Threads::Threads Common fmt::fmt)
+                              spdlog::spdlog Threads::Threads Common)
 
 add_executable("agnostic-pass-runner" src/AgnosticPassRunner.cpp)
 target_link_libraries(
@@ -136,7 +136,7 @@ target_link_libraries(
 
 add_executable("scheduler" src/Scheduler.cpp)
 target_link_libraries("scheduler" PUBLIC rabbitmq nlohmann_json::nlohmann_json
-                                         Threads::Threads Common fmt::fmt)
+                                         Threads::Threads Common spdlog::spdlog)
 
 add_executable("target-specific-pass-runner" src/TargetSpecificPassRunner.cpp)
 target_link_libraries(
@@ -154,7 +154,7 @@ target_link_libraries(
 
 add_executable("submitter" src/Submitter.cpp)
 target_link_libraries("submitter" PUBLIC rabbitmq nlohmann_json::nlohmann_json
-                                         Threads::Threads Common fmt::fmt)
+                                         Threads::Threads Common spdlog::spdlog)
 
 # spdlog::spdlog_header_only) LLVMSupport LLVMCore)
 
