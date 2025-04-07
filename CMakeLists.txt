@@ -109,57 +109,53 @@ if(NOT EXISTS ${CUDAQ_BINARY_DIR}/lib/libcudaq-mlir-runtime.so)
   )
 endif()
 # ##############################################################################
+set(CUDAQ_TARGETS ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so)
 
-# Build shared libraries add_library(PassRunner SHARED
-# src/generator_runner/GeneratorRunner.cpp) add_library(SchedulerRunner SHARED
-# src/scheduler_runner/SchedulerRunner.cpp) add_library(SelectorRunner  SHARED
-# src/selector_runner/SelectorRunner.cpp) add_library(PassRunner      SHARED
-# src/pass_runner/PassRunner.cpp) add_library(QirPassRunner   SHARED
-# src/pass_runner/QirPassRunner.cpp)
-
-# target_link_libraries(GeneratorRunner PRIVATE qdmi qinfo fomac)
-# target_link_libraries(SchedulerRunner PRIVATE qdmi qinfo fomac)
-# target_link_libraries(SelectorRunner  PRIVATE qdmi qinfo fomac)
-# target_link_libraries(PassRunner      PRIVATE qdmi qinfo fomac)
-# target_link_libraries(QirPassRunner   PRIVATE qdmi qinfo fomac)
-
-set(EXECUTABLE_NAME
-    "qresourcemanager_d"
-    CACHE STRING "" FORCE)
-
-# Build the executable
-set(SOURCES src/QuantumResourceManager.cpp src/ConnectionHandler.cpp)
 set(PUBLIC_QRM_HEADERS "include/mqss/QuantumResourceManager.hpp"
                        "include/mqss/ConnectionHandler.hpp")
-
 # Build the executable
-add_executable(${EXECUTABLE_NAME} ${SOURCES})
-
-# set_target_properties( ${EXECUTABLE_NAME} PROPERTIES VERSION
-# ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR} RUNTIME_OUTPUT_DIRECTORY
-# ${CMAKE_INSTALL_PREFIX} PUBLIC_HEADER "${PUBLIC_QRM_HEADERS}" INSTALL_RPATH
-# "${CMAKE_INSTALL_PREFIX}/lib" BUILD_WITH_INSTALL_RPATH TRUE)
-# set_target_properties( ${EXECUTABLE_NAME} PROPERTIES VERSION
-# ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR} RUNTIME_OUTPUT_DIRECTORY
-# ${CMAKE_BINARY_DIR}/bin PUBLIC_HEADER "${PUBLIC_QRM_HEADERS}" INSTALL_RPATH
-# "${CMAKE_INSTALL_PREFIX}/lib" BUILD_WITH_INSTALL_RPATH TRUE)
-
-set(CUDAQ_TARGETS ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so)
+add_executable("qresourcemanager_d" src/QuantumResourceManager.cpp)
 # Link the executable with the required libraries
 target_link_libraries(
-  ${EXECUTABLE_NAME}
+  "qresourcemanager_d" PUBLIC rabbitmq nlohmann_json::nlohmann_json
+                              Threads::Threads Common fmt::fmt)
+
+add_executable("agnostic-pass-runner" src/AgnosticPassRunner.cpp)
+target_link_libraries(
+  "agnostic-pass-runner"
   PUBLIC rabbitmq
          nlohmann_json::nlohmann_json
          Threads::Threads
-         # Boost::boost uuid ${CUDAQ_TARGETS})
          Common
          MLIRIR
          MLIRPass
          MLIRTransforms
          ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so
-         RabbitMQConnections
          PassRunner
          fmt::fmt)
+
+add_executable("scheduler" src/Scheduler.cpp)
+target_link_libraries("scheduler" PUBLIC rabbitmq nlohmann_json::nlohmann_json
+                                         Threads::Threads Common fmt::fmt)
+
+add_executable("target-specific-pass-runner" src/TargetSpecificPassRunner.cpp)
+target_link_libraries(
+  "target-specific-pass-runner"
+  PUBLIC rabbitmq
+         nlohmann_json::nlohmann_json
+         Threads::Threads
+         Common
+         MLIRIR
+         MLIRPass
+         MLIRTransforms
+         ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so
+         PassRunner
+         fmt::fmt)
+
+add_executable("submitter" src/Submitter.cpp)
+target_link_libraries("submitter" PUBLIC rabbitmq nlohmann_json::nlohmann_json
+                                         Threads::Threads Common fmt::fmt)
+
 # spdlog::spdlog_header_only) LLVMSupport LLVMCore)
 
 # Include header files target_include_directories( ${EXECUTABLE_NAME} PRIVATE
