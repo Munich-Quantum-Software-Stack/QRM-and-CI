@@ -6,14 +6,6 @@
 
 #pragma once
 
-#include "rabbitmq-c/amqp.h"
-#include "rabbitmq-c/tcp_socket.h"
-
-#include <cstring>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string>
-
 // Define the RabbitMQ server connection information
 #define AMQP_SERVER "127.0.0.1" //"localhost"
 #define AMQP_PORT 5672
