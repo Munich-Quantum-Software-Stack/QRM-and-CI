@@ -1,4 +1,4 @@
-#include "mqss/QuantumResourceManager/PassRunner.hpp"
+#include "mqss/PassRunner/PassRunner.hpp"
 
 #include "Optimizer/Pipelines.hpp"
 #include "mlir/IR/MLIRContext.h"

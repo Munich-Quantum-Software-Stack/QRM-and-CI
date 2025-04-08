@@ -4,7 +4,7 @@
  */
 #include "mqss/ConnectionHandler.hpp"
 #include "mqss/LoggerHandler.hpp"
-#include "mqss/QuantumResourceManager/PassRunner.hpp"
+#include "mqss/PassRunner/PassRunner.hpp"
 #include "mqss/common/Logger.hpp"
 #include "mqss/common/QuantumTask.hpp"
 #include "mqss/common/RabbitMQServer.hpp"
