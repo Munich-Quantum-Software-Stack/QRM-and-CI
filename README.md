@@ -44,10 +44,6 @@ devices with fewer physical qubits.
   </a>
 </div>
 
-<div align="center">
-    <img src="./docs/_static/MQSS-overall.png" width="100%">
-</div>
-
 ## FAQ
 
 <!-- [DOXYGEN FAQ] -->
@@ -68,6 +64,10 @@ its quantum devices via multiple compatible access paths, including a web portal
 access via web credentials as well as the option for hybrid access with tight integration with LRZ's
 HPC systems. It facilitates the connection between end-users and quantum computing platforms by its
 integration within HPC infrastructures, such as those found at the LRZ.
+
+<div align="center">
+    <img src="./docs/_static/MQSS-overall.png" width="100%">
+</div>
 
 ### What is the **Quantum Resource Manager (QRM)**?
 
