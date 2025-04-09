@@ -81,7 +81,7 @@ The QRM is designed to run on HPC resources and is composed of the following blo
 3. **Scheduler**: module that receives quantum tasks and schedules each quantum task, i.e.,
    selecting a device where each quantum task will be executed.
 4. **Target-specific pass runner**: module that receives quantum tasks after scheduling. Thus,
-   **transpiration** and target-specific passes can be applied to each received quantum task for
+   **transpilation** and target-specific passes can be applied to each received quantum task for
    further optimizations.
 5. **Submitter**: module that receives quantum tasks and submits them to the selected quantum device
    via the **Quantum Device Management Interface (QDMI)**.
