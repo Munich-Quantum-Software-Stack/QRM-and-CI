@@ -44,7 +44,7 @@ devices with fewer physical qubits.
   </a>
 </div>
 <div align="center">
-    <img src="./docs/_static/MQSS-overall.png" width="60%">
+    <img src="./docs/_static/MQSS-overall.png" width="100%">
 </div>
 ## FAQ
 
