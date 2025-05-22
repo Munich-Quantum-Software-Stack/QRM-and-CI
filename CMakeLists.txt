@@ -113,11 +113,18 @@ add_subdirectory(src)
 set(PUBLIC_QRM_HEADERS "include/mqss/QuantumResourceManager.hpp"
                        "include/mqss/ConnectionHandler.hpp")
 # Build the executable
-add_executable("qresourcemanager_d" src/QuantumResourceManager.cpp)
+add_executable("hpc-offload-listener" src/HPC-Offload-Listener.cpp)
 # Link the executable with the required libraries
 target_link_libraries(
-  "qresourcemanager_d" PUBLIC rabbitmq nlohmann_json::nlohmann_json
-                              spdlog::spdlog Threads::Threads Common)
+  "hpc-offload-listener" PUBLIC rabbitmq nlohmann_json::nlohmann_json
+                                spdlog::spdlog Threads::Threads Common)
+
+# Build the executable
+add_executable("mqp-offload-listener" src/MQP-Offload-Listener.cpp)
+# Link the executable with the required libraries
+target_link_libraries(
+  "mqp-offload-listener" PUBLIC rabbitmq nlohmann_json::nlohmann_json
+                                spdlog::spdlog Threads::Threads Common)
 
 add_executable("agnostic-pass-runner" src/AgnosticPassRunner.cpp)
 target_link_libraries(
