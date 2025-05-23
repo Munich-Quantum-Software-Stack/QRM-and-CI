@@ -130,7 +130,7 @@ void signalHandler(int signum) {
 
 void processTask(QuantumTask quantumTask, const std::string &replyQueue,
                  const std::string &correlationId, boost::uuids::uuid taskId) {
-  RabbitMQServer replyServer(AMQP_SERVER, AMQP_PORT, QUEUE_OFFLOADER_LISTENER,
+  RabbitMQServer replyServer(AMQP_SERVER, AMQP_PORT, QUEUE_MQP_OFFLOADER,
                              AMQP_USER, AMQP_PASSWORD);
   quantumTask.task_id = taskId;
   // dumpQuantumTask(quantumTask);
@@ -148,7 +148,7 @@ void processTask(QuantumTask quantumTask, const std::string &replyQueue,
 void processCheckStatusTask(QuantumTask quantumTask,
                             const std::string &replyQueue,
                             const std::string &correlationId) {
-  RabbitMQServer replyServer(AMQP_SERVER, AMQP_PORT, QUEUE_OFFLOADER_LISTENER,
+  RabbitMQServer replyServer(AMQP_SERVER, AMQP_PORT, QUEUE_MQP_OFFLOADER,
                              AMQP_USER, AMQP_PASSWORD);
   TaskStatus statusJob = getJobStatus(quantumTask.task_id);
   nlohmann::json statusJson = {{"status", to_string(statusJob)}};
@@ -164,9 +164,8 @@ int main(int argc, char *argv[]) {
   mqss::Logger::init(FILE_LOGGER_QRM, LOGGER_QRM);
   // Get the logger instance
   auto logger = mqss::Logger::getLogger();
-  RabbitMQServer offloaderListener(AMQP_SERVER, AMQP_PORT,
-                                   QUEUE_OFFLOADER_LISTENER, AMQP_USER,
-                                   AMQP_PASSWORD);
+  RabbitMQServer offloaderListener(AMQP_SERVER, AMQP_PORT, QUEUE_MQP_OFFLOADER,
+                                   AMQP_USER, AMQP_PASSWORD);
   logger->info("Running up the Quantum Resource Manager (QRM)");
   // tell the offloaderListener to start to consume
   offloaderListener.startToConsume();
