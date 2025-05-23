@@ -175,6 +175,19 @@ add_executable("submitter" src/Submitter.cpp)
 target_link_libraries("submitter" PUBLIC rabbitmq nlohmann_json::nlohmann_json
                                          Threads::Threads Common spdlog::spdlog)
 
+add_executable("mock-backend" src/MockBackend.cpp)
+target_link_libraries(
+  "mock-backend"
+  PUBLIC rabbitmq
+         nlohmann_json::nlohmann_json
+         Threads::Threads
+         Common
+         MLIRIR
+         MLIRPass
+         MLIRTransforms
+         ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so
+         fmt::fmt)
+
 # spdlog::spdlog_header_only) LLVMSupport LLVMCore)
 
 # Include header files target_include_directories( ${EXECUTABLE_NAME} PRIVATE
