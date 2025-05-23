@@ -127,6 +127,7 @@ cmake .. \
   -DMLIR_DIR="${MLIR_DIR}" \
   -DClang_DIR="${CLANG_DIR}" \
   -DLLVM_DIR="${LLVM_DIR}" \
+  -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
   -DCUDAQ_SOURCE_DIR="${CUDAQ_DIR}"
 
 if [ $? -ne 0 ]; then
