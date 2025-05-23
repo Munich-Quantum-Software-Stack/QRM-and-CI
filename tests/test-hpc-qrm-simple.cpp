@@ -54,7 +54,7 @@ QuantumResult JSONToQuantumResult(const char *QuantumResult_str) {
 int main(int argc, char *argv[]) {
   setbuf(stdout, NULL);
   std::cout << "Starting test-qrm-simple" << std::endl;
-  mqss::RabbitMQClient client(AMQP_SERVER, AMQP_PORT, QUEUE_OFFLOADER_LISTENER,
+  mqss::RabbitMQClient client(AMQP_SERVER, AMQP_PORT, QUEUE_HPC_OFFLOADER,
                               AMQP_USER, AMQP_PASSWORD);
   std::string filename = "../../benchmarks/Example.qke";
   std::ifstream file(filename);
@@ -97,16 +97,16 @@ int main(int argc, char *argv[]) {
                            {"via_hpc", true}};
 
   std::string QuantumTask_str = QuantumTask_json.dump();
-  std::string result = client.sendMessageWithReply(QUEUE_OFFLOADER_LISTENER,
-                                                   QuantumTask_str, true);
+  std::string result =
+      client.sendMessageWithReply(QUEUE_HPC_OFFLOADER, QuantumTask_str, true);
   QuantumTask returnedQT = dumpJsonToQuantumTask(result.c_str());
   std::cout << "I have submitted task wit id: " << returnedQT.task_id
             << std::endl;
   // now I check the status of the submitted task
   for (int i = 0; i < 10; i++) {
     QuantumTask_str = dumpQuantumTaskToJson(returnedQT).dump();
-    std::string status = client.sendMessageWithReply(QUEUE_OFFLOADER_LISTENER,
-                                                     QuantumTask_str, true);
+    std::string status =
+        client.sendMessageWithReply(QUEUE_HPC_OFFLOADER, QuantumTask_str, true);
     std::cout << "STATUS: " << status << std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(3));
   }

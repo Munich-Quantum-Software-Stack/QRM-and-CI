@@ -5,7 +5,7 @@ project(MyQirTests)
 find_package(GTest REQUIRED)
 include(GoogleTest)
 
-set(TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test-qrm-simple.cpp")
+set(TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test-hpc-qrm-simple.cpp")
 
 include_directories(${GTEST_INCLUDE_DIRS})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src)
