@@ -53,7 +53,7 @@ QuantumResult JSONToQuantumResult(const char *QuantumResult_str) {
 
 int main(int argc, char *argv[]) {
   setbuf(stdout, NULL);
-  std::cout << "Starting test-qrm-simple" << std::endl;
+  std::cout << "Starting test-hpc-qrm-simple" << std::endl;
   mqss::RabbitMQClient client(AMQP_SERVER, AMQP_PORT, QUEUE_HPC_OFFLOADER,
                               AMQP_USER, AMQP_PASSWORD);
   std::string filename = "../../benchmarks/Example.qke";
