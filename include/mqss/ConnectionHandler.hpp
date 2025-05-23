@@ -20,4 +20,6 @@
 #define QUEUE_AGNOSTIC_PASS_RUNNER_SCHEDULER "AgnosticPassRunner-To-Scheduler"
 #define QUEUE_SCHEDULER_TRANSPILER "Scheduler-To-Transpiler"
 #define QUEUE_TRANSPILER_SUBMITTER "Transpiler-To-Submitter"
-#define QUEUE_SUBMITTER_QRM "Submitter-To-QRM"
+#define QUEUE_SUBMITTER_OFFLOADER "Submitter-To-Offloader"
+#define QUEUE_SUBMITTER_BACKEND "Submitter-To-Backend" // for Testing
+#define QUEUE_BACKEND_SUBMITTER "Submitter-To-Backend" // for Testing
