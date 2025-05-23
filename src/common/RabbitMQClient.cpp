@@ -42,7 +42,9 @@ string
  ******************************************************************************/
 #include "mqss/common/RabbitMQClient.hpp"
 
+#ifdef DEBUG
 #include <iostream>
+#endif
 
 namespace mqss {
 
@@ -71,7 +73,9 @@ RabbitMQClient::~RabbitMQClient() {
   amqp_channel_close(conn, 1, AMQP_REPLY_SUCCESS);
   amqp_connection_close(conn, AMQP_REPLY_SUCCESS);
   amqp_destroy_connection(conn);
+#ifdef DEBUG
   std::cout << "MQSS: RabbitMQ Server shutting down." << std::endl;
+#endif
 }
 
 std::string RabbitMQClient::generateUUID() {
@@ -85,9 +89,11 @@ std::string RabbitMQClient::generateUUID() {
 std::string
 RabbitMQClient::getMessageFromReplyQueue(const std::string &correlation_id,
                                          const std::string &reply_queue) {
-  // Listen for response
+// Listen for response
+#ifdef DEBUG
   std::cout << "Correlation id:" << correlation_id << std::endl;
   std::cout << "replyQueue: " << reply_queue << std::endl;
+#endif
   amqp_basic_consume(conn, 1, amqp_cstring_bytes(reply_queue.c_str()),
                      amqp_empty_bytes, 0, 1, 0, amqp_empty_table);
   while (true) {
@@ -103,8 +109,10 @@ RabbitMQClient::getMessageFromReplyQueue(const std::string &correlation_id,
     std::string received_id(
         (char *)envelope.message.properties.correlation_id.bytes,
         envelope.message.properties.correlation_id.len);
+#ifdef DEBUG
     std::cout << "Correlation id a:" << correlation_id << std::endl;
     std::cout << "received id:" << correlation_id << std::endl;
+#endif
     if (received_id != correlation_id)
       continue;
 
@@ -145,14 +153,20 @@ RabbitMQClient::sendMessageWithReply(const std::string &request_queue,
 
   props.reply_to = amqp_cstring_bytes(reply_queue.c_str());
 
+#ifdef DEBUG
   std::cout << "before publish" << std::endl;
+#endif
   // send the message
   amqp_basic_publish(conn, 1, amqp_empty_bytes,
                      amqp_cstring_bytes(request_queue.c_str()), 0, 0, &props,
                      amqp_cstring_bytes(message.c_str()));
+#ifdef DEBUG
   std::cout << "after publish" << std::endl;
-  // getting the message from reply queue
+#endif
+// getting the message from reply queue
+#ifdef DEBUG
   std::cout << "Correlation id " << correlation_id << std::endl;
+#endif
   return getMessageFromReplyQueue(correlation_id, reply_queue);
 }
 } // namespace mqss

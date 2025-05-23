@@ -1,6 +1,9 @@
 #include "mqss/common/RabbitMQServer.hpp"
 
 #include <cstring>
+#ifdef DEBUG
+#include <iostream>
+#endif
 
 namespace mqss {
 RabbitMQServer::RabbitMQServer(const std::string &hostname, int port,
@@ -43,7 +46,9 @@ RabbitMQServer::~RabbitMQServer() {
   amqp_channel_close(this->conn, 1, AMQP_REPLY_SUCCESS);
   amqp_connection_close(this->conn, AMQP_REPLY_SUCCESS);
   amqp_destroy_connection(this->conn);
-  // std::cout << "MQSS: RabbitMQ Server shutting down." << std::endl;
+#ifdef DEBUG
+  std::cout << "MQSS: RabbitMQ Server shutting down." << std::endl;
+#endif
 }
 
 void RabbitMQServer::publishMessage(const std::string &message, bool isJson) {
@@ -68,7 +73,9 @@ void RabbitMQServer::publishMessage(const std::string &reply_to,
   props.content_type = amqp_cstring_bytes("text/plain");
   if (isJson)
     props.content_type = amqp_cstring_bytes("application/json");
-  // std::cout << "Answer correlation id: " << correlation_id << std::endl;
+#ifdef DEBUG
+  std::cout << "Answer correlation id: " << correlation_id << std::endl;
+#endif
   props.correlation_id = amqp_cstring_bytes(correlation_id.c_str());
   // sending the response
   amqp_basic_publish(conn, 1, amqp_empty_bytes,
