@@ -34,6 +34,7 @@ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #include "mqss/common/Logger.hpp"
 #include "mqss/common/QuantumTask.hpp"
 #include "mqss/common/RabbitMQServer.hpp"
+#include "mqss/common/TaskStatus.hpp"
 
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -49,25 +50,6 @@ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 using json = nlohmann::json;
 using namespace mqss;
-
-// Enum definition for task states
-enum class TaskStatus { RUNNING, CANCELLED, COMPLETED, UNKNOWN };
-
-// Function to convert enum to string (for easy printing)
-const char *to_string(TaskStatus status) {
-  switch (status) {
-  case TaskStatus::RUNNING:
-    return "RUNNING";
-  case TaskStatus::CANCELLED:
-    return "CANCELLED";
-  case TaskStatus::COMPLETED:
-    return "COMPLETED";
-  case TaskStatus::UNKNOWN:
-    return "UNKNOWN";
-  default:
-    return "UNKNOWN";
-  }
-}
 
 std::map<boost::uuids::uuid,
          std::pair<std::string, std::unordered_map<int, int>>>
@@ -151,11 +133,34 @@ void processCheckStatusTask(QuantumTask quantumTask,
   RabbitMQServer replyServer(AMQP_SERVER, AMQP_PORT, QUEUE_MQP_OFFLOADER,
                              AMQP_USER, AMQP_PASSWORD);
   TaskStatus statusJob = getJobStatus(quantumTask.task_id);
-  nlohmann::json statusJson = {{"status", to_string(statusJob)}};
-  replyServer.publishMessage(replyQueue, statusJson.dump(), correlationId,
+  nlohmann::json jsonResponse;
+
+  if (statusJob == mqss::TaskStatus::RUNNING)
+    jsonResponse = {{"status", "running"}};
+  if (statusJob == mqss::TaskStatus::CANCELLED ||
+      statusJob == mqss::TaskStatus::UNKNOWN)
+    jsonResponse = getErrorAnswer(404, "Job not found");
+  if (statusJob == mqss::TaskStatus::COMPLETED) {
+    // Retrieve the job data (name and counts)
+    auto &[name, counts] = finishedJobs[quantumTask.task_id];
+    // Prepare the result data by expanding the counts
+    std::vector<int> retData;
+    for (const auto &[bits, count] : counts) {
+      for (int i = 0; i < count; ++i) {
+        retData.push_back(bits);
+      }
+    }
+    // Convert the result data to a string list
+    std::vector<std::string> stringResults;
+    for (int bits : retData)
+      stringResults.push_back(std::to_string(bits));
+    // Create the final response JSON object
+    nlohmann::json resultResponse;
+    jsonResponse["status"] = "completed";
+    jsonResponse["results"]["MOCK_SERVER_RESULTS"] = stringResults;
+  }
+  replyServer.publishMessage(replyQueue, jsonResponse.dump(), correlationId,
                              true);
-  // at this point I have to pass the task to the queue connecting to the
-  // agnostic pass runner
 }
 
 int main(int argc, char *argv[]) {
