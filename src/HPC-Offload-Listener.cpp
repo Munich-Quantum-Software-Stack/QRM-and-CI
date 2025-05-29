@@ -34,6 +34,7 @@ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #include "mqss/common/Logger.hpp"
 #include "mqss/common/QuantumTask.hpp"
 #include "mqss/common/RabbitMQServer.hpp"
+#include "mqss/common/TaskStatus.hpp"
 
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
@@ -49,25 +50,6 @@ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 using json = nlohmann::json;
 using namespace mqss;
-
-// Enum definition for task states
-enum class TaskStatus { RUNNING, CANCELLED, COMPLETED, UNKNOWN };
-
-// Function to convert enum to string (for easy printing)
-const char *to_string(TaskStatus status) {
-  switch (status) {
-  case TaskStatus::RUNNING:
-    return "RUNNING";
-  case TaskStatus::CANCELLED:
-    return "CANCELLED";
-  case TaskStatus::COMPLETED:
-    return "COMPLETED";
-  case TaskStatus::UNKNOWN:
-    return "UNKNOWN";
-  default:
-    return "UNKNOWN";
-  }
-}
 
 std::map<boost::uuids::uuid,
          std::pair<std::string, std::unordered_map<int, int>>>
@@ -96,7 +78,14 @@ bool jobStatusExists(const boost::uuids::uuid &uuid) {
          statusQuantumJobs.end(); // Safe check for existence
 }
 
-TaskStatus getJobStatus(const boost::uuids::uuid &taskId) {
+TaskStatus getJobStatus(const std::string &taskIdStr) {
+  boost::uuids::uuid taskId;
+  try {
+    boost::uuids::string_generator gen;
+    taskId = gen(taskIdStr);
+  } catch (std::exception &e) {
+    return TaskStatus::UNKNOWN;
+  }
   std::shared_lock<std::shared_mutex> lock(
       jobsMutex); // Shared lock for reading
   auto it = statusQuantumJobs.find(taskId);
@@ -145,12 +134,12 @@ void processTask(QuantumTask quantumTask, const std::string &replyQueue,
   forwardQueue.publishMessage(taskJson.dump(), true);
 }
 
-void processCheckStatusTask(QuantumTask quantumTask,
+void processCheckStatusTask(const std::string &taskId,
                             const std::string &replyQueue,
                             const std::string &correlationId) {
   RabbitMQServer replyServer(AMQP_SERVER, AMQP_PORT, QUEUE_HPC_OFFLOADER,
                              AMQP_USER, AMQP_PASSWORD);
-  TaskStatus statusJob = getJobStatus(quantumTask.task_id);
+  TaskStatus statusJob = getJobStatus(taskId);
   nlohmann::json statusJson = {{"status", to_string(statusJob)}};
   replyServer.publishMessage(replyQueue, statusJson.dump(), correlationId,
                              true);
@@ -169,29 +158,31 @@ int main(int argc, char *argv[]) {
   logger->info("Running up the Quantum Resource Manager (QRM)");
   // tell the offloaderListener to start to consume
   offloaderListener.startToConsume();
+
   while (true) {
-    logger->info("Waiting for a new job...");
+    std::cout << "Waiting for a new job..." << std::endl;
     amqp_envelope_t envelope;
     std::string message, replyQueue, correlationId;
     offloaderListener.consumeMessage(envelope, message, replyQueue,
                                      correlationId);
-    boost::uuids::random_generator generator;
-    QuantumTask quantumTask = dumpJsonToQuantumTask(message.c_str());
-    if (quantumTask.task_id == boost::uuids::nil_uuid()) {
-      // Generate a new UUID
+    try {
+      // try to parse the received message, if is a json then I have to process
+      // it as a new job
+      auto jsonTask = nlohmann::json::parse(message);
+      boost::uuids::random_generator generator;
+      QuantumTask quantumTask = dumpJsonToQuantumTask(message.c_str());
       boost::uuids::uuid newTaskId = generator();
       threadsConnections.push_back(
           std::thread(processTask, std::move(quantumTask), replyQueue,
                       correlationId, newTaskId));
       logger->info("Processing new task with id: {}",
                    boost::uuids::to_string(newTaskId));
-    } else {
-      boost::uuids::uuid taskId = quantumTask.task_id;
-      threadsConnections.push_back(std::thread(processCheckStatusTask,
-                                               std::move(quantumTask),
+    } catch (const nlohmann::json::parse_error &e) {
+      // the message is just a regular uuid for the case when asking the status
+      // of a job
+      threadsConnections.push_back(std::thread(processCheckStatusTask, message,
                                                replyQueue, correlationId));
-      logger->info("Checking status of task with id: {}",
-                   boost::uuids::to_string(taskId));
+      logger->info("Checking status of task with id: {}", message);
     }
   }
   // Ensure the logger is properly destroyed
