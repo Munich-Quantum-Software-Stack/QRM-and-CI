@@ -44,6 +44,12 @@ void signalHandler(int signum) {
   }
 }
 
+void returnResult(const std::string &resultsMessage) {
+  RabbitMQServer forwardQueue(AMQP_SERVER, AMQP_PORT, QUEUE_HPC_OFFLOADER,
+                              AMQP_USER, AMQP_PASSWORD);
+  forwardQueue.publishMessage(resultsMessage, true);
+}
+
 void submit(QuantumTask quantumTask) {
   RabbitMQServer forwardQueue(AMQP_SERVER, AMQP_PORT, QUEUE_SUBMITTER_BACKEND,
                               AMQP_USER, AMQP_PASSWORD);
@@ -71,10 +77,18 @@ int main(int argc, char *argv[]) {
     logger->info("Waiting for a new job...");
     std::string message;
     queueListener.consumeMessage(message);
-    QuantumTask quantumTask = dumpJsonToQuantumTask(message.c_str());
-    std::string taskId = quantumTask.task_id;
-    threadsConnections.push_back(std::thread(submit, std::move(quantumTask)));
-    logger->info("Processing new task with id: {}", taskId);
+    if (message.find("__global__") != std::string::npos) {
+      // message comes from a device and send back
+      json jsonResults = json::parse(message);
+      std::string taskId = jsonResults["task_id"];
+      threadsConnections.push_back(std::thread(returnResult, message));
+      std::cout << "Received results for task with id: " << taskId << std::endl;
+    } else {
+      QuantumTask quantumTask = dumpJsonToQuantumTask(message.c_str());
+      std::string taskId = quantumTask.task_id;
+      threadsConnections.push_back(std::thread(submit, std::move(quantumTask)));
+      logger->info("Processing new task with id: {}", taskId);
+    }
   }
   // Ensure the logger is properly destroyed
   joinThreadsConnections();
