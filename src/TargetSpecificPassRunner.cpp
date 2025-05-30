@@ -142,7 +142,7 @@ int main(int argc, char *argv[]) {
     queueListener.consumeMessage(message);
     boost::uuids::random_generator generator;
     QuantumTask quantumTask = dumpJsonToQuantumTask(message.c_str());
-    std::string taskId = boost::uuids::to_string(quantumTask.task_id);
+    std::string taskId = quantumTask.task_id;
     threadsConnections.push_back(
         std::thread(applyTargetSpecificPasses, std::move(quantumTask)));
     logger->info("Processing new task with id: {}", taskId);

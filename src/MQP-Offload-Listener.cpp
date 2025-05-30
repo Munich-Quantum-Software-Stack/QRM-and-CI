@@ -65,10 +65,11 @@ void joinThreadsConnections() {
       thread.join();
 }
 
-void addJobStatus(const boost::uuids::uuid &uuid, TaskStatus status) {
+void addJobStatus(const std::string &uuidStr, TaskStatus status) {
+  boost::uuids::string_generator gen;
   std::unique_lock<std::shared_mutex> lock(
       jobsMutex); // Exclusive lock for writing
-  statusQuantumJobs[uuid] = status;
+  statusQuantumJobs[gen(uuidStr)] = status;
 }
 
 // Thread-safe function to check if a task exists
@@ -78,7 +79,14 @@ bool jobStatusExists(const boost::uuids::uuid &uuid) {
          statusQuantumJobs.end(); // Safe check for existence
 }
 
-TaskStatus getJobStatus(const boost::uuids::uuid &taskId) {
+TaskStatus getJobStatus(const std::string &taskIdStr) {
+  boost::uuids::uuid taskId;
+  try {
+    boost::uuids::string_generator gen;
+    taskId = gen(taskIdStr);
+  } catch (std::exception &e) {
+    return TaskStatus::UNKNOWN;
+  }
   std::shared_lock<std::shared_mutex> lock(
       jobsMutex); // Shared lock for reading
   auto it = statusQuantumJobs.find(taskId);
@@ -111,7 +119,7 @@ void signalHandler(int signum) {
 }
 
 void processTask(QuantumTask quantumTask, const std::string &replyQueue,
-                 const std::string &correlationId, boost::uuids::uuid taskId) {
+                 const std::string &correlationId, const std::string &taskId) {
   RabbitMQServer replyServer(AMQP_SERVER, AMQP_PORT, QUEUE_MQP_OFFLOADER,
                              AMQP_USER, AMQP_PASSWORD);
   quantumTask.task_id = taskId;
@@ -142,7 +150,8 @@ void processCheckStatusTask(QuantumTask quantumTask,
     jsonResponse = getErrorAnswer(404, "Job not found");
   if (statusJob == mqss::TaskStatus::COMPLETED) {
     // Retrieve the job data (name and counts)
-    auto &[name, counts] = finishedJobs[quantumTask.task_id];
+    boost::uuids::string_generator gen;
+    auto &[name, counts] = finishedJobs[gen(quantumTask.task_id)];
     // Prepare the result data by expanding the counts
     std::vector<int> retData;
     for (const auto &[bits, count] : counts) {
@@ -174,31 +183,31 @@ int main(int argc, char *argv[]) {
   logger->info("Running up the Quantum Resource Manager (QRM)");
   // tell the offloaderListener to start to consume
   offloaderListener.startToConsume();
-  while (true) {
-    logger->info("Waiting for a new job...");
-    amqp_envelope_t envelope;
-    std::string message, replyQueue, correlationId;
-    offloaderListener.consumeMessage(envelope, message, replyQueue,
-                                     correlationId);
-    boost::uuids::random_generator generator;
-    QuantumTask quantumTask = dumpJsonToQuantumTask(message.c_str());
-    if (quantumTask.task_id == boost::uuids::nil_uuid()) {
-      // Generate a new UUID
-      boost::uuids::uuid newTaskId = generator();
-      threadsConnections.push_back(
-          std::thread(processTask, std::move(quantumTask), replyQueue,
-                      correlationId, newTaskId));
-      logger->info("Processing new task with id: {}",
-                   boost::uuids::to_string(newTaskId));
-    } else {
-      boost::uuids::uuid taskId = quantumTask.task_id;
-      threadsConnections.push_back(std::thread(processCheckStatusTask,
-                                               std::move(quantumTask),
-                                               replyQueue, correlationId));
-      logger->info("Checking status of task with id: {}",
-                   boost::uuids::to_string(taskId));
-    }
-  }
+  /*  while (true) {
+      logger->info("Waiting for a new job...");
+      amqp_envelope_t envelope;
+      std::string message, replyQueue, correlationId;
+      offloaderListener.consumeMessage(envelope, message, replyQueue,
+                                       correlationId);
+      boost::uuids::random_generator generator;
+      QuantumTask quantumTask = dumpJsonToQuantumTask(message.c_str());
+      if (quantumTask.task_id == boost::uuids::nil_uuid()) {
+        // Generate a new UUID
+        boost::uuids::uuid newTaskId = generator();
+        threadsConnections.push_back(
+            std::thread(processTask, std::move(quantumTask), replyQueue,
+                        correlationId, newTaskId));
+        logger->info("Processing new task with id: {}",
+                     boost::uuids::to_string(newTaskId));
+      } else {
+        std::string taskId = quantumTask.task_id;
+        threadsConnections.push_back(std::thread(processCheckStatusTask,
+                                                 std::move(quantumTask),
+                                                 replyQueue, correlationId));
+        logger->info("Checking status of task with id: {}",
+                     taskId);
+      }
+    }*/
   // Ensure the logger is properly destroyed
   joinThreadsConnections();
   mqss::Logger::cleanup();

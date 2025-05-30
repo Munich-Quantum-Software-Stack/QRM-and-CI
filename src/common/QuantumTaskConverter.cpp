@@ -59,7 +59,7 @@ void mqss::dumpQuantumTask(const QuantumTask &quantumTask) {
 }
 
 json mqss::dumpQuantumTaskToJson(const QuantumTask &task) {
-  return {{"task_id", boost::uuids::to_string(task.task_id)},
+  return {{"task_id", task.task_id},
           {"n_qbits", task.n_qbits},
           {"n_shots", task.n_shots},
           {"circuit_files", task.circuit_files},
@@ -88,10 +88,7 @@ mqss::QuantumTask mqss::dumpJsonToQuantumTask(const char *quantumTaskAsString) {
     std::cerr << "Field task_id was not defined in json file" << std::endl;
     return QuantumTask();
   }
-  std::string uuid_from_json = jsonQuantumTask["task_id"];
-  boost::uuids::string_generator gen;
-  boost::uuids::uuid id = gen(uuid_from_json);
-  quantumTask.task_id = id;
+  jsonQuantumTask.at("task_id").get_to(quantumTask.task_id);
   jsonQuantumTask.at("n_qbits").get_to(quantumTask.n_qbits);
   jsonQuantumTask.at("n_shots").get_to(quantumTask.n_shots);
   if (!jsonQuantumTask.contains("circuit_files")) {

@@ -65,10 +65,11 @@ void joinThreadsConnections() {
       thread.join();
 }
 
-void addJobStatus(const boost::uuids::uuid &uuid, TaskStatus status) {
+void addJobStatus(const std::string &uuidStr, TaskStatus status) {
+  boost::uuids::string_generator gen;
   std::unique_lock<std::shared_mutex> lock(
       jobsMutex); // Exclusive lock for writing
-  statusQuantumJobs[uuid] = status;
+  statusQuantumJobs[gen(uuidStr)] = status;
 }
 
 // Thread-safe function to check if a task exists
@@ -118,7 +119,7 @@ void signalHandler(int signum) {
 }
 
 void processTask(QuantumTask quantumTask, const std::string &replyQueue,
-                 const std::string &correlationId, boost::uuids::uuid taskId) {
+                 const std::string &correlationId, std::string taskId) {
   RabbitMQServer replyServer(AMQP_SERVER, AMQP_PORT, QUEUE_HPC_OFFLOADER,
                              AMQP_USER, AMQP_PASSWORD);
   quantumTask.task_id = taskId;
@@ -137,14 +138,38 @@ void processTask(QuantumTask quantumTask, const std::string &replyQueue,
 void processCheckStatusTask(const std::string &taskId,
                             const std::string &replyQueue,
                             const std::string &correlationId) {
-  RabbitMQServer replyServer(AMQP_SERVER, AMQP_PORT, QUEUE_HPC_OFFLOADER,
+  RabbitMQServer replyServer(AMQP_SERVER, AMQP_PORT, QUEUE_MQP_OFFLOADER,
                              AMQP_USER, AMQP_PASSWORD);
   TaskStatus statusJob = getJobStatus(taskId);
-  nlohmann::json statusJson = {{"status", to_string(statusJob)}};
-  replyServer.publishMessage(replyQueue, statusJson.dump(), correlationId,
+  nlohmann::json jsonResponse;
+
+  if (statusJob == mqss::TaskStatus::RUNNING)
+    jsonResponse = {{"status", "running"}};
+  if (statusJob == mqss::TaskStatus::CANCELLED ||
+      statusJob == mqss::TaskStatus::UNKNOWN)
+    jsonResponse = getErrorAnswer(404, "Job not found");
+  if (statusJob == mqss::TaskStatus::COMPLETED) {
+    // Retrieve the job data (name and counts)
+    boost::uuids::string_generator gen;
+    auto &[name, counts] = finishedJobs[gen(taskId)];
+    // Prepare the result data by expanding the counts
+    std::vector<int> retData;
+    for (const auto &[bits, count] : counts) {
+      for (int i = 0; i < count; ++i) {
+        retData.push_back(bits);
+      }
+    }
+    // Convert the result data to a string list
+    std::vector<std::string> stringResults;
+    for (int bits : retData)
+      stringResults.push_back(std::to_string(bits));
+    // Create the final response JSON object
+    nlohmann::json resultResponse;
+    jsonResponse["status"] = "completed";
+    jsonResponse["results"]["MOCK_SERVER_RESULTS"] = stringResults;
+  }
+  replyServer.publishMessage(replyQueue, jsonResponse.dump(), correlationId,
                              true);
-  // at this point I have to pass the task to the queue connecting to the
-  // agnostic pass runner
 }
 
 int main(int argc, char *argv[]) {
@@ -160,7 +185,7 @@ int main(int argc, char *argv[]) {
   offloaderListener.startToConsume();
 
   while (true) {
-    std::cout << "Waiting for a new job..." << std::endl;
+    logger->info("Waiting for a new job...");
     amqp_envelope_t envelope;
     std::string message, replyQueue, correlationId;
     offloaderListener.consumeMessage(envelope, message, replyQueue,
@@ -174,7 +199,7 @@ int main(int argc, char *argv[]) {
       boost::uuids::uuid newTaskId = generator();
       threadsConnections.push_back(
           std::thread(processTask, std::move(quantumTask), replyQueue,
-                      correlationId, newTaskId));
+                      correlationId, boost::uuids::to_string(newTaskId)));
       logger->info("Processing new task with id: {}",
                    boost::uuids::to_string(newTaskId));
     } catch (const nlohmann::json::parse_error &e) {

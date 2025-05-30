@@ -15,7 +15,7 @@ using json = nlohmann::json;
 
 namespace mqss {
 struct QuantumTask {
-  boost::uuids::uuid task_id;
+  std::string task_id;
   int n_qbits;
   int n_shots;
   std::vector<std::string> circuit_files;
