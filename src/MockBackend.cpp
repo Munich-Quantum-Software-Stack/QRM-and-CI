@@ -9,13 +9,14 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <csignal>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <mutex>
 #include <nlohmann/json.hpp>
+#include <regex>
 #include <shared_mutex>
 #include <thread>
-
 // llvm includes
 #include "llvm/Bitcode/BitcodeReader.h"
 
@@ -56,6 +57,33 @@ void signalHandler(int signum) {
     mqss::Logger::cleanup();
     exit(0);
   }
+}
+
+// Trim leading and trailing whitespace
+std::string trim(const std::string &str) {
+  size_t first =
+      str.find_first_not_of(" \t\n\r\f\v"); // Find first non-whitespace
+  if (first == std::string::npos) {
+    return ""; // If no non-whitespace characters, return an empty string
+  }
+  size_t last = str.find_last_not_of(" \t\n\r\f\v"); // Find last non-whitespace
+  return str.substr(first, (last - first + 1));      // Return trimmed substring
+}
+
+std::string getKernelName(const std::string &program) {
+  std::regex patternKernel("func\\.func @__nvqpp__mlirgen__([^\\(\\)]+)\\(\\)");
+  std::smatch matches;
+  if (!std::regex_search(program, matches, patternKernel))
+    throw std::runtime_error(
+        "Error, no kernel function name found on the given Quake program...");
+  std::string kernelName = matches[1];
+  // Find the position of the substring
+  size_t pos = kernelName.find(CUDAQ_GEN_PREFIX_NAME);
+  // If the substring is found, erase it
+  if (pos != std::string::npos) {
+    kernelName.erase(pos, std::string(CUDAQ_GEN_PREFIX_NAME).length());
+  }
+  return trim(kernelName);
 }
 
 std::string lowerQuakeCode(const std::string &circuit,
@@ -128,9 +156,9 @@ void mockBackend(QuantumTask quantumTask) {
     std::cout << task << std::endl;
   // TODO
   // Extract job details from the request body
-  std::string jobName = jobData["name"].get<std::string>();
-  int jobCount = jobData["count"].get<int>();
-  std::string program = jobData["program"].get<std::string>();
+  // std::string jobName = quantumTask.circuit_name;
+  int jobCount = quantumTask.n_shots;
+  std::string program = quantumTask.circuit_files[0];
   // Simulate kernel function and qubit processing
   std::string kernelName = getKernelName(program);
   std::string qirCode = lowerQuakeCode(program, kernelName);
@@ -171,12 +199,12 @@ void mockBackend(QuantumTask quantumTask) {
 int main(int argc, char *argv[]) {
   // Install the signal handler for SIGINT (Ctrl+C)
   std::signal(SIGINT, signalHandler);
-  mqss::Logger::init(FILE_LOGGER_SUBMITTER, LOGGER_SUBMITTER);
+  mqss::Logger::init(FILE_LOGGER_MOCK_DEVICE, LOGGER_MOCK_DEVICE);
   // Get the logger instance
   auto logger = mqss::Logger::getLogger();
   RabbitMQServer queueListener(AMQP_SERVER, AMQP_PORT, QUEUE_SUBMITTER_BACKEND,
                                AMQP_USER, AMQP_PASSWORD);
-  logger->info("Running up Mock Backend...");
+  logger->info("Running up Mock Backend!...");
   // tell the offloaderListener to start to consume
   queueListener.startToConsume();
   while (true) {
@@ -184,7 +212,7 @@ int main(int argc, char *argv[]) {
     std::string message;
     queueListener.consumeMessage(message);
     QuantumTask quantumTask = dumpJsonToQuantumTask(message.c_str());
-    std::string taskId = boost::uuids::to_string(quantumTask.task_id);
+    std::string taskId = quantumTask.task_id;
     threadsConnections.push_back(
         std::thread(mockBackend, std::move(quantumTask)));
     logger->info("Processing new task with id: {}", taskId);
