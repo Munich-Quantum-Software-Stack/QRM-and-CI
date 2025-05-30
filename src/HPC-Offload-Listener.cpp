@@ -45,15 +45,14 @@ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #include <map>
 #include <mutex>
 #include <nlohmann/json.hpp>
+#include <regex>
 #include <shared_mutex>
 #include <thread>
 
 using json = nlohmann::json;
 using namespace mqss;
 
-std::map<boost::uuids::uuid,
-         std::pair<std::string, std::unordered_map<int, int>>>
-    finishedJobs;
+std::map<boost::uuids::uuid, std::unordered_map<int, int>> finishedJobs;
 std::map<boost::uuids::uuid, TaskStatus> statusQuantumJobs;
 std::shared_mutex jobsMutex;
 // Start threads to consume from each queue concurrently
@@ -118,6 +117,37 @@ void signalHandler(int signum) {
   }
 }
 
+std::unordered_map<std::string, std::unordered_map<int, int>>
+parseStringToMap(const std::string &input) {
+  std::unordered_map<std::string, std::unordered_map<int, int>> resultMap;
+  // Regex to match outer keys and their corresponding { ... } content
+  std::regex outerRegex(R"((\w+)\s*:\s*\{([^}]+)\})");
+  std::smatch outerMatch;
+  std::string::const_iterator searchStart(input.cbegin());
+  while (std::regex_search(searchStart, input.cend(), outerMatch, outerRegex)) {
+    std::string outerKey =
+        outerMatch[1]; // Capture outer key, e.g., "__global__"
+    std::string innerContent =
+        outerMatch[2]; // Capture inner content, e.g., "0:479 1:521"
+    // Parse the inner map
+    std::unordered_map<int, int> innerMap;
+    std::regex innerRegex(R"((\d+)\s*:\s*(\d+))");
+    std::smatch innerMatch;
+    std::string::const_iterator innerStart(innerContent.cbegin());
+    while (std::regex_search(innerStart, innerContent.cend(), innerMatch,
+                             innerRegex)) {
+      int key = std::stoi(innerMatch[1]);
+      int value = std::stoi(innerMatch[2]);
+      innerMap[key] = value;
+      innerStart = innerMatch.suffix().first; // Move to the next match
+    }
+    // Add the parsed inner map to the result
+    resultMap[outerKey] = innerMap;
+    searchStart = outerMatch.suffix().first; // Move to the next outer match
+  }
+  return resultMap;
+}
+
 void processTask(QuantumTask quantumTask, const std::string &replyQueue,
                  const std::string &correlationId, std::string taskId) {
   RabbitMQServer replyServer(AMQP_SERVER, AMQP_PORT, QUEUE_HPC_OFFLOADER,
@@ -151,7 +181,7 @@ void processCheckStatusTask(const std::string &taskId,
   if (statusJob == mqss::TaskStatus::COMPLETED) {
     // Retrieve the job data (name and counts)
     boost::uuids::string_generator gen;
-    auto &[name, counts] = finishedJobs[gen(taskId)];
+    auto counts = finishedJobs[gen(taskId)];
     // Prepare the result data by expanding the counts
     std::vector<int> retData;
     for (const auto &[bits, count] : counts) {
@@ -170,6 +200,27 @@ void processCheckStatusTask(const std::string &taskId,
   }
   replyServer.publishMessage(replyQueue, jsonResponse.dump(), correlationId,
                              true);
+}
+
+void saveResults(const std::string &resultsMessage) {
+  json jsonResults = json::parse(resultsMessage);
+  std::string taskIdStr = jsonResults["task_id"];
+  boost::uuids::string_generator gen;
+  boost::uuids::uuid taskId;
+  try {
+    taskId = gen(taskIdStr);
+  } catch (const std::exception &e) {
+    std::cerr << "Invalid UUID string: " << e.what() << std::endl;
+    exit(1);
+  }
+  std::cout << "Received message " << std::endl
+            << jsonResults["results"] << std::endl;
+  // Simulate results (in the original, this comes from some quantum function)
+  std::unordered_map<std::string, std::unordered_map<int, int>> results =
+      parseStringToMap(jsonResults["results"]);
+  // Store the created job in the global jobs dictionary
+  finishedJobs[taskId] = results[std::string("__global__")];
+  addJobStatus(taskIdStr, TaskStatus::COMPLETED);
 }
 
 int main(int argc, char *argv[]) {
@@ -194,14 +245,21 @@ int main(int argc, char *argv[]) {
       // try to parse the received message, if is a json then I have to process
       // it as a new job
       auto jsonTask = nlohmann::json::parse(message);
-      boost::uuids::random_generator generator;
-      QuantumTask quantumTask = dumpJsonToQuantumTask(message.c_str());
-      boost::uuids::uuid newTaskId = generator();
-      threadsConnections.push_back(
-          std::thread(processTask, std::move(quantumTask), replyQueue,
-                      correlationId, boost::uuids::to_string(newTaskId)));
-      logger->info("Processing new task with id: {}",
-                   boost::uuids::to_string(newTaskId));
+      if (message.find("__global__") != std::string::npos) {
+        std::string taskId = jsonTask["task_id"];
+        threadsConnections.push_back(std::thread(saveResults, message));
+        std::cout << "Received results for task with id: " << taskId
+                  << std::endl;
+      } else {
+        boost::uuids::random_generator generator;
+        QuantumTask quantumTask = dumpJsonToQuantumTask(message.c_str());
+        boost::uuids::uuid newTaskId = generator();
+        threadsConnections.push_back(
+            std::thread(processTask, std::move(quantumTask), replyQueue,
+                        correlationId, boost::uuids::to_string(newTaskId)));
+        logger->info("Processing new task with id: {}",
+                     boost::uuids::to_string(newTaskId));
+      }
     } catch (const nlohmann::json::parse_error &e) {
       // the message is just a regular uuid for the case when asking the status
       // of a job
