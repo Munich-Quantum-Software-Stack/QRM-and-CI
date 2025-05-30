@@ -142,21 +142,14 @@ std::string lowerQuakeCode(const std::string &circuit,
 }
 
 void mockBackend(QuantumTask quantumTask) {
-  // RabbitMQServer forwardQueue(AMQP_SERVER, AMQP_PORT,
-  //                             QUEUE_SCHEDULER_TRANSPILER,
-  //                             AMQP_USER,
-  //                             AMQP_PASSWORD);
-  // json taskJson = dumpQuantumTaskToJson(quantumTask);
-  //  the functionaliyt of the pass runner goes here!
-
-  // after processing, move forward the quantum task
-  // forwardQueue.publishMessage(taskJson.dump(), true);
+  RabbitMQServer forwardQueue(AMQP_SERVER, AMQP_PORT,
+                              QUEUE_TRANSPILER_SUBMITTER, AMQP_USER,
+                              AMQP_PASSWORD);
   std::cout << "Received task with id: " << quantumTask.task_id << std::endl;
   for (auto task : quantumTask.circuit_files)
     std::cout << task << std::endl;
-  // TODO
+
   // Extract job details from the request body
-  // std::string jobName = quantumTask.circuit_name;
   int jobCount = quantumTask.n_shots;
   std::string program = quantumTask.circuit_files[0];
   // Simulate kernel function and qubit processing
@@ -194,6 +187,9 @@ void mockBackend(QuantumTask quantumTask) {
 #ifdef DEBUG
   std::cout << "Results:" << std::endl << resultCircuit << std::endl;
 #endif
+  json results = {{"task_id", quantumTask.task_id}, {"results", resultCircuit}};
+  // after processing, move forward the quantum task
+  forwardQueue.publishMessage(results.dump(), true);
 }
 
 int main(int argc, char *argv[]) {
