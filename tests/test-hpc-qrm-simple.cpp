@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
   std::vector<std::string> circuit_files;
   circuit_files.push_back(quakeCircuit);
   boost::uuids::uuid new_uuid = boost::uuids::nil_uuid();
-  json QuantumTask_json = {{"task_id", boost::uuids::to_string(new_uuid)},
+  json QuantumTask_json = {{"task_id", ""},
                            {"n_qbits", 0},
                            {"n_shots", 1024},
                            {"circuit_files", circuit_files},
@@ -95,7 +95,6 @@ int main(int argc, char *argv[]) {
                            {"user_identity", ""},
                            {"token", ""},
                            {"via_hpc", true}};
-
   std::string QuantumTask_str = QuantumTask_json.dump();
   std::string result =
       client.sendMessageWithReply(QUEUE_HPC_OFFLOADER, QuantumTask_str, true);
@@ -104,9 +103,8 @@ int main(int argc, char *argv[]) {
             << std::endl;
   // now I check the status of the submitted task
   for (int i = 0; i < 10; i++) {
-    QuantumTask_str = dumpQuantumTaskToJson(returnedQT).dump();
-    std::string status =
-        client.sendMessageWithReply(QUEUE_HPC_OFFLOADER, QuantumTask_str, true);
+    std::string status = client.sendMessageWithReply(QUEUE_HPC_OFFLOADER,
+                                                     returnedQT.task_id, false);
     std::cout << "STATUS: " << status << std::endl;
     std::this_thread::sleep_for(std::chrono::seconds(3));
   }
