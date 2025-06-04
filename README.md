@@ -28,7 +28,8 @@ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 <!-- [DOXYGEN MAIN] -->
 
 This repository holds the Quantum Resource Manager (QRM), the component connecting classical and
-quantum resources in a tight HPCQC environment. The QRM is a runtime framework intended to run on
+quantum resources in a tight High Performance-Quantum Computing (HPCQC) environment. 
+The QRM is a runtime framework intended to run on
 HPC resources. QRM is responsible for applying agnostic and target-specific optimizations and
 scheduling quantum tasks on available quantum resources in a tightly integrated HPCQC environment.
 The QRM is also responsible for submitting the results obtained after running quantum circuits on
