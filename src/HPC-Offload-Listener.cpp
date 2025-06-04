@@ -53,6 +53,7 @@ using json = nlohmann::json;
 using namespace mqss;
 
 std::map<boost::uuids::uuid, std::unordered_map<int, int>> finishedJobs;
+std::shared_mutex finishedJobsMutex;
 std::map<boost::uuids::uuid, TaskStatus> statusQuantumJobs;
 std::shared_mutex jobsMutex;
 // Start threads to consume from each queue concurrently
@@ -202,6 +203,14 @@ void processCheckStatusTask(const std::string &taskId,
                              true);
 }
 
+void addFinishedJob(
+    boost::uuids::uuid taskId,
+    std::unordered_map<std::string, std::unordered_map<int, int>> results) {
+  std::unique_lock<std::shared_mutex> lock(
+      finishedJobsMutex); // Exclusive lock for writing
+  finishedJobs[taskId] = results[std::string("__global__")];
+}
+
 void saveResults(const std::string &resultsMessage) {
   json jsonResults = json::parse(resultsMessage);
   std::string taskIdStr = jsonResults["task_id"];
@@ -218,8 +227,18 @@ void saveResults(const std::string &resultsMessage) {
   // Simulate results (in the original, this comes from some quantum function)
   std::unordered_map<std::string, std::unordered_map<int, int>> results =
       parseStringToMap(jsonResults["results"]);
+  // Print map contents
+  for (const auto &outer_pair : results) {
+    std::cout << "Key: " << outer_pair.first << std::endl;
+    for (const auto &inner_pair : outer_pair.second) {
+      std::cout << "  Inner Key: " << inner_pair.first
+                << ", Value: " << inner_pair.second << std::endl;
+    }
+  }
+
   // Store the created job in the global jobs dictionary
-  finishedJobs[taskId] = results[std::string("__global__")];
+  addFinishedJob(taskId, results);
+  // finishedJobs[taskId] = results[std::string("__global__")];
   addJobStatus(taskIdStr, TaskStatus::COMPLETED);
 }
 
