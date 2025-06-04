@@ -73,6 +73,10 @@ integration within HPC infrastructures, such as those found at the LRZ.
 
 The QRM is designed to run on HPC resources and is composed of the following blocks:
 
+<div align="center">
+    <img src="./docs/_static/QRM-detail.png" width="100%">
+</div>
+
 1. **Target-agnostic pass runner**: module that receives quantum tasks (circuits) and performs
    target-specific optimizations on each received quantum task.
 2. **Generator** (optional): module that receives quantum tasks and performs **circuit-cutting**
