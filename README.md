@@ -103,9 +103,18 @@ The QRM is designed to run on HPC resources and is composed of the following blo
    are combined via knitting techniques to get the results of the large, highly entangled quantum
    circuit previously partitioned by the generator.
 
+Each of the components described before interacts in a data-driven fashion. Each block receives,
+processes, and submits jobs to the next block in the chain. At the input and the output of each block,
+there exist FIFOs storing the input and output jobs to be consumed or produced.
+Analogously, each block in the diagram can be seen as how processes work in an operating system and how
+they communicate via pipes (FIFO channels) to other processes. Potentially, each of the blocks might be
+able to delegate an input job to an execution thread, and each block might be able to process tasks in
+a parallel/concurrent manner. 
+
 ### Where is the code?
 
-The code is publicly available and hosted on GitHub: TODO
+The code is publicly available and hosted on GitHub: 
+https://github.com/Munich-Quantum-Software-Stack/QRM
 
 ### Under which license is the **Quantum Resource Manager (QRM)** released?
 
