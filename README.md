@@ -30,15 +30,18 @@ This repository hosts the Quantum Resource Manager (QRM), a component of the Mun
 Stack (MQSS) that bridges classical and quantum resources within a high-performance and quantum
 computing (HPCQC) environment. The QRM acts as a robust runtime framework, seamlessly orchestrating
 operations between HPC and quantum resources.
+
 At its core, the QRM is capable of performing optimizations, both agnostic and tailored to specific
 target devices, while efficiently scheduling quantum tasks across the diverse landscape of available
 quantum resources at LRZ. This ensures that resources are utilized to their fullest potential,
 maximizing performance in a tightly integrated HPCQC setting.
+
 One of the QRM's remarkable capabilities is its ability to perform circuit cutting—an intelligent
 method for breaking down large, complex quantum circuits into a set of more manageable sub-circuits.
 This technique is particularly advantageous when the scale of the application surpasses the number of
 qubits available. The resulting smaller sub-circuits can be allocated to quantum devices with limited
 physical qubits, allowing for effective execution without sacrificing the integrity of the computations.
+
 Moreover, the QRM plays a critical role in collecting and transmitting the outcomes from these quantum
 circuits, which are executed on real quantum devices, back to the original HPCQC application. This
 streamlined feedback loop ensures that results from quantum computations are seamlessly reintegrated
