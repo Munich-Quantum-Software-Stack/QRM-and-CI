@@ -2,8 +2,6 @@
   "name": "QRM-dev",
   "build": {
     "dockerfile": "dockerContainer.Dockerfile",
-    "context": "..",
-    "target": "final",
     "args": {
       "destination": "workspaces/QRM"
     }

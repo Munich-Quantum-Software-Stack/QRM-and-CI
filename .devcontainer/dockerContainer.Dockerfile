@@ -1,10 +1,10 @@
 ARG base_image=ubuntu:22.04
-
-FROM ${base_image} AS builder
+FROM ${base_image}
 SHELL ["/bin/bash", "-c"]
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
+# Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     wget git unzip \
@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /opt
 RUN git clone --branch llvmorg-16.0.6 --depth 1 https://github.com/llvm/llvm-project.git
 
-# Configure LLVM
+# Configure and build LLVM
 WORKDIR /opt/llvm-project/build
 RUN cmake -G Ninja ../llvm \
   -DLLVM_ENABLE_PROJECTS="mlir;clang" \
@@ -36,12 +36,12 @@ RUN cmake -G Ninja ../llvm \
   -DLLVM_ENABLE_EH=ON \
   -DLLVM_INSTALL_UTILS=ON \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-  -DCMAKE_INSTALL_PREFIX=/opt/llvm
+  -DCMAKE_INSTALL_PREFIX=/usr/local/llvm && \
+  ninja -j6 install && \
+  cd / && rm -rf /opt/llvm-project
 
-RUN ninja -j6 install
-
-# Final image
-FROM ${base_image} AS final
-COPY --from=builder /opt/llvm /usr/local/llvm
+# Add LLVM to PATH
 ENV PATH=/usr/local/llvm/bin:$PATH
+
+# Set working directory
 WORKDIR /workspace
