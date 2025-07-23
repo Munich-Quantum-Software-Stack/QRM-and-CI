@@ -1,8 +1,9 @@
 {
-  "name": "passes-dev",
+  "name": "QRM-dev",
   "build": {
     "dockerfile": "dockerContainer.Dockerfile",
-    "target": "builder",
+    "context": "..",
+    "target": "final",
     "args": {
       "destination": "workspaces/QRM"
     }
