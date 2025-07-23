@@ -13,8 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libz3-dev openssh-client libgtest-dev pkg-config \
     bison flex libeigen3-dev libboost-program-options-dev libzip-dev \
     ca-certificates && \
-    ln -s /usr/bin/python3 /usr/bin/python && \
-    ln -s /usr/bin/pip3 /usr/bin/pip && \
+    ln -sf /usr/bin/python3 /usr/bin/python && \
+    [ -e /usr/bin/pip ] || ln -s /usr/bin/pip3 /usr/bin/pip && \
     python -m pip install --no-cache-dir numpy && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
