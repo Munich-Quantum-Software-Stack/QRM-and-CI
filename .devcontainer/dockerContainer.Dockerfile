@@ -12,8 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     cmake ninja-build \
     libz3-dev openssh-client libgtest-dev pkg-config \
     bison flex libeigen3-dev libboost-program-options-dev libzip-dev \
-    autoconf automake libtool libspdlog-dev \
-    nlohmann-json3-dev uuid-dev rabbitmq-server \
+    autoconf automake libtool libspdlog-dev libopenblas-dev \
+    nlohmann-json3-dev uuid-dev rabbitmq-server libssl-dev  \
     ca-certificates && \
     ln -sf /usr/bin/python3 /usr/bin/python && \
     [ -e /usr/bin/pip ] || ln -s /usr/bin/pip3 /usr/bin/pip && \
@@ -49,11 +49,11 @@ ENV PATH=/usr/local/llvm/bin:$PATH
 RUN python3 -m pip install --upgrade pip setuptools wheel
 
 # Install CUDAQ (allowing pre-releases)
-RUN python3 -m pip install --pre cudaq
+#RUN python3 -m pip install --pre cudaq
 
 RUN python3 -m pip install numpy uvicorn llvmlite
 
 # Set working directory
 WORKDIR /workspace
 
-RUN bash scripts/install-zlib.sh
+#RUN bash scripts/install-zlib.sh
