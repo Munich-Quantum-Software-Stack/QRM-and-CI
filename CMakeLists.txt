@@ -143,6 +143,7 @@ add_executable("agnostic-pass-runner" src/AgnosticPassRunner.cpp)
 target_link_libraries(
   "agnostic-pass-runner"
   PUBLIC rabbitmq
+         spdlog::spdlog
          nlohmann_json::nlohmann_json
          Threads::Threads
          Common
@@ -161,6 +162,7 @@ add_executable("target-specific-pass-runner" src/TargetSpecificPassRunner.cpp)
 target_link_libraries(
   "target-specific-pass-runner"
   PUBLIC rabbitmq
+         spdlog::spdlog
          nlohmann_json::nlohmann_json
          Threads::Threads
          Common
@@ -176,40 +178,29 @@ target_link_libraries("submitter" PUBLIC rabbitmq nlohmann_json::nlohmann_json
                                          Threads::Threads Common spdlog::spdlog)
 
 add_executable("mock-backend" src/MockBackend.cpp)
+
+target_include_directories(mock-backend PRIVATE ${MLIR_INCLUDE_DIRS}
+                                                ${LLVM_INCLUDE_DIRS})
+
+target_compile_definitions(mock-backend PRIVATE ${MLIR_DEFINITIONS}
+                                                ${LLVM_DEFINITIONS})
+
 target_link_libraries(
   "mock-backend"
   PUBLIC rabbitmq
+         spdlog::spdlog
          nlohmann_json::nlohmann_json
          Threads::Threads
          Common
+         fmt::fmt
+         # Required MLIR components
          MLIRIR
          MLIRPass
          MLIRTransforms
-         ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so
-         fmt::fmt)
+         MLIROptLib
+         MLIRExecutionEngine
+         ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so)
 
-# spdlog::spdlog_header_only) LLVMSupport LLVMCore)
-
-# Include header files target_include_directories( ${EXECUTABLE_NAME} PRIVATE
-# /usr/local/include # RabbitMQ ${CMAKE_INSTALL_PREFIX}/include
-# ${CMAKE_BINARY_DIR}/_deps/qdmi-src/src # TODO PUBLIC
-# $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-# $<INSTALL_INTERFACE:include>)
-#
-# Install the Quantum Resource Manager install( TARGETS ${EXECUTABLE_NAME}
-# EXPORT qrmConfig DESTINATION ${CMAKE_INSTALL_PREFIX} PUBLIC_HEADER DESTINATION
-# ${CMAKE_INSTALL_PREFIX}/include)
-#
-# install( EXPORT qrmConfig FILE qrmConfig.cmake DESTINATION
-# "${CMAKE_INSTALL_PREFIX}/cmake" NAMESPACE qrm::)
-#
-# Uninstall the Quantum Resource Manager
-# configure_file("${CMAKE_CURRENT_SOURCE_DIR}/uninstall.cmake.in"
-# "${CMAKE_CURRENT_BINARY_DIR}/uninstall.cmake" IMMEDIATE @ONLY)
-#
-# add_custom_target( uninstallQRM COMMAND ${CMAKE_COMMAND} -P
-# ${CMAKE_CURRENT_BINARY_DIR}/uninstall.cmake WORKING_DIRECTORY
-# ${CMAKE_CURRENT_BINARY_DIR}) Setup tests
 enable_testing()
 add_subdirectory(tests)
 # Enable FetchContent for integration
