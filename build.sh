@@ -1,4 +1,18 @@
 #!/bin/bash
+set -e  # Exit immediately on error
+
+# Check if cudaq is installed
+if ! python3 -c "import cudaq" &> /dev/null; then
+  echo "cudaq not found. Installing via pip..."
+  python3 -m pip install --upgrade pip setuptools wheel
+  python3 -m pip install --pre cudaq
+else
+  echo "cudaq is already installed."
+fi
+
+# Run the install-zlib script
+echo "Running zlib installer..."
+bash scripts/install-zlib.sh
 
 # Define directoriesi
 CURRENT_DIR=$(pwd)
