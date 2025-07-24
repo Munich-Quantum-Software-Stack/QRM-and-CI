@@ -19,7 +19,7 @@ function remove_temp_installs {
 
 # [Zlib] Needed to build LLVM with zlib support (used by linker)
 if [ -n "$ZLIB_INSTALL_PREFIX" ] && [ -z "$(echo $exclude_prereq | grep zlib)" ]; then
-  #if [ ! -f "$ZLIB_INSTALL_PREFIX/lib/libz.a" ]; then
+  if [ ! -f "$ZLIB_INSTALL_PREFIX/lib/libz.a" ]; then
     echo "Installing libz..."
     temp_install_if_command_unknown wget wget
     temp_install_if_command_unknown make make
@@ -38,7 +38,7 @@ if [ -n "$ZLIB_INSTALL_PREFIX" ] && [ -z "$(echo $exclude_prereq | grep zlib)" ]
     make CC="$CC" && make install
     cd ../../.. && rm -rf zlib-1.3.tar.gz zlib-1.3
     remove_temp_installs
-  #else
-  #  echo "libz already installed in $ZLIB_INSTALL_PREFIX."
-  #fi
+  else
+    echo "libz already installed in $ZLIB_INSTALL_PREFIX."
+  fi
 fi
