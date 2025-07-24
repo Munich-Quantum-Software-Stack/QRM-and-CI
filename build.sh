@@ -94,6 +94,8 @@ mkdir -p build && cd build || { echo "Failed to create or navigate to build dire
 # Configure CUDA Quantum using CMake
 echo "Configuring CUDA Quantum with CMake..."
 cmake -G Ninja \
+	 -DZLIB_ROOT="/usr/local/zlib" \
+  -DCMAKE_PREFIX_PATH="/usr/local/zlib" \
   -DMLIR_DIR="${MLIR_DIR}" \
   -DClang_DIR="${CLANG_DIR}" \
   -DLLVM_DIR="${LLVM_DIR}" \
