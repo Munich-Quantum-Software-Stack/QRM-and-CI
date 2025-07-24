@@ -5,7 +5,7 @@ include(FetchContent)
 FetchContent_Declare(
   spdlog
   GIT_REPOSITORY https://github.com/gabime/spdlog.git
-  GIT_TAG v1.x # You can specify a version tag here
+  GIT_TAG v1.12.0 # You can specify a version tag here
 )
 
 # Make sure spdlog is downloaded and available
