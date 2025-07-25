@@ -23,6 +23,8 @@ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
     Implementation of the mqp-offload listener. This is the entry point of the
     MQSS when jobs are submitted using the Munich Quantum Portal (MQP).
     The access to the MQSS is via REST API.
+  TODO: NOT working yet, the logic here has nothing to do with the actual
+implementation. This is juts a placeholder.
 
 *******************************************************************************
 * This source code and the accompanying materials are made available under    *
