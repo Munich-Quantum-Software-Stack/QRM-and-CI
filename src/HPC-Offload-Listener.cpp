@@ -222,12 +222,15 @@ void saveResults(const std::string &resultsMessage) {
     std::cerr << "Invalid UUID string: " << e.what() << std::endl;
     exit(1);
   }
+#ifdef DEBUG
   std::cout << "Received message " << std::endl
             << jsonResults["results"] << std::endl;
+#endif
   // Simulate results (in the original, this comes from some quantum function)
   std::unordered_map<std::string, std::unordered_map<int, int>> results =
       parseStringToMap(jsonResults["results"]);
   // Print map contents
+#ifdef DEBUG
   for (const auto &outer_pair : results) {
     std::cout << "Key: " << outer_pair.first << std::endl;
     for (const auto &inner_pair : outer_pair.second) {
@@ -235,7 +238,7 @@ void saveResults(const std::string &resultsMessage) {
                 << ", Value: " << inner_pair.second << std::endl;
     }
   }
-
+#endif
   // Store the created job in the global jobs dictionary
   addFinishedJob(taskId, results);
   // finishedJobs[taskId] = results[std::string("__global__")];
@@ -267,8 +270,10 @@ int main(int argc, char *argv[]) {
       if (message.find("__global__") != std::string::npos) {
         std::string taskId = jsonTask["task_id"];
         threadsConnections.push_back(std::thread(saveResults, message));
+#ifdef DEBUG
         std::cout << "Received results for task with id: " << taskId
                   << std::endl;
+#endif
       } else {
         boost::uuids::random_generator generator;
         QuantumTask quantumTask = dumpJsonToQuantumTask(message.c_str());

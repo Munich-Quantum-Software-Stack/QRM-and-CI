@@ -26,7 +26,9 @@ namespace QRM {
 
 void PassRunner::invokePasses(ModuleOp circuit,
                               const std::vector<std::string> &passes) {
+#ifdef DEBUG
   std::cout << "Invoking Target Agnostic Passes" << std::endl;
+#endif
   // Join the vector into a single string with commas
   std::string passPipeline = llvm::join(passes, ",");
   mlir::PassManager pm(circuit.getContext());
@@ -54,7 +56,9 @@ void PassRunner::invokePasses(std::vector<ModuleOp> circuits,
 void PassRunner::invokePasses(ModuleOp circuit,
                               const std::vector<std::string> &passes,
                               std::string device) {
+#ifdef DEBUG
   std::cout << "Invoking Target Specific Passes" << std::endl;
+#endif
   mlir::PassManager pm(circuit.getContext());
 }
 
@@ -68,7 +72,9 @@ void PassRunner::invokePasses(std::vector<ModuleOp> circuits,
 }
 
 void PassRunner::applyOptimizationLevel(ModuleOp circuit, int oLevel) {
+#ifdef DEBUG
   std::cout << "Invoking Optimization Level" << oLevel << std::endl;
+#endif
   mlir::PassManager pm(circuit.getContext());
   // Function map
   std::unordered_map<int, std::function<void(mlir::PassManager &)>>
@@ -98,7 +104,9 @@ void PassRunner::transpile(ModuleOp circuit) {
       "phased_rx",
       "z(1)",
   };
+#ifdef DEBUG
   std::cout << "Transpiling circuit to IQM" << std::endl;
+#endif
   mlir::PassManager pm(circuit.getContext());
   BasisConversionPassOptions options;
   options.basis = basis;

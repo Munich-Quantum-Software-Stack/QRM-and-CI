@@ -1,3 +1,25 @@
+# This code and any associated documentation is provided "as is"
+#
+# Copyright 2025 Munich Quantum Software Stack Project
+#
+# Licensed under the Apache License, Version 2.0 with LLVM Exceptions (the
+# "License"); you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# TODO: LICENSE
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
+#
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+# *******************************************************************************
+# * This source code and the accompanying materials are made available under
+# * the terms of the Apache License 2.0 which accompanies this distribution.
+# *******************************************************************************
+
 cmake_minimum_required(VERSION 3.22.1)
 project(
   QuantumResourceManager
@@ -139,9 +161,9 @@ target_link_libraries(
   "mqp-offload-listener" PUBLIC rabbitmq nlohmann_json::nlohmann_json
                                 spdlog::spdlog Threads::Threads Common)
 
-add_executable("agnostic-pass-runner" src/AgnosticPassRunner.cpp)
+add_executable("target-agnostic-pass-runner" src/AgnosticPassRunner.cpp)
 target_link_libraries(
-  "agnostic-pass-runner"
+  "target-agnostic-pass-runner"
   PUBLIC rabbitmq
          spdlog::spdlog
          nlohmann_json::nlohmann_json
@@ -174,8 +196,28 @@ target_link_libraries(
          fmt::fmt)
 
 add_executable("submitter" src/Submitter.cpp)
-target_link_libraries("submitter" PUBLIC rabbitmq nlohmann_json::nlohmann_json
-                                         Threads::Threads Common spdlog::spdlog)
+
+target_include_directories(submitter PRIVATE ${MLIR_INCLUDE_DIRS}
+                                             ${LLVM_INCLUDE_DIRS})
+
+target_compile_definitions(submitter PRIVATE ${MLIR_DEFINITIONS}
+                                             ${LLVM_DEFINITIONS})
+
+target_link_libraries(
+  "submitter"
+  PUBLIC rabbitmq
+         nlohmann_json::nlohmann_json
+         Threads::Threads
+         Common
+         spdlog::spdlog
+         fmt::fmt
+         # Required MLIR components
+         MLIRIR
+         MLIRPass
+         MLIRTransforms
+         MLIROptLib
+         MLIRExecutionEngine
+         ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so)
 
 add_executable("mock-backend" src/MockBackend.cpp)
 
@@ -193,12 +235,6 @@ target_link_libraries(
          Threads::Threads
          Common
          fmt::fmt
-         # Required MLIR components
-         MLIRIR
-         MLIRPass
-         MLIRTransforms
-         MLIROptLib
-         MLIRExecutionEngine
          ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so)
 
 enable_testing()
