@@ -30,8 +30,8 @@ RUN cmake -G Ninja ../llvm \
   -DLLVM_ENABLE_PROJECTS="mlir;clang" \
   -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind;compiler-rt" \
   -DLLVM_TARGETS_TO_BUILD="X86" \
-  -DLLVM_PARALLEL_COMPILE_JOBS=6 \
-  -DLLVM_PARALLEL_LINK_JOBS=6 \
+  -DLLVM_PARALLEL_COMPILE_JOBS=2 \
+  -DLLVM_PARALLEL_LINK_JOBS=2 \
   -DCMAKE_BUILD_TYPE=Release \
   -DLLVM_ENABLE_ASSERTIONS=ON \
   -DLLVM_ENABLE_RTTI=ON \
@@ -40,7 +40,7 @@ RUN cmake -G Ninja ../llvm \
   -DLLVM_INSTALL_UTILS=ON \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
   -DCMAKE_INSTALL_PREFIX=/usr/local/llvm && \
-  ninja -j6 install && \
+  ninja -j2 install && \
   cd / && rm -rf /opt/llvm-project
 
 # Add LLVM to PATH
