@@ -59,7 +59,7 @@ module transpile to IQM device.
 #include "Passes/Transforms.hpp"
 #include "common/JIT.h"
 #include "common/RuntimeMLIR.h"
-#include "cudaq/Optimizer/CodeGen/Pipelines.h"
+// #include "cudaq/Optimizer/CodeGen/Pipelines.h"
 
 using json = nlohmann::json;
 using namespace mlir;
@@ -106,7 +106,7 @@ void signalHandler(int signum) {
 
 std::tuple<mlir::ModuleOp, mlir::MLIRContext *>
 extractMLIRContext(const std::string &quakeModule) {
-  auto contextPtr = cudaq::initializeMLIR();
+  auto contextPtr = cudaq::getOwningMLIRContext();
   mlir::MLIRContext &context = *contextPtr.get();
 
   // Get the quake representation of the kernel

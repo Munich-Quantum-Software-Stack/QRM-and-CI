@@ -32,10 +32,10 @@ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #pragma once
 
 // Define the RabbitMQ server connection information
-#define AMQP_SERVER "127.0.0.1" //"localhost"
+#define AMQP_SERVER "rabbitmq" //"localhost"
 #define AMQP_PORT 5672
-#define AMQP_USER "guest"
-#define AMQP_PASSWORD "guest"
+#define AMQP_USER "myuser"
+#define AMQP_PASSWORD "mypassword"
 #define AMQP_VHOST "/"
 #define RESPONSESIZE 150
 

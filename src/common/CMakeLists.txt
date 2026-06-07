@@ -8,6 +8,9 @@ target_link_libraries(
   PRIVATE spdlog::spdlog
           rabbitmq
           uuid
+          qdmi::qdmi
+          lrz_device 
+          qdmi::project_warnings
           MLIRIR
           MLIRPass
           MLIRTransforms

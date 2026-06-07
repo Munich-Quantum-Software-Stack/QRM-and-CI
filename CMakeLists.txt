@@ -77,7 +77,7 @@ include_directories(SYSTEM ${LLVM_INCLUDE_DIRS} ${CLANG_INCLUDE_DIRS}
                     ${MLIR_INCLUDE_DIRS})
 # ##############################################################################
 # Find FOMAC package find_package(fomac REQUIRED) Find QDMI package
-find_package(qdmi REQUIRED)
+find_package(mqss-devices REQUIRED)
 # Find QInfo package find_package(qinfo REQUIRED) Find nlohmann_json package
 find_package(fmt REQUIRED)
 find_package(nlohmann_json REQUIRED)
@@ -106,6 +106,8 @@ include_directories(${PASSES_TB_INCLUDE_DIR})
 set(MQT_QMAP_INCLUDE_DIR "${mqt-qmap_SOURCE_DIR}/include/")
 set(MQT_QCEC_INCLUDE_DIR "${mqt-qcec_SOURCE_DIR}/include/")
 set(MQT_CORE_INCLUDE_DIR "${mqt-core_SOURCE_DIR}/include/mqt-core")
+set(QDMI_INCLUDE_DIR "/workspaces/QRM/build/_deps/qdmi-src/include")
+set(LRZ_QDMI_DEVICES_DIR "/workspaces/QRM/build/_deps/mqss-devices-build/src/datacenters/lrz/include")
 
 # Add the include paths
 include_directories(
@@ -114,6 +116,8 @@ include_directories(
   ${MLIR_INCLUDE_DIRS}
   ${MQT_QMAP_INCLUDE_DIR}
   ${MQT_CORE_INCLUDE_DIR}
+  ${QDMI_INCLUDE_DIR}
+  ${LRZ_QDMI_DEVICES_DIR}
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/mqss"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/mqss/Utils"
@@ -214,6 +218,10 @@ target_link_libraries(
          # Required MLIR components
          MLIRIR
          MLIRPass
+         MLIRFuncDialect         # <--- Fixes the func.func error
+         MLIRArithDialect        # <--- For constants and math
+         MLIRControlFlowDialect  # <--- For branching/returns
+         MLIRLLVMDialect
          MLIRTransforms
          MLIROptLib
          MLIRExecutionEngine

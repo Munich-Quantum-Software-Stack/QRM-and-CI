@@ -1,10 +1,11 @@
+#include "common/RuntimeMLIR.h"
 #include "mqss/common/QuantumTask.hpp"
 
 #include <iostream>
 
 std::tuple<mlir::ModuleOp, mlir::MLIRContext *>
 mqss::extractMLIRContext(const std::string &quakeModule) {
-  auto contextPtr = cudaq::initializeMLIR();
+  auto contextPtr = cudaq::getOwningMLIRContext();
   mlir::MLIRContext &context = *contextPtr.get();
 
   // Get the quake representation of the kernel
@@ -82,7 +83,15 @@ json mqss::dumpQuantumTaskToJson(const QuantumTask &task) {
 }
 mqss::QuantumTask mqss::dumpJsonToQuantumTask(const char *quantumTaskAsString) {
   QuantumTask quantumTask;
-  json jsonQuantumTask = json::parse(quantumTaskAsString);
+  json jsonQuantumTask;
+  try {
+    jsonQuantumTask = json::parse(quantumTaskAsString);
+  } catch (const json::parse_error &e) {
+    std::cerr << "JSON parse error: " << e.what() << "\n";
+    return QuantumTask();
+  }
+
+  //json jsonQuantumTask = json::parse(quantumTaskAsString);
 
   if (!jsonQuantumTask.contains("task_id")) {
     std::cerr << "Field task_id was not defined in json file" << std::endl;

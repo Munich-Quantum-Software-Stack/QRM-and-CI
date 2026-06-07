@@ -30,6 +30,7 @@ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 * the terms of the Apache License 2.0 which accompanies this distribution.    *
 ******************************************************************************/
 
+#include "cudaq/Optimizer/Transforms/Passes.h"
 #include "mqss/ConnectionHandler.hpp"
 #include "mqss/LoggerHandler.hpp"
 #include "mqss/common/Logger.hpp"
@@ -42,7 +43,12 @@ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #include <csignal>
 #include <cstdlib>
 #include <iostream>
+#include <llvm/Bitcode/BitcodeWriter.h>
+#include <llvm/IR/LLVMContext.h>
 #include <map>
+#include <mlir/Dialect/Func/IR/FuncOps.h>
+#include <mlir/Pass/PassManager.h>
+#include <mlir/Target/LLVMIR/Export.h>
 #include <mutex>
 #include <nlohmann/json.hpp>
 #include <regex>
@@ -59,9 +65,10 @@ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 // cudaq includes
 #include "common/JIT.h"
 #include "common/RuntimeMLIR.h"
-#include "cudaq/Optimizer/CodeGen/Pipelines.h"
+#include "cudaq/Optimizer/CodeGen/OptUtils.h"
+#include "cudaq/Optimizer/CodeGen/Passes.h"
 
-#define CUDAQ_GEN_PREFIX_NAME "__nvqpp__mlirgen____"
+#define CUDAQ_GEN_PREFIX_NAME "__nvqpp__mlirgen__"
 using json = nlohmann::json;
 using namespace mqss;
 // Start threads to consume from each queue concurrently
@@ -126,48 +133,29 @@ std::string lowerQuakeCode(const std::string &circuit,
   auto func = m_module.lookupSymbol<mlir::func::FuncOp>(
       std::string(CUDAQ_GEN_PREFIX_NAME + kernelName));
 
-  auto translation = cudaq::getTranslation("qir-base");
+  mlir::PassManager pm(m_module->getContext());
+  cudaq::opt::addAggressiveInlining(pm);
+  cudaq::opt::createTargetFinalizePipeline(pm);
+  cudaq::opt::addJITPipelineConvertToQIR(pm, "qir-full");
 
-  std::string codeStr;
-  {
-    llvm::raw_string_ostream outStr(codeStr);
-    m_module.getContext()->disableMultithreading();
-    if (failed(translation(m_module, outStr, "", false, false, false)))
-      throw std::runtime_error("Could not successfully translate to qir-base");
-  }
+  // ✅ actually run the passes
+  if (failed(pm.run(m_module)))
+    throw std::runtime_error("Failed to lower Quake to QIR");
+  
+  llvm::LLVMContext llvmContext;
+  llvmContext.setOpaquePointers(false);
+  auto llvmModule = mlir::translateModuleToLLVMIR(m_module, llvmContext);
 
-  std::vector<char> decodedBase64Output;
-  // Decode the Base64 string
-  if (llvm::decodeBase64(codeStr, decodedBase64Output))
-    throw std::runtime_error("Error decoding Base64 string");
+  // Optimize
+  // auto optPipeline = mlir::makeOptimizingTransformer(3, 0, nullptr);
+  // if (auto err = optPipeline(m_module.get()))
+  //   throw std::runtime_error("Failed to optimize LLVM IR");
 
-  std::string decodedBase64Kernel =
-      std::string(decodedBase64Output.data(), decodedBase64Output.size());
-  // decode the LLVM byte code to string
-  llvm::LLVMContext contextLLVM;
-  contextLLVM.setOpaquePointers(false);
-  auto memoryBuffer = llvm::MemoryBuffer::getMemBuffer(decodedBase64Kernel);
-
-  llvm::Expected<std::unique_ptr<llvm::Module>> moduleOrErr =
-      llvm::parseBitcodeFile(*memoryBuffer, contextLLVM);
-  std::error_code ec = llvm::errorToErrorCode(moduleOrErr.takeError());
-  if (ec)
-    throw std::runtime_error(
-        "Compiler::Error parsing bitcode..."); // when debbugin dump:
-                                               // ec.message())
-  // Successfully parsed
-  std::unique_ptr<llvm::Module> moduleConverted = std::move(*moduleOrErr);
-
-  auto optPipeline = mlir::makeOptimizingTransformer(
-      /*optLevel=*/3, /*sizeLevel=*/0,
-      /*targetMachine=*/nullptr);
-  if (auto err = optPipeline(moduleConverted.get()))
-    throw std::runtime_error("getQIR Failed to optimize LLVM IR ");
-
+  // Print directly to string
   std::string loweredCode;
   {
     llvm::raw_string_ostream os(loweredCode);
-    moduleConverted->print(os, nullptr);
+    os << *llvmModule;
   }
   return loweredCode;
 }
@@ -192,6 +180,7 @@ void submit(QuantumTask quantumTask) {
     int jobCount = quantumTask.n_shots;
     std::string program = quantumTask.circuit_files[i];
     std::string kernelName = getKernelName(program);
+
     std::string qirCode = lowerQuakeCode(program, kernelName);
     // update QIR code into the quantumTask
     quantumTask.circuit_files[i] = qirCode;

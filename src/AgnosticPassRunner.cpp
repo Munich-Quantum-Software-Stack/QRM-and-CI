@@ -57,7 +57,7 @@ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #include "Passes/Transforms.hpp"
 #include "common/JIT.h"
 #include "common/RuntimeMLIR.h"
-#include "cudaq/Optimizer/CodeGen/Pipelines.h"
+// #include "cudaq/Optimizer/CodeGen/Pipelines.h"
 
 using json = nlohmann::json;
 using namespace mlir;

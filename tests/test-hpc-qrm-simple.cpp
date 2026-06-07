@@ -51,12 +51,12 @@ QuantumResult JSONToQuantumResult(const char *QuantumResult_str) {
   return result;
 }
 
-int main(int argc, char *argv[]) {
+int main() {
+  write(STDOUT_FILENO, "entered main\n", 13); // bypasses cout entirely
   setbuf(stdout, NULL);
-  std::cout << "Starting test-hpc-qrm-simple" << std::endl;
   mqss::RabbitMQClient client(AMQP_SERVER, AMQP_PORT, QUEUE_HPC_OFFLOADER,
                               AMQP_USER, AMQP_PASSWORD);
-  std::string filename = "../../benchmarks/Example.qke";
+  std::string filename = "/workspaces/QRM/benchmarks/Example.qke";
   std::ifstream file(filename);
   if (!file) {
     std::cerr << "Failed to open file." << std::endl;
@@ -98,6 +98,12 @@ int main(int argc, char *argv[]) {
   std::string QuantumTask_str = QuantumTask_json.dump();
   std::string result =
       client.sendMessageWithReply(QUEUE_HPC_OFFLOADER, QuantumTask_str, true);
+
+  if (result.empty()) {
+    std::cerr << "ERROR: got empty reply from RabbitMQ\n";
+    return 1;
+  }
+
   QuantumTask returnedQT = dumpJsonToQuantumTask(result.c_str());
   std::cout << "I have submitted task wit id: " << returnedQT.task_id
             << std::endl;

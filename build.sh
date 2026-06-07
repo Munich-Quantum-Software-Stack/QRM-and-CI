@@ -19,15 +19,15 @@ CURRENT_DIR=$(pwd)
 
 INSTALL_PATH="${INSTALL_PATH:-$HOME}"
 # Default values
-NUM_JOBS=1  # Default number of jobs
+NUM_JOBS=4  # Default number of jobs
 BUILD_DOCS=OFF  # Default: Do not build documentation
 BUILD_TESTS=OFF  # Default: Do not build tests
 BUILD_TYPE="Release"  # Default: Release mode
 
 # Default directories (can be overridden by arguments)
-MLIR_DIR="/opt/llvm/lib/cmake/mlir"
-CLANG_DIR="/opt/llvm/lib/cmake/clang"
-LLVM_DIR="/opt/llvm/lib/cmake/llvm"
+MLIR_DIR="/usr/local/llvm/lib/cmake/mlir"
+CLANG_DIR="/usr/local/llvm/lib/cmake/clang"
+LLVM_DIR="/usr/local/llvm/lib/cmake/llvm"
 
 # Parse command-line arguments
 while [[ $# -gt 0 ]]; do
@@ -110,9 +110,9 @@ echo "Configuring CUDA Quantum with CMake..."
 cmake -G Ninja \
 	 -DZLIB_ROOT="/usr/local/zlib" \
   -DCMAKE_PREFIX_PATH="/usr/local/zlib" \
-  -DMLIR_DIR="${MLIR_DIR}" \
-  -DClang_DIR="${CLANG_DIR}" \
-  -DLLVM_DIR="${LLVM_DIR}" \
+  -DMLIR_DIR="/usr/local/llvm/lib/cmake/mlir" \
+  -DClang_DIR="/usr/local/llvm/lib/cmake/clang" \
+  -DLLVM_DIR="/usr/local/llvm/lib/cmake/llvm" \
   ..
 
 if [ $? -ne 0 ]; then
@@ -140,9 +140,9 @@ cmake .. \
   -DCMAKE_CXX_COMPILER=g++ \
   -DBUILD_WITH_DOCS=ON \
   -DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}\
-  -DMLIR_DIR="${MLIR_DIR}" \
-  -DClang_DIR="${CLANG_DIR}" \
-  -DLLVM_DIR="${LLVM_DIR}" \
+  -DMLIR_DIR="/usr/local/llvm/lib/cmake/mlir" \
+  -DClang_DIR="/usr/local/llvm/lib/cmake/clang" \
+  -DLLVM_DIR="/usr/local/llvm/lib/cmake/llvm" \
   -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
   -DCUDAQ_SOURCE_DIR="${CUDAQ_DIR}"
 

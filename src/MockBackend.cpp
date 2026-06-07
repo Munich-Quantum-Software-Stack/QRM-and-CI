@@ -58,9 +58,10 @@ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 // cudaq includes
 #include "common/JIT.h"
 #include "common/RuntimeMLIR.h"
-#include "cudaq/Optimizer/CodeGen/Pipelines.h"
+#include "createJob.h"
+// #include "cudaq/Optimizer/CodeGen/Pipelines.h"
 
-#define CUDAQ_GEN_PREFIX_NAME "__nvqpp__mlirgen____"
+#define CUDAQ_GEN_PREFIX_NAME "__nvqpp__mlirgen__"
 using json = nlohmann::json;
 using namespace mqss;
 // Start threads to consume from each queue concurrently
@@ -138,6 +139,77 @@ void mockBackend(QuantumTask quantumTask) {
   json results = {{"task_id", quantumTask.task_id}, {"results", resultCircuit}};
   // after processing, move forward the quantum task
   forwardQueue.publishMessage(results.dump(), true);
+}
+
+static HardwareSession* setUpNewSession() {
+  char *hostname = getenv(LRZ_HOST_URL);
+  char *token = getenv(MQP_SECRET_TOKEN);
+  int err;
+  EXIT_ON_FAIL(LRZ_QDMI_device_initialize(), "Failed to initialize the device");
+  size_t hardware_size;
+  EXIT_ON_FAIL(
+      LRZ_QDMI_device_session_query_device_property(
+          nullptr, QDMI_DEVICE_PROPERTY_CUSTOM1, 0, nullptr, &hardware_size),
+      "Could not fetch the hardwares");
+  std::string hardwares(hardware_size - 1, '\0');
+
+  EXIT_ON_FAIL(LRZ_QDMI_device_session_query_device_property(
+                   nullptr, QDMI_DEVICE_PROPERTY_CUSTOM1, 0,
+                   static_cast<void *>(hardwares.data()), nullptr),
+               "Could not fetch the hardwares");
+
+  std::regex del(";");
+  std::sregex_token_iterator hardware_iterator(hardwares.begin(),
+                                               hardwares.end(), del, -1);
+  std::sregex_token_iterator hardware_iterator_end;
+
+  HardwareSession *hardware_session = NAME_SESSIONS[hardware_iterator++->str()];
+  LRZ_QDMI_Device_Session device_session;
+  LRZ_QDMI_device_session_alloc(&device_session);
+
+  LRZ_QDMI_device_session_set_parameter(
+      device_session, QDMI_DEVICE_SESSION_PARAMETER_BASEURL,
+      strlen(hostname) * sizeof(char) + 1, hostname);
+
+  LRZ_QDMI_device_session_set_parameter(
+      device_session, QDMI_DEVICE_SESSION_PARAMETER_TOKEN,
+      strlen(token) * sizeof(char) + 1, token);
+
+  LRZ_QDMI_device_session_set_parameter(
+      device_session, QDMI_DEVICE_SESSION_PARAMETER_CUSTOM1,
+      hardware_session->name.size() * sizeof(char) + 1,
+      hardware_session->name.data());
+
+  err = LRZ_QDMI_device_session_init(device_session);
+  if (err == QDMI_SUCCESS) {
+    hardware_session->session =
+        std::make_shared<LRZ_QDMI_Device_Session>(device_session);
+  }
+  return hardware_session;
+}
+
+void createLRZJob(std::string test_circuit) {
+
+  HardwareSession *hardware_session = setUpNewSession();
+  if (hardware_session->session == nullptr) {
+    std::cout << "Empty hardware session!!\n";
+    return;
+  }
+  std::shared_ptr<LRZ_QDMI_Device_Session> session_ptr =
+      hardware_session->session;
+  LRZ_QDMI_Device_Session session = *(session_ptr.get());
+
+  LRZ_QDMI_Device_Job job = nullptr;
+  size_t nShot = 50;
+  const QDMI_Program_Format qasmFormat = QDMI_PROGRAM_FORMAT_QASM2;
+
+  const char *c_t_c = test_circuit.c_str();
+  QDMI_Job_Status *job_status =
+      (QDMI_Job_Status *)malloc(sizeof(QDMI_Job_Status));
+  int create_device_Job = LRZ_QDMI_device_session_create_device_job(session, &job);
+
+  assert((create_device_Job == QDMI_STATUS::QDMI_SUCCESS) && "Device job could not be created");
+              
 }
 
 int main(int argc, char *argv[]) {
