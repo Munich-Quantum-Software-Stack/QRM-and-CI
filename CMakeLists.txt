@@ -77,7 +77,7 @@ include_directories(SYSTEM ${LLVM_INCLUDE_DIRS} ${CLANG_INCLUDE_DIRS}
                     ${MLIR_INCLUDE_DIRS})
 # ##############################################################################
 # Find FOMAC package find_package(fomac REQUIRED) Find QDMI package
-find_package(mqss-devices REQUIRED)
+find_package(qdmi REQUIRED)
 # Find QInfo package find_package(qinfo REQUIRED) Find nlohmann_json package
 find_package(fmt REQUIRED)
 find_package(nlohmann_json REQUIRED)
@@ -106,8 +106,8 @@ include_directories(${PASSES_TB_INCLUDE_DIR})
 set(MQT_QMAP_INCLUDE_DIR "${mqt-qmap_SOURCE_DIR}/include/")
 set(MQT_QCEC_INCLUDE_DIR "${mqt-qcec_SOURCE_DIR}/include/")
 set(MQT_CORE_INCLUDE_DIR "${mqt-core_SOURCE_DIR}/include/mqt-core")
-set(QDMI_INCLUDE_DIR "/workspaces/QRM/build/_deps/qdmi-src/include")
-set(LRZ_QDMI_DEVICES_DIR "/workspaces/QRM/build/_deps/mqss-devices-build/src/datacenters/lrz/include")
+set(QDMI_INCLUDE_DIR "${qdmi_SOURCE_DIR}/include")
+set(QDMI_EXAMPLES_DIR "${qdmi_SOURCE_DIR}/examples/")
 
 # Add the include paths
 include_directories(
@@ -117,7 +117,7 @@ include_directories(
   ${MQT_QMAP_INCLUDE_DIR}
   ${MQT_CORE_INCLUDE_DIR}
   ${QDMI_INCLUDE_DIR}
-  ${LRZ_QDMI_DEVICES_DIR}
+  ${QDMI_EXAMPLES_DIR}
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/mqss"
   "${CMAKE_CURRENT_SOURCE_DIR}/include/mqss/Utils"
@@ -205,7 +205,8 @@ target_include_directories(submitter PRIVATE ${MLIR_INCLUDE_DIRS}
                                              ${LLVM_INCLUDE_DIRS})
 
 target_compile_definitions(submitter PRIVATE ${MLIR_DEFINITIONS}
-                                             ${LLVM_DEFINITIONS})
+                                             ${LLVM_DEFINITIONS}
+                                             QDMI_DEVICE_PATH="$<TARGET_FILE:cxx-qdmi-device>")
 
 target_link_libraries(
   "submitter"
@@ -215,6 +216,9 @@ target_link_libraries(
          Common
          spdlog::spdlog
          fmt::fmt
+         qdmi::qdmi
+         qdmi::example_driver
+         qdmi::qdmi_project_warnings
          # Required MLIR components
          MLIRIR
          MLIRPass
@@ -226,6 +230,8 @@ target_link_libraries(
          MLIROptLib
          MLIRExecutionEngine
          ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so)
+
+add_dependencies(submitter cxx-qdmi-device)
 
 add_executable("mock-backend" src/MockBackend.cpp)
 
