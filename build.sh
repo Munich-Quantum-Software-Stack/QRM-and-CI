@@ -20,9 +20,11 @@ BUILD_TYPE="Release"  # Default: Release mode
 
 BUILD_DIR=${CURRENT_DIR}"/build"
 DEPS_DIR="${BUILD_DIR}/_deps"
+LOGS_DIR="${BUILD_DIR}/logs"
 
 mkdir -p ${BUILD_DIR}
 mkdir -p ${DEPS_DIR}
+mkdir -p ${LOGS_DIR}
 
 echo ${BUILD_DIR}
 cd  "${BUILD_DIR}" || { echo "Failed to navigate back to the original directory."; exit 1; }

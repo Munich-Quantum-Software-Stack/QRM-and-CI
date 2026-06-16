@@ -1,24 +1,25 @@
-# cmake_minimum_required(VERSION 3.10)
 
-project(MyQirTests)
 
-find_package(GTest REQUIRED)
-include(GoogleTest)
+include_directories(BEFORE ${PROJECT_ROOT_DIR}/include)
 
-set(TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test-hpc-qrm-simple.cpp")
+add_executable(test-hpc-qrm-simple
+    test-hpc-qrm-simple.cpp
+    ${PROJECT_ROOT_DIR}/src/Daemon.cpp
+    ${PROJECT_ROOT_DIR}/src/MQSSCompiler.cpp
+)
 
-include_directories(${GTEST_INCLUDE_DIRS})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src)
+target_compile_definitions(test-hpc-qrm-simple PRIVATE
+      CUDAQ_QUAKE_PATH="${CUDAQ_QUAKE_PATH}"
+      CUDAQ_TRANSLATE_PATH="${CUDAQ_TRANSLATE_PATH}"
+      MQSS_CUDAQ_PATH="${MQSS_CUDAQ_PATH}"
+      CUDAQ_OPT_PATH="${CUDAQ_OPT_PATH}"
+      LOG_FILES_PATH="${LOG_FILES_PATH}"
+)
 
-find_package(rabbitmq-c REQUIRED)
-
-foreach(TEST_SOURCE ${TEST_SOURCES})
-  get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
-  add_executable(${TEST_NAME} ${TEST_SOURCE})
-  target_link_libraries(${TEST_NAME} ${GTEST_LIBRARIES} rabbitmq Common
-                        spdlog::spdlog_header_only)
-  target_include_directories(
-    ${TEST_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mqss
-                        ${CMAKE_CURRENT_SOURCE_DIR}/include/mqss/Utils)
-  add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
-endforeach()
+target_link_libraries(
+  "test-hpc-qrm-simple"
+  PUBLIC rabbitmq
+         mqss::mqss
+         spdlog::spdlog
+         nlohmann_json::nlohmann_json
+      )

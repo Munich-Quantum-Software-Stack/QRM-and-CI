@@ -2,13 +2,8 @@
 # start.sh
 cd build
 
-./mock-backend &
-./submitter &
-./scheduler &
-./target-agnostic-pass-runner & 
-./target-specific-pass-runner &
-./hpc-offload-listener &
-./tests/test-hpc-qrm-simple
+./Daemon &
+./MQSSCompiler
 
 echo "All services started. PIDs: $!"
 echo "Press Ctrl+C to stop all"

@@ -51,27 +51,55 @@ include_directories(
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 
+add_subdirectory(src)
+
 add_executable("MQSSCompiler" src/MQSSCompiler.cpp)
 
 set(CUDAQ_QUAKE_PATH "${MQSSCI_SRC_DIR}/_deps/mqss-cudaq/cudaq/bin/cudaq-quake")
 set(CUDAQ_TRANSLATE_PATH "${MQSSCI_SRC_DIR}/_deps/mqss-cudaq/cudaq/bin/cudaq-translate")
+set(CUDAQ_OPT_PATH "${MQSSCI_SRC_DIR}/_deps/mqss-cudaq/cudaq/bin/cudaq-opt")
 
 set(MQSS_CUDAQ_PATH "${MQSSCI_INSTALL_DIR}/mqss-cudaq-opt")
 set(MQSS_CATALYST_OPT "${MQSSCI_INSTALL_DIR}/mqss-catalyst-opt")
+
+set(LOG_FILES_PATH "${MQSSCI_SRC_DIR}/build/logs")
 
 target_compile_definitions(MQSSCompiler PRIVATE
       CUDAQ_QUAKE_PATH="${CUDAQ_QUAKE_PATH}"
       CUDAQ_TRANSLATE_PATH="${CUDAQ_TRANSLATE_PATH}"
       MQSS_CUDAQ_PATH="${MQSS_CUDAQ_PATH}"
+      CUDAQ_OPT_PATH="${CUDAQ_OPT_PATH}"
+      LOG_FILES_PATH="${LOG_FILES_PATH}"
 )
 
 target_link_libraries(
   "MQSSCompiler"
+    PUBLIC 
+    rabbitmq
+    mqss::mqss
+    spdlog::spdlog
+    nlohmann_json::nlohmann_json
+    Common
+)
+
+add_executable("Daemon" src/Daemon.cpp)
+
+target_compile_definitions(Daemon PRIVATE
+      LOG_FILES_PATH="${LOG_FILES_PATH}"
+)
+
+target_link_libraries(
+  "Daemon"
   PUBLIC rabbitmq
          mqss::mqss
          spdlog::spdlog
          nlohmann_json::nlohmann_json
+         Common
       )
 
-  # set(CUDAQ_TARGETS ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so)
-  # /workspaces/QRM/build/_deps/mqssci-src/_deps/mqss-cudaq/cudaq/lib/libcudaq-mlir-runtime.so
+# add_executable(ExampleDriver
+#     src/ExampleDriver.cpp
+#     src/Daemon.cpp
+#     src/MQSSCompiler.cpp
+# )
+# add_subdirectory(tests)

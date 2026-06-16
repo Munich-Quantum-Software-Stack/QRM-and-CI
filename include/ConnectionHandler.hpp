@@ -38,13 +38,3 @@ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #define AMQP_PASSWORD "mypassword"
 #define AMQP_VHOST "/"
 #define RESPONSESIZE 150
-
-#define QUEUE_HPC_OFFLOADER "MQSS-HPC-Offloader"
-#define QUEUE_MQP_OFFLOADER "MQSS-MQP-Offloader"
-#define QUEUE_QRM_AGNOSTIC_PASS_RUNNER "MQSS-To-AgnosticPassRunner"
-#define QUEUE_AGNOSTIC_PASS_RUNNER_SCHEDULER "MQSS-To-Scheduler"
-#define QUEUE_SCHEDULER_TRANSPILER "MQSS-To-Transpiler"
-#define QUEUE_TRANSPILER_SUBMITTER "MQSS-To-Submitter"
-#define QUEUE_SUBMITTER_OFFLOADER "MQSS-To-Offloader"
-#define QUEUE_SUBMITTER_BACKEND "MQSS-To-Backend" // for Testing
-#define QUEUE_BACKEND_SUBMITTER "MQSS-To-Backend" // for Testing
