@@ -5,7 +5,7 @@ include(FetchContent)
 FetchContent_Declare(
   rabbitmq-c
   GIT_REPOSITORY https://github.com/alanxz/rabbitmq-c.git
-  GIT_TAG v0.13.0)
+  GIT_TAG v0.14.0)
 
 # Make sure spdlog is downloaded and available
 FetchContent_MakeAvailable(rabbitmq-c)

@@ -1,8 +1,0 @@
-[mqss::AgnosticPassRunner::2026-06-05 16:38:56] [info] Running up the Target Agnostic Pass Runner
-[mqss::AgnosticPassRunner::2026-06-05 16:38:56] [info] Waiting for a new job...
-[mqss::AgnosticPassRunner::2026-06-05 16:39:33] [warning] Stopping the Agnostic Pass Runner
-[mqss::AgnosticPassRunner::2026-06-05 16:39:33] [warning] Closing connections to RabbitMQ
-[mqss::AgnosticPassRunner::2026-06-05 17:55:06] [info] Running up the Target Agnostic Pass Runner
-[mqss::AgnosticPassRunner::2026-06-05 17:55:06] [info] Waiting for a new job...
-[mqss::AgnosticPassRunner::2026-06-05 17:55:10] [warning] Stopping the Agnostic Pass Runner
-[mqss::AgnosticPassRunner::2026-06-05 17:55:10] [warning] Closing connections to RabbitMQ
