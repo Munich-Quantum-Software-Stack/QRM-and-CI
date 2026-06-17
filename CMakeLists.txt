@@ -66,12 +66,19 @@ add_subdirectory(src)
 
 add_executable("MQSSCompiler" src/MQSSCompiler.cpp)
 
+set(COMPILER_QUEUE_STR "compiler.tasks.queue")
+set(SCHEDULER_QUEUE_STR "scheduler.tasks.queue")
+set(RESULTS_QUEUE_STR "test.results.queue")
+
 target_compile_definitions(MQSSCompiler PRIVATE
       CUDAQ_QUAKE_PATH="${CUDAQ_QUAKE_PATH}"
       CUDAQ_TRANSLATE_PATH="${CUDAQ_TRANSLATE_PATH}"
       MQSS_CUDAQ_PATH="${MQSS_CUDAQ_PATH}"
       CUDAQ_OPT_PATH="${CUDAQ_OPT_PATH}"
       LOG_FILES_PATH="${LOG_FILES_PATH}"
+      COMPILER_QUEUE="${COMPILER_QUEUE_STR}"
+      SCHEDULER_QUEUE="${SCHEDULER_QUEUE_STR}"
+      RESULTS_QUEUE="${RESULTS_QUEUE_STR}"
 )
 
 target_link_libraries(
@@ -88,6 +95,8 @@ add_executable("MQSSScheduler" src/MQSSScheduler.cpp)
 
 target_compile_definitions(MQSSScheduler PRIVATE
       LOG_FILES_PATH="${LOG_FILES_PATH}"
+      COMPILER_QUEUE="${COMPILER_QUEUE_STR}"
+      SCHEDULER_QUEUE="${SCHEDULER_QUEUE_STR}"
 )
 
 target_link_libraries(

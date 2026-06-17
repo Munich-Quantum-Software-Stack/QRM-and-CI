@@ -1,4 +1,9 @@
 #include "Compiler.h"
+#include "LoggerHandler.hpp"
+
+#include <csignal>
+#include <iostream>
+#include <stdexcept>
 
 using namespace mqss;
 // Invokes cudaq-quake on `src_path` which convert the source to quake mlir
@@ -6,9 +11,9 @@ using namespace mqss;
 // dialect Finally, cudaq-translate is called to translate the output to qasm or
 // qir. Returns the raw Quake MLIR as a string. result_type can be "qir",
 // "qir-full", "qir-adaptive", "qir-base", "openqasm2"
-std::string lowerToOutputFormat(const std::string &srcPath, int opt_level,
-                                std::string target_qpu,
-                                std::string result_type = "qir-base") {
+static std::string lowerToOutputFormat(const std::string &srcPath,
+                                       int opt_level, std::string target_qpu,
+                                       std::string result_type = "qir-base") {
   // Write output to a temp file
   char tmpPath[] = "/tmp/mqss_quake_XXXXXX";
   int fd = mkstemp(tmpPath);
@@ -73,11 +78,20 @@ static void applyOptimizationPasses(mqss::QuantumTask &Qtask) {
 }
 
 int main() {
-  mqss::Logger::init(FILE_LOGGER_MQSSCompiler, LOGGER_MQSSCompiler);
+
+  std::signal(SIGINT, [](int) {
+    Logger::cleanup();
+    exit(0);
+  });
+
+  std::signal(SIGTERM, [](int) {
+    Logger::cleanup();
+    exit(0);
+  });
+
+  mqss::Logger::init(FILE_LOGGER_COMPILER, LOGGER_COMPILER);
   auto logger = Logger::getLogger();
   logger->info("Running up the MQSS Compiler");
-
-  mqss::QuantumTask task;
 
   mqss::TransportOptions<mqss::RabbitMqSimple> opts;
   opts.host = AMQP_SERVER;
@@ -91,23 +105,21 @@ int main() {
   while (true) {
     logger->info("Waiting for a new job...");
     auto res = messenger.receive<mqss::QuantumTask>(
-        {"compiler.tasks.queue"},
-        mqss::ReceiveArgs{
-            .timeout = std::chrono::milliseconds(5000),
-            .ack_mode = mqss::AckMode::Auto,
-        });
+        {COMPILER_QUEUE}, mqss::ReceiveArgs{
+                          .timeout = std::chrono::milliseconds(5000),
+                          .ack_mode = mqss::AckMode::Auto,
+                      });
 
     if (!res.has_value()) {
       // Timeout is normal — just keep polling
-      if (res.error().code() == mqss::StatusCode::Timeout)
+      if (res.error().code() == mqss::StatusCode::Timeout) {
         continue;
+      }
       logger->error("Receive error: ", res.error().reason());
       continue;
     }
 
     mqss::QuantumTask &task = *res;
-    logger->info("Received task: ", task.task_id());
-
     logger->info("Processing new task with id: {}", task.task_id());
     // Process the task...
     applyOptimizationPasses(task);
@@ -116,9 +128,11 @@ int main() {
         {task.result_destination()}, // use the queue the daemon specified
         task);
 
+    // After send
+    logger->info("Result sent by the compiler for task: {}", task.task_id());
     if (!send_st.ok())
-      logger->error("Failed to send result: ", send_st.reason());
+      logger->error("Failed to send result: {}", send_st.reason());
   }
   Logger::cleanup();
-  return 1;
+  return 0;
 }

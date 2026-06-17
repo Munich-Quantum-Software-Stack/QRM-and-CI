@@ -30,16 +30,12 @@ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 #pragma once
 
-#include <string>
-#define LOGGER_QRM "mqss::QRM"
-#define LOGGER_MQSSCompiler "mqss::MQSSCompiler"
+#define LOGGER_COMPILER "mqss::Compiler"
 #define LOGGER_DAEMON "mqss::Daemon"
 #define LOGGER_SCHEDULER "mqss::Scheduler"
 #define LOGGER_SUBMITTER "mqss::Submitter"
 
-#define FILE_LOGGER_QRM "QRM.log"
-#define FILE_LOGGER_MQSSCompiler"MQSSCompiler.log"
+#define FILE_LOGGER_COMPILER "Compiler.log"
 #define FILE_LOGGER_SCHEDULER "Scheduler.log"
 #define FILE_LOGGER_DAEMON "Daemon.log"
 #define FILE_LOGGER_SUBMITTER "Submitter.log"
-#define FILE_LOGGER_MOCK_DEVICE "Mock-Device.log"

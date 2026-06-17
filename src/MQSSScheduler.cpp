@@ -1,21 +1,24 @@
 #include "LoggerHandler.hpp"
 #include "Scheduler.h"
+#include <csignal>
 
 using namespace mqss;
-enum class TypedFormat { ProtoBinary, ProtoJson };
-
-static std::string uniqueName(const std::string &base) {
-  static std::atomic<unsigned> seq{1};
-  return base + "." + std::to_string(seq.fetch_add(1));
-}
 
 int main() {
+
+  std::signal(SIGINT, [](int) {
+    Logger::cleanup();
+    exit(0);
+  });
+
+  std::signal(SIGTERM, [](int) {
+    Logger::cleanup();
+    exit(0);
+  });
 
   mqss::Logger::init(FILE_LOGGER_SCHEDULER, LOGGER_SCHEDULER);
   auto logger = Logger::getLogger();
   logger->info("Running up the MQSS Scheduler");
-
-  mqss::QuantumTask task;
 
   mqss::TransportOptions<mqss::RabbitMqSimple> opts;
   opts.host = AMQP_SERVER;
@@ -29,7 +32,7 @@ int main() {
   while (true) {
     logger->info("Waiting for a new job...");
     auto res = messenger.receive<mqss::QuantumTask>(
-        {"scheduler.tasks.queue"},
+        {SCHEDULER_QUEUE},
         mqss::ReceiveArgs{
             .timeout = std::chrono::milliseconds(5000),
             .ack_mode = mqss::AckMode::Auto,
@@ -44,12 +47,12 @@ int main() {
     }
 
     mqss::QuantumTask &task = *res;
-    logger->info("Received task: ", task.task_id());
+    logger->info("Received task: {}", task.task_id());
 
-    logger->info("Forwarding task to Compiler: ", task.task_id());
+    logger->info("Forwarding task to Compiler: {}", task.task_id());
 
     auto send_st = messenger.send<mqss::QuantumTask>(
-        {"compiler.tasks.queue"}, // use the queue the daemon specified
+        {COMPILER_QUEUE}, // use the queue the daemon specified
         task);
 
     if (!send_st.ok())
