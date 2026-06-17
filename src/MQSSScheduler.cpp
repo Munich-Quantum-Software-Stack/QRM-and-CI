@@ -16,7 +16,7 @@ int main() {
     exit(0);
   });
 
-  mqss::Logger::init(FILE_LOGGER_SCHEDULER, LOGGER_SCHEDULER);
+  mqss::Logger::init(SCHEDULER_LOG_FILES_PATH, LOGGER_SCHEDULER);
   auto logger = Logger::getLogger();
   logger->info("Running up the MQSS Scheduler");
 

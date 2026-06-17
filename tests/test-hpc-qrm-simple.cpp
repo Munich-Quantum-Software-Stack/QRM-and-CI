@@ -21,7 +21,7 @@ int main() {
     exit(0);
   });
 
-  mqss::Logger::init(FILE_LOGGER_DAEMON, LOGGER_DAEMON);
+  mqss::Logger::init(TEST_CASE_LOG_FILES_PATH, LOGGER_DAEMON);
   auto logger = Logger::getLogger();
   logger->info("Running up the Daemon");
 

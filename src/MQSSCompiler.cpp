@@ -89,7 +89,7 @@ int main() {
     exit(0);
   });
 
-  mqss::Logger::init(FILE_LOGGER_COMPILER, LOGGER_COMPILER);
+  mqss::Logger::init(COMPILER_LOG_FILES_PATH, LOGGER_COMPILER);
   auto logger = Logger::getLogger();
   logger->info("Running up the MQSS Compiler");
 

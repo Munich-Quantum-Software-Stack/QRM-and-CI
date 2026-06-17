@@ -14,7 +14,7 @@ target_include_directories(test-hpc-qrm-simple PRIVATE
 )
 
 target_compile_definitions(test-hpc-qrm-simple PRIVATE
-      LOG_FILES_PATH="${LOG_FILES_PATH}"
+      TEST_CASE_LOG_FILES_PATH="${LOG_FILES_PATH}/Test-Case.log"
       SCHEDULER_QUEUE="${SCHEDULER_QUEUE_STR}"
       RESULTS_QUEUE="${RESULTS_QUEUE_STR}"
 )

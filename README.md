@@ -82,6 +82,12 @@ build/MQSSScheduler
 build/tests/test-hpc-qrm-simple
 ```
 
+If changes are made to the source files, rebuild using:</br>
+
+```sh
+make -C build -j4
+```
+
 ### Testing the installation via RabbitMQ
 
 Important: Please refer to [rabbitmq-setup](docs/develop_guide/rabbitmq.md) on how to setup RabbitMQ
@@ -103,3 +109,17 @@ back to ```test-hpc-qrm-simple``` which simply prints the received QIR circuit t
 
 Next, we will add support for a ```Submitter``` module that will submit the quantum-task to a real
 quantum device.
+
+### Checking Logs
+
+The logs of each of the component are generated within ```QRM/logs``` directory.
+This directory is automatically creating during the build process and populated during
+execution.
+
+The logs are:</br>
+
+```
+Compiler : Compiler.log
+Scheduler : Scheduler.log
+test case: Test-Case.log
+```

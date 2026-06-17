@@ -60,7 +60,7 @@ set(CUDAQ_OPT_PATH "${MQSSCI_SRC_DIR}/_deps/mqss-cudaq/cudaq/bin/cudaq-opt")
 set(MQSS_CUDAQ_PATH "${MQSSCI_INSTALL_DIR}/mqss-cudaq-opt")
 set(MQSS_CATALYST_OPT "${MQSSCI_INSTALL_DIR}/mqss-catalyst-opt")
 
-set(LOG_FILES_PATH "${MQSSCI_SRC_DIR}/build/logs")
+set(LOG_FILES_PATH "${LOGS_DIR}")
 
 add_subdirectory(src)
 
@@ -75,7 +75,7 @@ target_compile_definitions(MQSSCompiler PRIVATE
       CUDAQ_TRANSLATE_PATH="${CUDAQ_TRANSLATE_PATH}"
       MQSS_CUDAQ_PATH="${MQSS_CUDAQ_PATH}"
       CUDAQ_OPT_PATH="${CUDAQ_OPT_PATH}"
-      LOG_FILES_PATH="${LOG_FILES_PATH}"
+      COMPILER_LOG_FILES_PATH="${LOG_FILES_PATH}/Compiler.log"
       COMPILER_QUEUE="${COMPILER_QUEUE_STR}"
       SCHEDULER_QUEUE="${SCHEDULER_QUEUE_STR}"
       RESULTS_QUEUE="${RESULTS_QUEUE_STR}"
@@ -94,7 +94,7 @@ target_link_libraries(
 add_executable("MQSSScheduler" src/MQSSScheduler.cpp)
 
 target_compile_definitions(MQSSScheduler PRIVATE
-      LOG_FILES_PATH="${LOG_FILES_PATH}"
+      SCHEDULER_LOG_FILES_PATH="${LOG_FILES_PATH}/Scheduler.log"
       COMPILER_QUEUE="${COMPILER_QUEUE_STR}"
       SCHEDULER_QUEUE="${SCHEDULER_QUEUE_STR}"
 )

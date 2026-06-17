@@ -20,7 +20,7 @@ BUILD_TYPE="Release"  # Default: Release mode
 
 BUILD_DIR=${CURRENT_DIR}"/build"
 DEPS_DIR="${BUILD_DIR}/_deps"
-LOGS_DIR="${BUILD_DIR}/logs"
+LOGS_DIR="${CURRENT_DIR}/logs"
 
 mkdir -p ${BUILD_DIR}
 mkdir -p ${DEPS_DIR}
@@ -34,6 +34,7 @@ cmake .. \
   -DCMAKE_C_COMPILER=gcc-13 \
   -DCMAKE_CXX_COMPILER=g++-13 \
   -DCMAKE_INSTALL_PREFIX=${INSTALL_PATH} \
+  -DLOGS_DIR=${LOGS_DIR} \
   -DCMAKE_BUILD_TYPE="${BUILD_TYPE}"
 
 if [ $? -ne 0 ]; then

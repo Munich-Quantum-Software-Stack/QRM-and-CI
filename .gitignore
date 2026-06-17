@@ -16,7 +16,7 @@ CTestTestfile.cmake
 _deps
 CMakeUserPresets.json
 build
-
+logs
 # Compiled Object files
 *.slo
 *.lo

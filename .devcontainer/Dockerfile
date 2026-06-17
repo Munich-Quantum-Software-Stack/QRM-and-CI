@@ -70,8 +70,6 @@ RUN apt-get update && \
     jq \
     gcc-11 \
     g++-11 \
-    gcc-13 \
-    g++-13 \
     python3 \
     python3-pip \
     ninja-build \
@@ -88,13 +86,19 @@ RUN apt-get update && \
     # Clean up cache to reduce image size
     rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && \
+    apt-get install -y software-properties-common && \
+    add-apt-repository ppa:ubuntu-toolchain-r/test && \
+    apt-get update && \
+    apt-get install -y gcc-13 g++-13
+       
 RUN apt-get update && apt-get install -y --no-install-recommends \
     protobuf-compiler \
     libprotobuf-dev \
     libgtest-dev \
     libboost-chrono-dev \
-    libboost-system-dev \
-  && rm -rf /var/lib/apt/lists/*
+    libboost-system-dev && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN git clone --depth 1 --branch v0.14.0 https://github.com/alanxz/rabbitmq-c.git /tmp/rabbitmq-c \
     && cmake -S /tmp/rabbitmq-c -B /tmp/rabbitmq-c/build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF \
