@@ -44,10 +44,9 @@ operations between HPC and quantum resources.
 Clone the project:
 
 ```bash
-git clone https://github.com/Munich-Quantum-Software-Stack/QRM.git \
-       /workspaces/QRM
-cd /workspaces/QRM
-git checkout 98540622efdac538f7c0614d6524804f753fbe82
+git clone https://github.com/Munich-Quantum-Software-Stack/QRM.git <your-local-path>
+cd <your-local-path>
+git checkout DA-QRM
 ```
 
 If using docker, RUN the commands:
