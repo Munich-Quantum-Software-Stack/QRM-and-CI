@@ -51,9 +51,7 @@ include_directories(
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 
-add_subdirectory(src)
-
-add_executable("MQSSCompiler" src/MQSSCompiler.cpp)
+set(PROJECT_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 
 set(CUDAQ_QUAKE_PATH "${MQSSCI_SRC_DIR}/_deps/mqss-cudaq/cudaq/bin/cudaq-quake")
 set(CUDAQ_TRANSLATE_PATH "${MQSSCI_SRC_DIR}/_deps/mqss-cudaq/cudaq/bin/cudaq-translate")
@@ -63,6 +61,10 @@ set(MQSS_CUDAQ_PATH "${MQSSCI_INSTALL_DIR}/mqss-cudaq-opt")
 set(MQSS_CATALYST_OPT "${MQSSCI_INSTALL_DIR}/mqss-catalyst-opt")
 
 set(LOG_FILES_PATH "${MQSSCI_SRC_DIR}/build/logs")
+
+add_subdirectory(src)
+
+add_executable("MQSSCompiler" src/MQSSCompiler.cpp)
 
 target_compile_definitions(MQSSCompiler PRIVATE
       CUDAQ_QUAKE_PATH="${CUDAQ_QUAKE_PATH}"
@@ -82,14 +84,14 @@ target_link_libraries(
     Common
 )
 
-add_executable("Daemon" src/Daemon.cpp)
+add_executable("MQSSScheduler" src/MQSSScheduler.cpp)
 
-target_compile_definitions(Daemon PRIVATE
+target_compile_definitions(MQSSScheduler PRIVATE
       LOG_FILES_PATH="${LOG_FILES_PATH}"
 )
 
 target_link_libraries(
-  "Daemon"
+  "MQSSScheduler"
   PUBLIC rabbitmq
          mqss::mqss
          spdlog::spdlog
@@ -97,9 +99,5 @@ target_link_libraries(
          Common
       )
 
-# add_executable(ExampleDriver
-#     src/ExampleDriver.cpp
-#     src/Daemon.cpp
-#     src/MQSSCompiler.cpp
-# )
-# add_subdirectory(tests)
+
+add_subdirectory(tests)

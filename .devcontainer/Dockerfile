@@ -70,6 +70,8 @@ RUN apt-get update && \
     jq \
     gcc-11 \
     g++-11 \
+    gcc-13 \
+    g++-13 \
     python3 \
     python3-pip \
     ninja-build \

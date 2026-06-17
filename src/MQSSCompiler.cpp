@@ -120,5 +120,5 @@ int main() {
       logger->error("Failed to send result: ", send_st.reason());
   }
   Logger::cleanup();
-  return 0;
+  return 1;
 }
