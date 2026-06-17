@@ -47,7 +47,7 @@ Clone the project:
 git clone https://github.com/Munich-Quantum-Software-Stack/QRM.git \
        /workspaces/QRM
 cd /workspaces/QRM
-git checkout f40f6b23059419900e40551dfba71973018e56e7
+git checkout 98540622efdac538f7c0614d6524804f753fbe82
 ```
 
 If using docker, RUN the commands:
