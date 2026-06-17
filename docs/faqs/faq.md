@@ -1,5 +1,5 @@
 
-### What is MQSS?
+# What is MQSS?
 
 **MQSS** stands for _Munich Quantum Software Stack_, which is a project of the _Munich Quantum
 Valley (MQV)_ initiative and is jointly developed by the _Leibniz Supercomputing Centre (LRZ)_ and
@@ -20,7 +20,7 @@ integration within HPC infrastructures, such as those found at the LRZ.
     <img src="./docs/_static/MQSS-overall.png" width="100%">
 </div>
 
-### What is the **Quantum Resource Manager (QRM)**?
+# What is the **Quantum Resource Manager (QRM)**?
 
 The QRM is designed to run on HPC resources and is composed of the following blocks:
 
@@ -53,12 +53,12 @@ they communicate via pipes (FIFO channels) to other processes. Potentially, each
 able to delegate an input job to an execution thread, and each block might be able to process tasks in
 a parallel/concurrent manner.
 
-### Where is the code?
+# Where is the code?
 
 The code is publicly available and hosted on GitHub:
 <https://github.com/Munich-Quantum-Software-Stack/QRM>
 
-### Under which license is the **Quantum Resource Manager (QRM)** released?
+# Under which license is the **Quantum Resource Manager (QRM)** released?
 
 The Quantum Resource Manager (QRM) is released under the Apache License v2.0 with LLVM Exceptions.
 See [LICENSE](TODO) for more information. Any contribution to the project is assumed to be under the
