@@ -44,10 +44,6 @@ find_package(Spdlog REQUIRED)
 # Add the include paths
 include_directories(
   BEFORE
-  ${MQT_QMAP_INCLUDE_DIR}
-  ${MQT_CORE_INCLUDE_DIR}
-  ${QDMI_INCLUDE_DIR}
-  ${QDMI_EXAMPLES_DIR}
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 
@@ -102,6 +98,28 @@ target_compile_definitions(MQSSScheduler PRIVATE
 target_link_libraries(
   "MQSSScheduler"
   PUBLIC rabbitmq
+         mqss::mqss
+         spdlog::spdlog
+         nlohmann_json::nlohmann_json
+         Common
+      )
+
+
+add_executable("MQSSSubmitter" src/MQSSSubmitter.cpp)
+
+target_compile_definitions(MQSSSubmitter PRIVATE
+      SUBMITTER_LOG_FILES_PATH="${LOG_FILES_PATH}/Submitter.log"
+      COMPILER_QUEUE="${COMPILER_QUEUE_STR}"
+)
+
+target_include_directories("MQSSSubmitter" PRIVATE ${qdmi_SOURCE_DIR}/)
+
+target_link_libraries(
+  "MQSSSubmitter"
+  PUBLIC rabbitmq
+         qdmi::qdmi
+         qdmi::example_driver
+         qdmi::qdmi_project_warnings
          mqss::mqss
          spdlog::spdlog
          nlohmann_json::nlohmann_json
