@@ -124,8 +124,12 @@ int main() {
     // Process the task...
     applyOptimizationPasses(task);
 
+    for(auto out_circuit : task.circuit_files()){
+      logger->info(out_circuit);
+    }
+
     auto send_st = messenger.send<mqss::QuantumTask>(
-        {task.result_destination()}, // use the queue the daemon specified
+        {SUBMITTER_QUEUE}, // use the queue the daemon specified
         task);
 
     // After send
