@@ -36,6 +36,7 @@ static std::string lowerToOutputFormat(const std::string &srcPath,
   std::string cmd =
       std::string(CUDAQ_QUAKE_PATH) + " " + srcPath + " | " +
       std::string(MQSS_CUDAQ_PATH) + " --O" + std::to_string(opt_level) +
+      " " + "--CommonMappingPass=qdmi=/workspaces/QRM/cxx_qdmi.conf " +
       " | " + std::string(CUDAQ_OPT_PATH) + " " + decomposition_cmd + " | " +
       std::string(CUDAQ_TRANSLATE_PATH) + " --convert-to=" + result_type +
       " -o " + tmpPath; // capture stderr too for diagnostics

@@ -14,7 +14,7 @@ set(MQSSCI_INSTALL_DIR ${CMAKE_BINARY_DIR}/_deps/mqssci-build)
 
 ExternalProject_Add(mqssci_external
   GIT_REPOSITORY   https://github.com/Munich-Quantum-Software-Stack/MQSS-Quantum-Compilation-Suite.git
-  GIT_TAG           34db2e3b3407de59377f81a18ff9f8dff8f738ab
+  GIT_TAG           fc9ef735e437c457aab79f38dcbe4b90c55a45e7
   PREFIX            ${CMAKE_BINARY_DIR}/_deps/mqssci-build
   SOURCE_DIR        ${CMAKE_BINARY_DIR}/_deps/mqssci-src
   BINARY_DIR        ${CMAKE_BINARY_DIR}/_deps/mqssci-src   # in-source make, adjust if out-of-source supported

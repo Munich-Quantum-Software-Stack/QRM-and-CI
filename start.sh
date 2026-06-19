@@ -1,16 +1,15 @@
 #!/bin/bash
-cd build
 
-./MQSSScheduler &
+./build/MQSSScheduler &
 SCHEDULER_PID=$!
 
-./MQSSSubmitter &
+./build/MQSSSubmitter &
 SUBMITTER_PID=$!
 
-./MQSSCompiler &
+./build/MQSSCompiler &
 COMPILER_PID=$!
 
-./tests/test-hpc-qrm-simple &
+./build/tests/test-hpc-qrm-simple &
 TEST_PID=$!
 
 echo "All services started."
