@@ -25,6 +25,7 @@ find_package(nlohmann_json REQUIRED)
 find_package(MQSSCI REQUIRED)
 find_package(MQSSDeploy REQUIRED)
 find_package(Spdlog REQUIRED)
+find_package(GTest REQUIRED)
 
 # add_library(mqssci::mqssci STATIC IMPORTED GLOBAL)
 # set_target_properties(mqssci::mqssci PROPERTIES
@@ -46,6 +47,7 @@ find_package(Spdlog REQUIRED)
 include_directories(
   BEFORE
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
+  ${GTEST_INCLUDE_DIRS}
 )
 
 set(PROJECT_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -127,6 +129,8 @@ target_link_libraries(
          qinfo
          mqss::mqss
          spdlog::spdlog
+         GTest::gtest_main 
+         GTest::gmock
          nlohmann_json::nlohmann_json
          Common
       )

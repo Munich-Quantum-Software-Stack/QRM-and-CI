@@ -27,7 +27,7 @@
 #include "common/Logger.hpp"
 #include "LoggerHandler.hpp"
 #include <csignal>
-
+#include <gtest/gtest.h>
 
 #define QDMI_CONF_PATH "cxx_qdmi.conf"
 
@@ -58,6 +58,8 @@ static int getDeviceNumQubits(QDMI_Device device) {
   assert(ret == QDMI_SUCCESS);
   return numQubits;
 }
+
+// TODO: Qubit Mapping needs to be done for an accurate result!
 static std::vector<CouplingTy>
 getDeviceCouplingMap(QDMI_Device device,
                      std::shared_ptr<spdlog::logger> MQSSLogger) {
@@ -113,6 +115,38 @@ getDeviceProperties(QDMI_Device Device,
 
   return Properties;
 }
+
+::testing::AssertionResult
+CheckBellState(const std::vector<std::complex<double>> &state_vector,
+               std::shared_ptr<spdlog::logger> MQSSLogger, double tol = 1e-6) {
+  if (state_vector.size() != 4) {
+    MQSSLogger->error("Expected 4 amplitudes got: {}", state_vector.size());
+  }
+  constexpr double inv_sqrt2 = 0.70710678118654752440;
+  const double a00 = std::abs(state_vector[0]);
+  const double a01 = std::abs(state_vector[1]);
+  const double a10 = std::abs(state_vector[2]);
+  const double a11 = std::abs(state_vector[3]);
+
+  MQSSLogger->info("Results of Quantum Job are the following:");
+  MQSSLogger->info("|00> amplitude: {}", a00);
+  MQSSLogger->info("|01> amplitude: {}", a01);
+  MQSSLogger->info("|10> amplitude: {}", a10);
+  MQSSLogger->info("|11> amplitude: {}", a11);
+
+  if (std::abs(a00 - inv_sqrt2) > tol)
+    return ::testing::AssertionFailure() << "|00> amplitude wrong: " << a00;
+  if (a01 > tol)
+    return ::testing::AssertionFailure() << "|01> amplitude should be ~0: " << a01;
+  if (a10 > tol)
+    return ::testing::AssertionFailure() << "|10> amplitude should be ~0: " << a10;
+  if (std::abs(a11 - inv_sqrt2) > tol)
+    return ::testing::AssertionFailure() << "|11> amplitude wrong: " << a11;
+
+  return ::testing::AssertionSuccess();
+}
+
+// Use QDMI API's to create a QDMI Job and submit it to the QDMI device.
 
 static QuantumResult createAndSubmitQDMIJob(mqss::QuantumTask task,
                                   const char *device_conf_path,
@@ -186,6 +220,7 @@ static QuantumResult createAndSubmitQDMIJob(mqss::QuantumTask task,
     ret = QDMI_job_set_parameter(job, QDMI_JOB_PARAMETER_SHOTSNUM,
                                  sizeof(size_t), &num_shots);
     assert(ret == QDMI_SUCCESS);
+    MQSSLogger->info("--> QDMI Num shots: " + std::to_string(num_shots));
   }
 
   MQSSLogger->info("QDMI Job parameters Set...");
@@ -197,12 +232,12 @@ static QuantumResult createAndSubmitQDMIJob(mqss::QuantumTask task,
   ret = QDMI_job_wait(job, 0);
   
   assert(ret == QDMI_SUCCESS);
-  
+
   QDMI_Job_Status status{};
   ret = QDMI_job_check(job, &status);
 
   assert(ret == QDMI_SUCCESS);
-  MQSSLogger->info("QDMI Job status: ", status);
+  MQSSLogger->info("QDMI Job status: {}", status);
   // Teardown (in reverse order)
 
   // Fetch Results of Job execution
@@ -236,9 +271,17 @@ static QuantumResult createAndSubmitQDMIJob(mqss::QuantumTask task,
     norm += std::norm(val);
   }
 
-  MQSSLogger->info("Results of Job: ", norm);
+  MQSSLogger->info("Results of Job are, norm: {}", norm);
+  if(!CheckBellState(complex_state_vector, MQSSLogger)){
+    MQSSLogger->info("Incorrect Results...");
+  }
+  else {
+    MQSSLogger->info("Results Check Succeeded!!!");
+  }
+
   QuantumResult result;
   result.set_task_id(task.task_id());
+  
   result.add_executed_circuits(circuit);
   result.set_additional_information(std::to_string(norm));
 

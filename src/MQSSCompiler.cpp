@@ -31,7 +31,7 @@ static std::string lowerToOutputFormat(const std::string &srcPath,
   else if (target_qpu == "oqc")
     decomposition_cmd = "--oqc-gate-set-mapping";
   else
-    throw std::runtime_error("Unknown target qpu selected: " + target_qpu);
+    decomposition_cmd = "";
 
   std::string cmd =
       std::string(CUDAQ_QUAKE_PATH) + " " + srcPath + " | " +

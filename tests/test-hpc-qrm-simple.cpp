@@ -7,7 +7,9 @@
 #include "mqss/transport/Transport.hpp"
 #include "common/Logger.hpp"
 #include "LoggerHandler.hpp"
+#include <complex>
 #include <csignal>
+#include <gtest/gtest.h>
 
 
 using namespace mqss;
@@ -37,11 +39,11 @@ int main() {
 
   task.set_task_id(111);
   task.set_n_qbits(2);
-  task.set_n_shots(64);
+  task.set_n_shots(0); // What should this value be? Currently,setting to 0 produces results
   task.set_optimisation_level(1);
   task.set_result_destination(RESULTS_QUEUE);
-  task.set_preferred_qpu(
-      "iqm"); // Either iqm, fermioniq, ionq, oqc, quantinuum, qci
+  task.set_preferred_qpu(""); // Either iqm, fermioniq, ionq, oqc, quantinuum,
+                              // qci (Set to "" for example QDMI device)
 
   std::string circuit_file_path = "/workspaces/QRM/benchmarks/bell_state.cpp";
 
