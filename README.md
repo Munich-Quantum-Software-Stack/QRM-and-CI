@@ -27,8 +27,8 @@ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 <!-- [DOXYGEN MAIN] -->
 This repository hosts the Quantum Resource Manager (QRM), a component of the Munich Quantum Software
-Stack (MQSS) that bridges classical and quantum resources within a high-performance and quantum
-computing (HPCQC) environment. The QRM acts as a robust runtime framework, seamlessly orchestrating
+Stack (MQSS) that bridges classical and quantum resources within a high-Performance and Quantum
+Computing (HPCQC) environment. The QRM acts as a robust runtime framework, seamlessly orchestrating
 operations between HPC and quantum resources.
 
 <!-- [DOXYGEN MAIN] -->
@@ -76,6 +76,7 @@ the project targets all within the ```build``` directory.
 Following key targets should be generated:
 
 ```
+build/MQSSSubmitter
 build/MQSSCompiler
 build/MQSSScheduler
 build/tests/test-hpc-qrm-simple
@@ -89,12 +90,12 @@ make -C build -j4
 
 ### Testing the installation via RabbitMQ
 
-Important: Please refer to [rabbitmq-setup](docs/develop_guide/rabbitmq.md) on how to setup RabbitMQ
+**Important**: Please refer to [rabbitmq-setup](docs/develop_guide/rabbitmq.md) on how to setup RabbitMQ
           with your docker dev container (mqss-qrm-dev).
 
 Once the rabbitmq docker container and your dev container are on the same network and can communicate
 via Rabbitmq, run the following script that runs all the target executables mentioned above.
-The test case here is ```test-hpc-qrm-simple```.
+The test case here is ```test-hpc-qrm-simple``` which creates the quantum task.
 
 ```sh
 ./start.sh
@@ -104,15 +105,15 @@ The ```test-hpc-qrm-simple``` reads a ```c++``` circuit input file from ```bench
 creates a quantum-task. It then forwards this quantum-task to the ```Scheduler``` which the forwards
 it to the ```MQSS Compiler```. The compiler runs various optimizations and translations on the circuit
 within the quantum-task, updates the task with the new circuit (in ```QIR```) format and sends the task
-back to ```test-hpc-qrm-simple``` which simply prints the received QIR circuit to its log file.
-
-Next, we will add support for a ```Submitter``` module that will submit the quantum-task to a real
-quantum device.
+to the ```MQSS Submitter``` which creates a QDMI job. The example QDMI device and QDMI driver found
+in the QDMI [repository](https://github.com/Munich-Quantum-Software-Stack/QDMI/tree/develop/examples) are
+used to create the job. The job is then submitted to the same example device and results are received by
+the Submitter and forwarded back to ```test-hpc-qrm-simple```.
 
 ### Checking Logs
 
 The logs of each of the component are generated within ```QRM/logs``` directory.
-This directory is automatically creating during the build process and populated during
+This directory is automatically created during the build process and populated during
 execution.
 
 The logs are:</br>
@@ -120,5 +121,6 @@ The logs are:</br>
 ```
 Compiler : Compiler.log
 Scheduler : Scheduler.log
+Submiiter : Submitter.log
 test case: Test-Case.log
 ```

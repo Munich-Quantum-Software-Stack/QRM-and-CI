@@ -192,7 +192,7 @@ createAndSubmitQDMIJob(mqss::QuantumTask task, const char *device_conf_path,
 
   MQSSLogger->info("Found QDMI Device...");
   // Create a Job for the QDMI device
-  // TODO: What if there are more than 1 device to target?
+  // TODO: What if there are more than 1 devices to target?
   QDMI_Device dev = devices[0];
 
   ret = QDMI_device_create_job(dev, &job);
@@ -239,9 +239,8 @@ createAndSubmitQDMIJob(mqss::QuantumTask task, const char *device_conf_path,
   // Teardown (in reverse order)
 
   // Fetch Results of Job execution
-  // TODO: What result to fetch (here: QDMI_JOB_RESULT_STATEVECTOR_DENSE) should
-  // come
-  //        from the user or quantumtask. There is another enum
+  // TODO: What result to fetch (here: QDMI_JOB_RESULT_STATEVECTOR_DENSE)? This 
+  //        should be gathered from the user or quantumtask. There is another enum
   //        "QDMI_JOB_RESULT_CUSTOM" which is defined by the target device.
   //        Perhaps, that should be used for real device. However, the example
   //        qdmi device used for this test does not support custom job results.
