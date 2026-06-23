@@ -25,6 +25,8 @@ target_link_libraries(test-hpc-qrm-simple
     rabbitmq
     mqss::mqss
     spdlog::spdlog
+    GTest::gtest_main 
+    GTest::gmock
     nlohmann_json::nlohmann_json
     Common
 )

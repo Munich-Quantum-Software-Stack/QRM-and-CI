@@ -19,11 +19,13 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -frtti -fexceptions")
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 find_package(qdmi REQUIRED)
+find_package(qinfo REQUIRED)
 # find_package(rabbitmq-c REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(MQSSCI REQUIRED)
 find_package(MQSSDeploy REQUIRED)
 find_package(Spdlog REQUIRED)
+find_package(GTest REQUIRED)
 
 # add_library(mqssci::mqssci STATIC IMPORTED GLOBAL)
 # set_target_properties(mqssci::mqssci PROPERTIES
@@ -44,11 +46,8 @@ find_package(Spdlog REQUIRED)
 # Add the include paths
 include_directories(
   BEFORE
-  ${MQT_QMAP_INCLUDE_DIR}
-  ${MQT_CORE_INCLUDE_DIR}
-  ${QDMI_INCLUDE_DIR}
-  ${QDMI_EXAMPLES_DIR}
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
+  ${GTEST_INCLUDE_DIRS}
 )
 
 set(PROJECT_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -69,6 +68,7 @@ add_executable("MQSSCompiler" src/MQSSCompiler.cpp)
 set(COMPILER_QUEUE_STR "compiler.tasks.queue")
 set(SCHEDULER_QUEUE_STR "scheduler.tasks.queue")
 set(RESULTS_QUEUE_STR "test.results.queue")
+set(SUBMITTER_QUEUE_STR "submitter.tasks.queue")
 
 target_compile_definitions(MQSSCompiler PRIVATE
       CUDAQ_QUAKE_PATH="${CUDAQ_QUAKE_PATH}"
@@ -78,7 +78,7 @@ target_compile_definitions(MQSSCompiler PRIVATE
       COMPILER_LOG_FILES_PATH="${LOG_FILES_PATH}/Compiler.log"
       COMPILER_QUEUE="${COMPILER_QUEUE_STR}"
       SCHEDULER_QUEUE="${SCHEDULER_QUEUE_STR}"
-      RESULTS_QUEUE="${RESULTS_QUEUE_STR}"
+      SUBMITTER_QUEUE="${SUBMITTER_QUEUE_STR}"
 )
 
 target_link_libraries(
@@ -104,6 +104,33 @@ target_link_libraries(
   PUBLIC rabbitmq
          mqss::mqss
          spdlog::spdlog
+         nlohmann_json::nlohmann_json
+         Common
+      )
+
+
+add_executable("MQSSSubmitter" src/MQSSSubmitter.cpp)
+
+target_compile_definitions(MQSSSubmitter PRIVATE
+      SUBMITTER_LOG_FILES_PATH="${LOG_FILES_PATH}/Submitter.log"
+      SUBMITTER_QUEUE="${SUBMITTER_QUEUE_STR}"
+      COMPILER_QUEUE="${COMPILER_QUEUE_STR}"
+      RESULTS_QUEUE="${RESULTS_QUEUE_STR}"
+)
+
+target_include_directories("MQSSSubmitter" PRIVATE ${qdmi_SOURCE_DIR}/)
+
+target_link_libraries(
+  "MQSSSubmitter"
+  PUBLIC rabbitmq
+         qdmi::qdmi
+         qdmi::example_driver
+         qdmi::qdmi_project_warnings
+         qinfo
+         mqss::mqss
+         spdlog::spdlog
+         GTest::gtest_main 
+         GTest::gmock
          nlohmann_json::nlohmann_json
          Common
       )

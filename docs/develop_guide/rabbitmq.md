@@ -72,9 +72,34 @@ Start both containers:
 docker compose up -d
 ```
 
+## 2. Connecting the Dev Container to RabbitMQ
+
+### Networking
+
+Both containers must be on the **same Docker network**. If using Docker Compose, this is handled automatically via the shared `mqss-net` network. If using Docker CLI, run the commands:
+
+```bash
+# Create a shared network
+docker network create mqss-net
+
+# Connect both containers to it
+docker network connect mqss-net rabbitmq
+docker network connect mqss-net mqss-dev
+```
+
+Once on the same network, use the **container name** as the hostname:
+
+```cpp
+mqss::TransportOptions<mqss::RabbitMqSimple> opts;
+opts.host     = "rabbitmq";    // container name; use "localhost" for local installs
+opts.port     = 5672;
+opts.username = "myuser";
+opts.password = "mypassword";
+```
+
 ---
 
-## 2. Creating a Dedicated RabbitMQ User
+## 3. Creating a Dedicated RabbitMQ User
 
 By default, RabbitMQ restricts the `guest` user to `localhost` connections only. Since your dev container connects from a different container, create a dedicated user:
 
@@ -97,34 +122,9 @@ environment:
 
 ---
 
-## 3. Connecting the Dev Container to RabbitMQ
-
-### Networking
-
-Both containers must be on the **same Docker network**. If using Docker Compose, this is handled automatically via the shared `mqss-net` network. If using Docker CLI:
-
-```bash
-# Create a shared network
-docker network create mqss-net
-
-# Connect both containers to it
-docker network connect mqss-net rabbitmq
-docker network connect mqss-net mqss-dev
-```
-
-Once on the same network, use the **container name** as the hostname:
-
-```cpp
-mqss::TransportOptions<mqss::RabbitMqSimple> opts;
-opts.host     = "rabbitmq";    // container name; use "localhost" for local installs
-opts.port     = 5672;
-opts.username = "myuser";
-opts.password = "mypassword";
-```
-
 ### Passing Connection Details (Currently within header files)
 
-The important AMPQ variables have been defined in:</br>
+The important AMQP variables have been defined in:</br>
 
 ```c++
 QRM/include/ConnectionHandler.hpp
@@ -182,6 +182,7 @@ docker exec -it rabbitmq rabbitmqctl close_all_connections "clearing stale conne
 docker exec -it rabbitmq rabbitmqadmin delete queue name=compiler.tasks.queue
 docker exec -it rabbitmq rabbitmqadmin delete queue name=scheduler.tasks.queue
 docker exec -it rabbitmq rabbitmqadmin delete queue name=test.results.queue
+docker exec -it rabbitmq rabbitmqadmin delete queue name=submitter.tasks.queue
 ```
 
 Or simply restart the container to reset everything:
@@ -198,6 +199,7 @@ If multiple MQSS deployments share the same broker, prefix your queue names to a
 const std::string compiler_queue = "compiler.tasks.queue";
 const std::string scheduler_queue = "scheduler.tasks.queue";
 const std::string results_queue = "test.results.queue";
+const std::string submitter_queue = "submitter.tasks.queue";
 ```
 
 Note: Currently these queues are set within the root CMakeLists.txt i.e. ```QRM/CMakeLists.txt```.

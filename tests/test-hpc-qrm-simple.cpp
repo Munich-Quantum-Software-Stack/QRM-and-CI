@@ -2,11 +2,14 @@
 #include "ConnectionHandler.hpp"
 #include "mqss/Messenger.hpp"
 #include "mqss/Protocol.hpp"
+#include "mqss/protocol/ProtoProtocol.hpp"
 #include "mqss/transport/RabbitMqSimpleTransport.hpp"
 #include "mqss/transport/Transport.hpp"
 #include "common/Logger.hpp"
 #include "LoggerHandler.hpp"
+#include <complex>
 #include <csignal>
+#include <gtest/gtest.h>
 
 
 using namespace mqss;
@@ -35,15 +38,14 @@ int main() {
   mqss::Messenger<mqss::RabbitMqSimple, mqss::ProtoJson> messenger(opts);
 
   task.set_task_id(111);
-  task.set_n_qbits(6);
-  task.set_n_shots(2048);
+  task.set_n_qbits(2);
+  task.set_n_shots(0); // What should this value be? Currently,setting to 0 produces results
   task.set_optimisation_level(1);
   task.set_result_destination(RESULTS_QUEUE);
-  task.set_preferred_qpu(
-      "iqm"); // Either iqm, fermioniq, ionq, oqc, quantinuum, qci
+  task.set_preferred_qpu(""); // Either iqm, fermioniq, ionq, oqc, quantinuum,
+                              // qci (Set to "" for example QDMI device)
 
-  std::string circuit_file_path =
-      "/workspaces/QRM/benchmarks/DoubleCnotCancellation.cpp";
+  std::string circuit_file_path = "/workspaces/QRM/benchmarks/bell_state.cpp";
 
   task.add_circuit_files(circuit_file_path);
   task.set_circuit_file_type("cpp");
@@ -56,21 +58,22 @@ int main() {
 
   logger->info("Task Sent...");
   // Block waiting for the result
-  auto res = messenger.receive<mqss::QuantumTask>(
+  auto res = messenger.receive<mqss::QuantumResult>(
       {task.result_destination()}, mqss::ReceiveArgs{
                                     .timeout = std::chrono::milliseconds(60000),
                                     .ack_mode = mqss::AckMode::Auto,
                                 });
   
   if (res.has_value()) {
-    logger->info("Task Received by Test/Daemon Queue!");
+    logger->info("Results Received by Test/Daemon Queue!");
     const auto &decoded = *res;
     logger->info("-->Decoded task id: {}", decoded.task_id());
-    logger->info("-->New Circuit files dump:\n");
-    auto decoded_circuits = decoded.circuit_files();
+    logger->info("-->Executed Circuit files dump:\n");
+    auto decoded_circuits = decoded.executed_circuits();
     for (auto circuit : decoded_circuits) {
       logger->info(circuit);
     }
+    logger->info(decoded.additional_information());
     // use decoded.task_id(), decoded.n_qbits(), etc.
   }
   Logger::cleanup();

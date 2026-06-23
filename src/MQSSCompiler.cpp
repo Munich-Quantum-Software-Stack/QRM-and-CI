@@ -31,11 +31,12 @@ static std::string lowerToOutputFormat(const std::string &srcPath,
   else if (target_qpu == "oqc")
     decomposition_cmd = "--oqc-gate-set-mapping";
   else
-    throw std::runtime_error("Unknown target qpu selected: " + target_qpu);
+    decomposition_cmd = "";
 
   std::string cmd =
       std::string(CUDAQ_QUAKE_PATH) + " " + srcPath + " | " +
       std::string(MQSS_CUDAQ_PATH) + " --O" + std::to_string(opt_level) +
+      " " + "--CommonMappingPass=qdmi=/workspaces/QRM/cxx_qdmi.conf " +
       " | " + std::string(CUDAQ_OPT_PATH) + " " + decomposition_cmd + " | " +
       std::string(CUDAQ_TRANSLATE_PATH) + " --convert-to=" + result_type +
       " -o " + tmpPath; // capture stderr too for diagnostics
@@ -124,8 +125,12 @@ int main() {
     // Process the task...
     applyOptimizationPasses(task);
 
+    for(auto out_circuit : task.circuit_files()){
+      logger->info(out_circuit);
+    }
+
     auto send_st = messenger.send<mqss::QuantumTask>(
-        {task.result_destination()}, // use the queue the daemon specified
+        {SUBMITTER_QUEUE}, // use the queue the daemon specified
         task);
 
     // After send
