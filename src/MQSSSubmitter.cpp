@@ -32,6 +32,24 @@
 #include <vector>
 
 
+static std::tuple<std::string, std::string> extractQDMIObj(std::string conf_path) {
+  std::ifstream conf(conf_path);
+  std::string line;
+
+  while (std::getline(conf, line)) {
+    // Skip empty lines and comments
+    if (line.empty() || line[0] == '#')
+      continue;
+
+    std::istringstream iss(line);
+    std::string path, prefix;
+
+    if (iss >> path >> prefix) {
+      return std::make_tuple(path, prefix);
+    }
+  }
+}
+
 // Load the device library dynamically
 static std::pair<std::reference_wrapper<qdmi_main_driver::Driver>, QDMI_Device>
 addDynamicDeviceLibrary(const std::string &libName, const std::string &prefix,
@@ -66,13 +84,15 @@ addDynamicDeviceLibrary(const std::string &libName, const std::string &prefix,
   assert(ret == QDMI_SUCCESS);
   MQSSLogger->info("Device name: {} ", name);
   return std::make_pair(std::ref(driver), device);
-  ;
 }
 
 // Use QDMI API's to create a QDMI Job and submit it to the QDMI device.
-static mqss::QuantumResult createAndSubmitQDMIJobToQDMIDevice(
-    mqss::QuantumTask task, const std::string &libName,
-    const std::string &prefix, std::shared_ptr<spdlog::logger> MQSSLogger) {
+static mqss::QuantumResult
+createAndSubmitQDMIJobToQDMIDevice(mqss::QuantumTask task,
+                                   const std::string &device_conf_path,
+                                   std::shared_ptr<spdlog::logger> MQSSLogger) {
+
+  auto [libName, prefix] = extractQDMIObj(device_conf_path);
 
   auto [driver_ref, dev] = addDynamicDeviceLibrary(libName, prefix, MQSSLogger);
   QDMI_Job job = nullptr;
@@ -246,14 +266,12 @@ int main() {
 
     // prepare QDMI job and submit
     // Set the path to the QDMI Device Shared Object file
-    std::string libName = "/workspaces/QRM/qdmi_device_objs/"
-                          "libmqt-core-qdmi-ddsim-device.so.3.3.4";
 
-    std::string device_prefix = "MQT_DDSIM";
-    logger->info("Device conf is: " + libName);
+    std::string device_prefix = "/workspaces/QRM/qdmi_device_objs/mqt_qdmi.conf";
+    logger->info("Device conf is: " + device_prefix);
 
     auto circuit_result = createAndSubmitQDMIJobToQDMIDevice(
-        task, libName, device_prefix, logger);
+        task, device_prefix, logger);
 
     // auto circuit_result =
     //     createAndSubmitQDMIJob(task, device_conf.c_str(), std::move(logger));

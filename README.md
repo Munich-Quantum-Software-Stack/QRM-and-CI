@@ -67,7 +67,7 @@ Note: The project root is at ```/workspaces/QRM```
 To build, RUN the build script in project root by running the command:
 
 ```sh
-./build.sh
+make build
 ```
 
 This should download and install all the required dependencies and create
@@ -85,7 +85,7 @@ build/tests/test-hpc-qrm-simple
 If changes are made to the source files, rebuild using:</br>
 
 ```sh
-make -C build -j4
+make build
 ```
 
 ### Testing the installation via RabbitMQ
@@ -98,7 +98,7 @@ via Rabbitmq, run the following script that runs all the target executables ment
 The test case here is ```test-hpc-qrm-simple``` which creates the quantum task.
 
 ```sh
-./start.sh
+make invoke
 ```
 
 The ```test-hpc-qrm-simple``` reads a ```c++``` circuit input file from ```benchmarks/``` directory and
