@@ -6,6 +6,29 @@
 #include <stdexcept>
 
 using namespace mqss;
+
+std::string stripSpuriousGateDefs(const std::string& qasm) {
+    std::istringstream stream(qasm);
+    std::ostringstream result;
+    std::string line;
+    bool inGateBlock = false;
+    while (std::getline(stream, line)) {
+        if (line.find("gate ") != std::string::npos && 
+            line.find("{") != std::string::npos) {
+            inGateBlock = true;
+            continue;
+        }
+        if (inGateBlock) {
+            if (line.find("}") != std::string::npos) {
+                inGateBlock = false;
+            }
+            continue;
+        }
+        result << line << "\n";
+    }
+    return result.str();
+}
+
 // Invokes cudaq-quake on `src_path` which convert the source to quake mlir
 // dialect. Then mqss-cudaq-opt is called to invoke mqss-passes on the quake
 // dialect Finally, cudaq-translate is called to translate the output to qasm or
@@ -36,7 +59,7 @@ static std::string lowerToOutputFormat(const std::string &srcPath,
   std::string cmd =
       std::string(CUDAQ_QUAKE_PATH) + " " + srcPath + " | " +
       std::string(MQSS_CUDAQ_PATH) + " --O" + std::to_string(opt_level) +
-      " " + "--CommonMappingPass=qdmi=/workspaces/QRM/cxx_qdmi.conf " +
+      // " " + "--CommonMappingPass=qdmi=/workspaces/QRM/cxx_qdmi.conf " +
       " | " + std::string(CUDAQ_OPT_PATH) + " " + decomposition_cmd + " | " +
       std::string(CUDAQ_TRANSLATE_PATH) + " --convert-to=" + result_type +
       " -o " + tmpPath; // capture stderr too for diagnostics
@@ -59,6 +82,7 @@ static std::string lowerToOutputFormat(const std::string &srcPath,
   return result;
 }
 
+
 static void applyOptimizationPasses(mqss::QuantumTask &Qtask) {
 
   std::unordered_map<int, std::string> updated_circuit_files;
@@ -70,7 +94,11 @@ static void applyOptimizationPasses(mqss::QuantumTask &Qtask) {
     auto qpu = Qtask.preferred_qpu();
     // Final argument to lowerToOutputFormat can be set to:
     // "qir", "qir-full", "qir-adaptive", "qir-base", "openqasm2"
-    auto out_res = lowerToOutputFormat(circuit_file, opt_level, qpu);
+    std::string result_type = "openqasm2";
+    auto out_res = lowerToOutputFormat(circuit_file, opt_level, qpu, result_type);
+    if(result_type == "openqasm2"){
+      out_res = stripSpuriousGateDefs(out_res);
+    }
     updated_circuit_files[i] = out_res;
   }
   for (auto [index, new_circuit_file] : updated_circuit_files) {

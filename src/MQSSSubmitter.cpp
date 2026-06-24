@@ -8,10 +8,12 @@
 #include "mqss/protocol/ProtoProtocol.hpp"
 #include "mqss/transport/RabbitMqSimpleTransport.hpp"
 #include "mqss/transport/Transport.hpp"
-#include "qdmi/client.h"
-#include "qdmi/constants.h"
-#include "qdmi/device.h"
-#include "qdmi_example_driver.h"
+// #include "qdmi/client.h"
+// #include "qdmi/constants.h"
+// #include "qdmi/device.h"
+#include "Driver.hpp"
+// #include "qdmi_example_driver.h"
+// #include "qdmi/constants.h"
 #include "qinfo.h"
 
 #include "gtest/gtest.h"
@@ -145,71 +147,72 @@ CheckBellState(const std::vector<std::complex<double>> &state_vector,
   return ::testing::AssertionSuccess();
 }
 
+static std::pair<std::reference_wrapper<qdmi_main_driver::Driver>, QDMI_Device>
+addDynamicDeviceLibrary(const std::string &libName, const std::string &prefix,
+                        std::shared_ptr<spdlog::logger> MQSSLogger) {
+
+  qdmi_main_driver::DeviceSessionConfig config;
+  // If connecting to a remote device, use:
+  // config.baseUrl = "http://localhost:8080";
+  // config.token = "test_token";
+  // config.authUrl = "https://auth.example.com";
+  // config.username = "user";
+  // config.password = "pass";
+  // config.custom1 = "value1";
+  // config.custom2 = "value2";
+  // config.custom3 = "value3";
+  // config.custom4 = "value4";
+  // config.custom5 = "value5";
+
+  auto &driver = qdmi_main_driver::Driver::get();
+
+  auto *device = driver.addDynamicDeviceLibrary(libName, prefix, config);
+  size_t namesSize = 0;
+  size_t ret = 0;
+  ret = QDMI_device_query_device_property(device, QDMI_DEVICE_PROPERTY_NAME, 0,
+                                          nullptr, &namesSize);
+
+  assert(ret == QDMI_SUCCESS);
+  std::string name(namesSize - 1, '\0');
+  ret = QDMI_device_query_device_property(device, QDMI_DEVICE_PROPERTY_NAME,
+                                          namesSize, name.data(), nullptr);
+
+  assert(ret == QDMI_SUCCESS);
+  MQSSLogger->info("Device name: {} ", name);
+  return std::make_pair(std::ref(driver), device);
+  ;
+}
+
 // Use QDMI API's to create a QDMI Job and submit it to the QDMI device.
-static QuantumResult
-createAndSubmitQDMIJob(mqss::QuantumTask task, const char *device_conf_path,
-                       std::shared_ptr<spdlog::logger> MQSSLogger) {
+static QuantumResult createAndSubmitQDMIJobToQDMIDevice(
+    mqss::QuantumTask task, const std::string &libName,
+    const std::string &prefix, std::shared_ptr<spdlog::logger> MQSSLogger) {
 
+  auto [driver_ref, dev] = addDynamicDeviceLibrary(libName, prefix, MQSSLogger);
   QDMI_Job job = nullptr;
-  int num_shots = task.n_shots();
-  auto circuit = task.circuit_files()[0];
+  int ret = 0;
 
-  setenv("QDMI_CONF", device_conf_path, 1);
-
-  int ret = QDMI_driver_init();
-  assert(ret == QDMI_SUCCESS);
-
+  qdmi_main_driver::Driver &driver = driver_ref.get();
   QDMI_Session session = nullptr;
-  ret = QDMI_session_alloc(&session);
-  assert(ret == QDMI_SUCCESS);
+  driver.sessionAlloc(&session);
 
-  // Empty token = read-only; non-empty token = read/write
-  const char *token = "XX12Mayi98"; // read-only
-  ret = QDMI_session_set_parameter(session, QDMI_SESSION_PARAMETER_TOKEN,
-                                   strlen(token) + 1, token);
-  assert(ret == QDMI_SUCCESS);
-
-  // Initialize QDMI session
-  ret = QDMI_session_init(session); // device sessions are created here
-  assert(ret == QDMI_SUCCESS);
-
-  MQSSLogger->info("Initialized new QDMI session...");
-  // Query the number of devices
-  size_t size_ret = 0;
-  ret = QDMI_session_query_session_property(
-      session, QDMI_SESSION_PROPERTY_DEVICES, 0, nullptr, &size_ret);
-
-  assert(ret == QDMI_SUCCESS);
-
-  size_t num_devices = size_ret / sizeof(QDMI_Device);
-  std::vector<QDMI_Device> devices(num_devices);
-  ret = QDMI_session_query_session_property(
-      session, QDMI_SESSION_PROPERTY_DEVICES, size_ret,
-      static_cast<void *>(devices.data()), nullptr);
-
-  MQSSLogger->info("--> QDMI Num Devices: " + std::to_string(devices.size()));
-  assert(ret == QDMI_SUCCESS);
-
-  MQSSLogger->info("Found QDMI Device...");
-  // Create a Job for the QDMI device
-  // TODO: What if there are more than 1 devices to target?
-  QDMI_Device dev = devices[0];
-
+  auto circuit = task.circuit_files()[0];
   ret = QDMI_device_create_job(dev, &job);
   assert(ret == QDMI_SUCCESS);
 
   MQSSLogger->info("Created QDMI Job...");
   // Set Properties for the Job
   // Properties set:
-  //    1. Circuit format (QIR-base profile)
+  //    1. Circuit format (QIR-base profile or OPENQASM2)
   //    2. Circuit size and source string
   //    3. Number of shots
-  const auto format = QDMI_PROGRAM_FORMAT_QIRBASESTRING;
+  const auto format = QDMI_PROGRAM_FORMAT_QASM2;
   ret = QDMI_job_set_parameter(job, QDMI_JOB_PARAMETER_PROGRAMFORMAT,
                                sizeof(QDMI_Program_Format), &format);
 
   assert(ret == QDMI_SUCCESS);
 
+  int num_shots = task.n_shots();
   ret = QDMI_job_set_parameter(job, QDMI_JOB_PARAMETER_PROGRAM,
                                circuit.size() + 1, circuit.c_str());
   assert(ret == QDMI_SUCCESS);
@@ -228,6 +231,9 @@ createAndSubmitQDMIJob(mqss::QuantumTask task, const char *device_conf_path,
 
   MQSSLogger->info("QDMI Job submitted to QDMI Device...");
   ret = QDMI_job_wait(job, 0);
+  if (ret != QDMI_SUCCESS) {
+    MQSSLogger->error("QDMI job wait failed with: {}", ret);
+  }
 
   assert(ret == QDMI_SUCCESS);
 
@@ -239,53 +245,61 @@ createAndSubmitQDMIJob(mqss::QuantumTask task, const char *device_conf_path,
   // Teardown (in reverse order)
 
   // Fetch Results of Job execution
-  // TODO: What result to fetch (here: QDMI_JOB_RESULT_STATEVECTOR_DENSE)? This 
-  //        should be gathered from the user or quantumtask. There is another enum
-  //        "QDMI_JOB_RESULT_CUSTOM" which is defined by the target device.
+  // TODO: What result to fetch (here: QDMI_JOB_RESULT_STATEVECTOR_DENSE)? This
+  //        should be gathered from the user or quantumtask. There is another
+  //        enum "QDMI_JOB_RESULT_CUSTOM" which is defined by the target device.
   //        Perhaps, that should be used for real device. However, the example
   //        qdmi device used for this test does not support custom job results.
-  size_t state_size = 0;
-  ret = QDMI_job_get_results(job, QDMI_JOB_RESULT_STATEVECTOR_DENSE, 0, nullptr,
-                             &state_size);
+  size_t size = 0;
+  ret = QDMI_job_get_results(job, QDMI_JOB_RESULT_HIST_KEYS, 0, nullptr, &size);
   assert(ret == QDMI_SUCCESS);
-  const size_t vec_length = state_size / sizeof(double);
-  assert(vec_length % 2 == 0);
+  // const size_t vec_length = state_size / sizeof(double);
+  // assert(vec_length % 2 == 0);
 
-  std::vector<double> state_vector(vec_length);
-  ret = QDMI_job_get_results(job, QDMI_JOB_RESULT_STATEVECTOR_DENSE, state_size,
-                             static_cast<void *>(state_vector.data()), nullptr);
-  assert(ret == QDMI_SUCCESS);
+  MQSSLogger->info("Raw HIST KEYS size: {}", size);
+  std::string key_list(size - 1, '\0');
+  ret = QDMI_job_get_results(
+      job, QDMI_JOB_RESULT_HIST_KEYS, size,
+      static_cast<void *>(const_cast<char *>(key_list.data())), nullptr);
 
-  std::vector<std::complex<double>> complex_state_vector;
-  MQSSLogger->info("Raw state_vector size: {}", state_vector.size());
-  complex_state_vector.reserve(vec_length / 2);
-  for (size_t i = 0; i < state_vector.size(); i += 2) {
-    complex_state_vector.emplace_back(state_vector[i], state_vector[i + 1]);
+  assert(ret == QDMI_STATUS::QDMI_SUCCESS);
+
+  std::vector<std::string> key_vec;
+  std::string token;
+  std::stringstream ss(key_list);
+  while (std::getline(ss, token, ',')) {
+    key_vec.emplace_back(token);
   }
 
-  // assert that the complex vector is normalized up to a certain tolerance
-  double norm = 0;
-  for (const auto &val : complex_state_vector) {
-    norm += std::norm(val);
-  }
+  size_t val_size = 0;
+  ret = QDMI_job_get_results(job, QDMI_JOB_RESULT_HIST_VALUES, 0, nullptr,
+                             &val_size);
+  assert(ret == QDMI_SUCCESS);
 
-  MQSSLogger->info("Results of Job are, norm: {}", norm);
-  if (CheckBellState(complex_state_vector, MQSSLogger) ==
-      testing::AssertionFailure()) {
-    MQSSLogger->info("Incorrect Results...");
-  } else {
-    MQSSLogger->info("Results Check Succeeded!!!");
+  auto type = val_size / sizeof(size_t);
+
+  std::vector<size_t> counts(type);
+  ret = QDMI_job_get_results(job, QDMI_JOB_RESULT_HIST_VALUES, val_size,
+                             static_cast<void *>(counts.data()), nullptr);
+  assert(ret == QDMI_SUCCESS);
+
+  for (size_t i = 0; i < counts.size(); i++) {
+    MQSSLogger->info("counts[{}]: {}", i, counts[i]);
   }
 
   QuantumResult result;
   result.set_task_id(task.task_id());
 
   result.add_executed_circuits(circuit);
-  result.set_additional_information(std::to_string(norm));
+  std::string return_String = "";
+  for (auto entry : key_vec) {
+    return_String += entry + " ";
+  }
+  result.set_additional_information(return_String);
 
   QDMI_job_free(job);
-  QDMI_session_free(session);
-  QDMI_driver_shutdown(); // dlclose() happens here
+  // QDMI_session_free(session);
+  driver.sessionFree(session);
 
   return result;
 }
@@ -344,12 +358,15 @@ int main() {
     // }
 
     // prepare QDMI job and submit
-    std::string device_name = "cxx";
-    // TODO: This path should not be hard-coded
-    std::string device_conf = "/workspaces/QRM/cxx_qdmi.conf";
-    logger->info("Device conf is: " + device_conf);
+    std::string libName = "/workspaces/QRM/_deps/core/build/src/qdmi/devices/"
+                          "dd/libmqt-core-qdmi-ddsim-device.so";
+    logger->info("Device conf is: " + libName);
+
     auto circuit_result =
-        createAndSubmitQDMIJob(task, device_conf.c_str(), std::move(logger));
+        createAndSubmitQDMIJobToQDMIDevice(task, libName, "MQT_DDSIM", logger);
+
+    // auto circuit_result =
+    //     createAndSubmitQDMIJob(task, device_conf.c_str(), std::move(logger));
 
     auto send_st = messenger.send<mqss::QuantumResult>(
         {task.result_destination()}, // use the queue the daemon specified
