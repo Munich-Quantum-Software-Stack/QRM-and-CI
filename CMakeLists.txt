@@ -27,6 +27,10 @@ find_package(MQSSDeploy REQUIRED)
 find_package(Spdlog REQUIRED)
 find_package(GTest REQUIRED)
 
+# set(mqt-core_DIR "/workspaces/QRM/_deps/core/build/" 
+#     CACHE PATH "Path to mqt-core CMake config")
+# find_package(mqt-core REQUIRED)
+
 # add_library(mqssci::mqssci STATIC IMPORTED GLOBAL)
 # set_target_properties(mqssci::mqssci PROPERTIES
 #   IMPORTED_LOCATION ${MQSSCI_INSTALL_DIR}/lib/libmoduleY.a
@@ -109,7 +113,7 @@ target_link_libraries(
       )
 
 
-add_executable("MQSSSubmitter" src/MQSSSubmitter.cpp)
+add_executable("MQSSSubmitter" src/MQSSSubmitter.cpp src/Driver.cpp)
 
 target_compile_definitions(MQSSSubmitter PRIVATE
       SUBMITTER_LOG_FILES_PATH="${LOG_FILES_PATH}/Submitter.log"
@@ -118,7 +122,7 @@ target_compile_definitions(MQSSSubmitter PRIVATE
       RESULTS_QUEUE="${RESULTS_QUEUE_STR}"
 )
 
-target_include_directories("MQSSSubmitter" PRIVATE ${qdmi_SOURCE_DIR}/)
+target_include_directories("MQSSSubmitter" PRIVATE ${qdmi_SOURCE_DIR} )
 
 target_link_libraries(
   "MQSSSubmitter"

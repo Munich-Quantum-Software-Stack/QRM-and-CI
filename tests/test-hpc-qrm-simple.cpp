@@ -73,8 +73,10 @@ int main() {
     for (auto circuit : decoded_circuits) {
       logger->info(circuit);
     }
-    logger->info(decoded.additional_information());
-    // use decoded.task_id(), decoded.n_qbits(), etc.
+    logger->info("-->Results:\n");
+    for(auto [key, count] : decoded.results(0).counts()){
+        logger->info("count[{}] : {}" , key, count);
+    }
   }
   Logger::cleanup();
 
