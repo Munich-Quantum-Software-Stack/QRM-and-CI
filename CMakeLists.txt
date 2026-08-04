@@ -1,243 +1,79 @@
-# This code and any associated documentation is provided "as is"
-#
-# Copyright 2025 Munich Quantum Software Stack Project
-#
-# Licensed under the Apache License, Version 2.0 with LLVM Exceptions (the
-# "License"); you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# TODO: LICENSE
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations under
-# the License.
+# Copyright (c) 2026 MQSS Maintainers
+# All rights reserved.
 #
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-# *******************************************************************************
-# * This source code and the accompanying materials are made available under
-# * the terms of the Apache License 2.0 which accompanies this distribution.
-# *******************************************************************************
 
-cmake_minimum_required(VERSION 3.22.1)
+cmake_minimum_required(VERSION 3.20)
 project(
-  QuantumResourceManager
-  VERSION 0.1
-  DESCRIPTION "Quantum Resource Manager"
-  LANGUAGES C CXX)
+  QRMCI
+  VERSION 0.1.0
+  DESCRIPTION "Quantum Resource Manager and Compiler Infrastructure"
+  LANGUAGES CXX)
 
 # Set the C++ standard
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED on)
 set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
-set(CMAKE_CXX_FLAGS "-w -fPIC")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -frtti -fexceptions")
 
-# Set default build type to Debug if none is specified
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE
-      Debug
-      CACHE STRING "Build type (Debug, Release)" FORCE)
+      Release
+      CACHE STRING "Choose the type of build." FORCE)
 endif()
 
-# Define macros for Debug builds
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  message("Configuring for Debug mode")
-  add_compile_definitions(DEBUG)
-endif()
-
-# Set the installation directory for the daemon
-# if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-set(CMAKE_INSTALL_PREFIX
-    $ENV{HOME}/bin
-    CACHE PATH "..." FORCE)
-# endif()
-set(INSTALL_PATH "${CMAKE_INSTALL_PREFIX}")
-
-# Create the qresourcemanager_d.log file
-file(WRITE ${CMAKE_INSTALL_PREFIX}/logs/QuantumResourceManarger.log "")
-# Tell where to find fetch content, etc.
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
-find_package(MLIR REQUIRED CONFIG)
-message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
+# Boost 1.89+ no longer ships a separate boost_system package config, but some
+# third-party dependency trees still request it explicitly. Provide a local shim
+# only for this build tree instead of overriding find_package globally.
+set(_qrm_boost_system_shim_dir
+    "${CMAKE_BINARY_DIR}/_deps/cmake/boost_system-shim")
+file(MAKE_DIRECTORY "${_qrm_boost_system_shim_dir}")
+file(
+  WRITE "${_qrm_boost_system_shim_dir}/boost_systemConfig.cmake"
+  "if(NOT TARGET Boost::system)\n  add_library(Boost::system INTERFACE IMPORTED)\nendif()\n"
+)
+file(
+  WRITE "${_qrm_boost_system_shim_dir}/boost_systemConfigVersion.cmake"
+  "set(PACKAGE_VERSION \"1.90.0\")\nset(PACKAGE_VERSION_COMPATIBLE TRUE)\nset(PACKAGE_VERSION_EXACT TRUE)\n"
+)
+list(PREPEND CMAKE_PREFIX_PATH "${_qrm_boost_system_shim_dir}")
 
-list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}")
-list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
-
-include(TableGen)
-include(AddLLVM)
-include(AddMLIR)
-
-# Add LLVM, Clang and MLIR headers to the include path
-include_directories(SYSTEM ${LLVM_INCLUDE_DIRS} ${CLANG_INCLUDE_DIRS}
-                    ${MLIR_INCLUDE_DIRS})
-# ##############################################################################
-# Find FOMAC package find_package(fomac REQUIRED) Find QDMI package
-find_package(qdmi REQUIRED)
-# Find QInfo package find_package(qinfo REQUIRED) Find nlohmann_json package
 find_package(fmt REQUIRED)
-find_package(nlohmann_json REQUIRED)
-# Find the Threads package
-find_package(Threads REQUIRED)
-find_package(rabbitmq-c REQUIRED)
-find_package(MLIRPasses REQUIRED)
+find_package(spdlog REQUIRED)
+find_package(MQSSCompiler REQUIRED)
+find_package(MQSSScheduler REQUIRED)
+find_package(MQSSSubmitter REQUIRED)
+find_package(MQSSIntegrationDeploymentFramework REQUIRED)
 
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_MULTITHREADED ON)
-set(Boost_USE_STATIC_RUNTIME OFF)
-find_package(Boost REQUIRED)
-message(STATUS "Boost version: ${Boost_VERSION}")
-if(NOT Boost_FOUND)
-  message(FATAL_ERROR "Boost library not found.")
+if(TARGET spdlog::spdlog_header_only)
+  set(QRMCI_SPDLOG_TARGET spdlog::spdlog_header_only)
+else()
+  set(QRMCI_SPDLOG_TARGET spdlog::spdlog)
 endif()
-find_package(BoostUUID REQUIRED)
 
-# configure the MLIR Passes repo
-set(PASSES_SOURCE_DIR ${MLIRPasses_SOURCE_DIR})
-set(PASSES_INCLUDE_DIR "${PASSES_SOURCE_DIR}/include")
-set(PASSES_TB_INCLUDE_DIR "${MLIRPasses_BINARY_DIR}/include")
-include_directories(${PASSES_INCLUDE_DIR})
-include_directories(${PASSES_TB_INCLUDE_DIR})
+include(cmake/Config.cmake)
 
-set(MQT_QMAP_INCLUDE_DIR "${mqt-qmap_SOURCE_DIR}/include/")
-set(MQT_QCEC_INCLUDE_DIR "${mqt-qcec_SOURCE_DIR}/include/")
-set(MQT_CORE_INCLUDE_DIR "${mqt-core_SOURCE_DIR}/include/mqt-core")
+configure_file(include/ConfigDefaults.hpp.in
+               ${CMAKE_CURRENT_BINARY_DIR}/generated/ConfigDefaults.hpp @ONLY)
 
 # Add the include paths
-include_directories(
-  BEFORE
-  ${LLVM_INCLUDE_DIRS}
-  ${MLIR_INCLUDE_DIRS}
-  ${MQT_QMAP_INCLUDE_DIR}
-  ${MQT_CORE_INCLUDE_DIR}
-  "${CMAKE_CURRENT_SOURCE_DIR}/include"
-  "${CMAKE_CURRENT_SOURCE_DIR}/include/mqss"
-  "${CMAKE_CURRENT_SOURCE_DIR}/include/mqss/Utils"
-  "${CMAKE_CURRENT_SOURCE_DIR}/include/mqss/QuantumResourceManager"
-  "${CMAKE_CURRENT_SOURCE_DIR}/include/mqss/QuantumResourceManager/PassManager")
+include_directories(BEFORE "${CMAKE_CURRENT_SOURCE_DIR}/include"
+                    "${CMAKE_CURRENT_BINARY_DIR}/generated")
 
-# ###################### CUDAQ settings ###################################
-set(CUDAQ_MAIN_INCLUDE_DIR "${CUDAQ_SOURCE_DIR}/include")
+add_library(qrmci src/CommunicationHandler.cpp src/Config.cpp src/Runners.cpp)
+target_link_libraries(qrmci PUBLIC mqss mqss_compiler mqss_scheduler
+                                   mqss_submitter ${QRMCI_SPDLOG_TARGET})
 
-set(CUDAQ_BINARY_DIR "${CUDAQ_SOURCE_DIR}/build")
-set(CUDAQ_CMAKE_DIR "${CUDAQ_SOURCE_DIR}/cmake")
-set(CUDAQ_INCLUDE_DIR "${CUDAQ_SOURCE_DIR}/build/include")
-set(CUDAQ_LIBRARY_DIR "${CUDAQ_SOURCE_DIR}/build/lib")
-set(CUDAQ_TOOLS_DIR "${CUDAQ_SOURCE_DIR}/build/bin")
-set(CUDAQ_MLIR_RUNTIME_PATH "${CUDAQ_BINARY_DIR}/lib")
-message(STATUS "CUDAQ bin ${CUDAQ_MLIR_RUNTIME_PATH}")
-
-include_directories(BEFORE ${CUDAQ_MAIN_INCLUDE_DIR}
-                    ${CUDAQ_BINARY_DIR}/include ${CUDAQ_SOURCE_DIR}/runtime)
-
-# Validate CUDAQ dependencies
-if(NOT EXISTS ${CUDAQ_BINARY_DIR}/lib/libcudaq-mlir-runtime.so)
-  message(
-    FATAL_ERROR
-      "Invalid CUDAQ dir: ${CUDAQ_SOURCE_DIR}. Cannot find libcudaq.so in build directory."
-  )
-endif()
-set(CUDAQ_TARGETS ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so)
-# ##############################################################################
-add_subdirectory(src)
-
-set(PUBLIC_QRM_HEADERS "include/mqss/QuantumResourceManager.hpp"
-                       "include/mqss/ConnectionHandler.hpp")
-# Build the executable
-add_executable("hpc-offload-listener" src/HPC-Offload-Listener.cpp)
-# Link the executable with the required libraries
-target_link_libraries(
-  "hpc-offload-listener" PUBLIC rabbitmq nlohmann_json::nlohmann_json
-                                spdlog::spdlog Threads::Threads Common)
-
-# Build the executable
-add_executable("mqp-offload-listener" src/MQP-Offload-Listener.cpp)
-# Link the executable with the required libraries
-target_link_libraries(
-  "mqp-offload-listener" PUBLIC rabbitmq nlohmann_json::nlohmann_json
-                                spdlog::spdlog Threads::Threads Common)
-
-add_executable("target-agnostic-pass-runner" src/AgnosticPassRunner.cpp)
-target_link_libraries(
-  "target-agnostic-pass-runner"
-  PUBLIC rabbitmq
-         spdlog::spdlog
-         nlohmann_json::nlohmann_json
-         Threads::Threads
-         Common
-         MLIRIR
-         MLIRPass
-         MLIRTransforms
-         ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so
-         PassRunner
-         fmt::fmt)
-
-add_executable("scheduler" src/Scheduler.cpp)
-target_link_libraries("scheduler" PUBLIC rabbitmq nlohmann_json::nlohmann_json
-                                         Threads::Threads Common spdlog::spdlog)
-
-add_executable("target-specific-pass-runner" src/TargetSpecificPassRunner.cpp)
-target_link_libraries(
-  "target-specific-pass-runner"
-  PUBLIC rabbitmq
-         spdlog::spdlog
-         nlohmann_json::nlohmann_json
-         Threads::Threads
-         Common
-         MLIRIR
-         MLIRPass
-         MLIRTransforms
-         ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so
-         PassRunner
-         fmt::fmt)
-
-add_executable("submitter" src/Submitter.cpp)
-
-target_include_directories(submitter PRIVATE ${MLIR_INCLUDE_DIRS}
-                                             ${LLVM_INCLUDE_DIRS})
-
-target_compile_definitions(submitter PRIVATE ${MLIR_DEFINITIONS}
-                                             ${LLVM_DEFINITIONS})
-
-target_link_libraries(
-  "submitter"
-  PUBLIC rabbitmq
-         nlohmann_json::nlohmann_json
-         Threads::Threads
-         Common
-         spdlog::spdlog
-         fmt::fmt
-         # Required MLIR components
-         MLIRIR
-         MLIRPass
-         MLIRTransforms
-         MLIROptLib
-         MLIRExecutionEngine
-         ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so)
-
-add_executable("mock-backend" src/MockBackend.cpp)
-
-target_include_directories(mock-backend PRIVATE ${MLIR_INCLUDE_DIRS}
-                                                ${LLVM_INCLUDE_DIRS})
-
-target_compile_definitions(mock-backend PRIVATE ${MLIR_DEFINITIONS}
-                                                ${LLVM_DEFINITIONS})
-
-target_link_libraries(
-  "mock-backend"
-  PUBLIC rabbitmq
-         spdlog::spdlog
-         nlohmann_json::nlohmann_json
-         Threads::Threads
-         Common
-         fmt::fmt
-         ${CUDAQ_MLIR_RUNTIME_PATH}/libcudaq-mlir-runtime.so)
+add_subdirectory(deployment/workflow-aio)
 
 enable_testing()
 add_subdirectory(tests)
+
+option(BUILD_QRMCI_DOCS "Build Doxygen API documentation" OFF)
+if(BUILD_QRMCI_DOCS)
+  add_subdirectory(docs)
+endif()
+
 # Enable FetchContent for integration
 include(FetchContent)

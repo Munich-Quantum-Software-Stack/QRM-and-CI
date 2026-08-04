@@ -1,0 +1,52 @@
+{
+  "author": {
+    "name": "MQSS Maintainers"
+  },
+  "force_author": true,
+  "force_license": true,
+  "license": "Apache-2.0 WITH LLVM-exception",
+  "custom_license": "SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception",
+  "title": false,
+  "include": ["**/*"],
+  "style_override_for_suffix": {
+    ".pyi": "DOCSTRING_STYLE",
+    ".in": "POUND_STYLE",
+    ".mlir": "SLASH_STYLE",
+    ".td": "SLASH_STYLE",
+    ".yaml": "POUND_STYLE",
+    ".toml": "POUND_STYLE",
+    ".proto": "SLASH_STYLE"
+  },
+  "exclude": [
+    "^\\.[^/]+",
+    "/\\.[^/]+",
+    ".*\\.qasm",
+    ".*\\.ll",
+    ".*\\.in",
+    ".*\\.md",
+    ".*\\.bib",
+    ".*\\.cff",
+    ".*\\.css",
+    ".*\\.json",
+    ".*\\.html",
+    ".*\\.xml",
+    ".*\\.tag",
+    ".*\\.tfc",
+    ".*\\.qc",
+    ".*\\.real",
+    ".*\\.tex",
+    ".*\\.png",
+    ".*\\.jpg",
+    ".*\\.jpeg",
+    ".*\\.svg",
+    ".*\\.pdf",
+    "uv\\.lock",
+    "py\\.typed",
+    ".*build.*",
+    "(^|/)LICENSE$",
+    "patterns.txt",
+    ".*\\.cmake",
+    "Dockerfile",
+    "Makefile"
+  ]
+}

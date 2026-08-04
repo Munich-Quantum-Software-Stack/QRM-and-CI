@@ -6,14 +6,16 @@
 #
 #     pre-commit install
 #
+
 ci:
   autoupdate_commit_msg: "⬆️🪝 update pre-commit hooks"
+  autoupdate_schedule: quarterly
   autofix_commit_msg: "🎨 pre-commit fixes"
-stages: [commit]
+
 repos:
   # Standard hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: check-added-large-files
       - id: check-case-conflict
@@ -30,7 +32,7 @@ repos:
 
   # Handling unwanted unicode characters
   - repo: https://github.com/sirosen/texthooks
-    rev: 0.6.8
+    rev: 0.7.1
     hooks:
       - id: fix-ligatures
       - id: fix-smartquotes
@@ -43,15 +45,21 @@ repos:
       - id: rst-directive-colons
       - id: rst-inline-touching-normal
 
+  # Check for license headers
+  - repo: https://github.com/emzeat/mz-lictools
+    rev: v2.9.0
+    hooks:
+      - id: license-tools
+
   # Check for spelling
   - repo: https://github.com/crate-ci/typos
-    rev: v1.30.2
+    rev: v1.48.0
     hooks:
       - id: typos
 
   # Clang-format the C++ part of the code base automatically
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v19.1.7
+    rev: v22.1.5
     hooks:
       - id: clang-format
         types_or: [c++, c, cuda]
@@ -67,15 +75,11 @@ repos:
 
   # Format configuration files with prettier
   - repo: https://github.com/rbubley/mirrors-prettier
-    rev: v3.5.3
+    rev: v3.9.4
     hooks:
       - id: prettier
         types_or: [yaml, markdown, html, css, scss, javascript, json]
-        args:
-          - --print-width=100
-          - --prose-wrap=always
-          - --tab-width=2
-        exclude: ^docs/header\.html$
+        exclude: docs/header\.html$
 
   # Catch common capitalization mistakes
   - repo: local
@@ -88,7 +92,7 @@ repos:
 
   # Check JSON schemata
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.31.3
+    rev: 0.37.4
     hooks:
       - id: check-dependabot
       - id: check-github-workflows

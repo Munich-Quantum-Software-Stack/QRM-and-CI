@@ -1,24 +1,28 @@
-# cmake_minimum_required(VERSION 3.10)
+# Copyright (c) 2026 MQSS Maintainers
+# All rights reserved.
+#
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-project(MyQirTests)
+cmake_minimum_required(VERSION 3.20)
 
-find_package(GTest REQUIRED)
-include(GoogleTest)
+add_executable(
+  submit_task
+  ${CMAKE_CURRENT_SOURCE_DIR}/../src/Config.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/../src/CommunicationHandler.cpp submit_task.cpp)
 
-set(TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test-hpc-qrm-simple.cpp")
+target_compile_features(submit_task PRIVATE cxx_std_23)
+target_compile_definitions(submit_task PRIVATE FMT_HEADER_ONLY)
 
-include_directories(${GTEST_INCLUDE_DIRS})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../src)
+target_include_directories(
+  submit_task PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../include
+                      ${CMAKE_CURRENT_BINARY_DIR}/../generated)
 
-find_package(rabbitmq-c REQUIRED)
+if(TARGET spdlog::spdlog_header_only)
+  set(QRMCI_SPDLOG_TARGET spdlog::spdlog_header_only)
+else()
+  set(QRMCI_SPDLOG_TARGET spdlog::spdlog)
+endif()
 
-foreach(TEST_SOURCE ${TEST_SOURCES})
-  get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
-  add_executable(${TEST_NAME} ${TEST_SOURCE})
-  target_link_libraries(${TEST_NAME} ${GTEST_LIBRARIES} rabbitmq Common
-                        spdlog::spdlog_header_only)
-  target_include_directories(
-    ${TEST_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mqss
-                        ${CMAKE_CURRENT_SOURCE_DIR}/include/mqss/Utils)
-  add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
-endforeach()
+target_link_libraries(submit_task PRIVATE qrmci)
+
+add_test(NAME submit_task COMMAND submit_task)

@@ -1,0 +1,30 @@
+/*
+ * Copyright (c) 2026 MQSS Maintainers
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ */
+
+#pragma once
+
+#include <string_view>
+
+namespace mqss::qrmci::defaults {
+
+// Static defaults.
+inline constexpr std::string_view amqp_host = "host.docker.internal";
+inline constexpr int amqp_port = 5672;
+inline constexpr std::string_view amqp_user = "guest";
+inline constexpr std::string_view amqp_password = "guest";
+inline constexpr std::string_view amqp_vhost = "/";
+
+inline constexpr std::string_view qrmci_queue = "qrmci.tasks.queue";
+inline constexpr std::string_view scheduler_queue = "scheduler.tasks.queue";
+inline constexpr std::string_view compiler_queue = "compiler.tasks.queue";
+inline constexpr std::string_view results_queue = "test.results.queue";
+inline constexpr std::string_view submitter_queue = "submitter.tasks.queue";
+
+inline constexpr std::string_view log_dir = "@QRM_LOG_DIR@";
+inline constexpr std::string_view benchmark_dir = "@QRM_BENCHMARK_DIR@";
+
+} // namespace mqss::qrmci::defaults

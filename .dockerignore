@@ -1,0 +1,15 @@
+.git
+build
+dist
+target
+node_modules
+venv
+.venv
+__pycache__
+*.pyc
+*.o
+*.a
+*.so
+*.tar
+*.tar.gz
+*.log
