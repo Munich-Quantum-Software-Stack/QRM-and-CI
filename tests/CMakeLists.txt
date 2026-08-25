@@ -5,24 +5,14 @@
 
 cmake_minimum_required(VERSION 3.20)
 
-add_executable(
-  submit_task
-  ${CMAKE_CURRENT_SOURCE_DIR}/../src/Config.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/../src/CommunicationHandler.cpp submit_task.cpp)
+find_package(GTest REQUIRED)
 
-target_compile_features(submit_task PRIVATE cxx_std_23)
-target_compile_definitions(submit_task PRIVATE FMT_HEADER_ONLY)
+option(QRMCI_BUILD_UNIT_TESTS "Build unit tests" ON)
+option(QRMCI_BUILD_INTEGRATION_TESTS "Build integration tests" ON)
 
-target_include_directories(
-  submit_task PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../include
-                      ${CMAKE_CURRENT_BINARY_DIR}/../generated)
-
-if(TARGET spdlog::spdlog_header_only)
-  set(QRMCI_SPDLOG_TARGET spdlog::spdlog_header_only)
-else()
-  set(QRMCI_SPDLOG_TARGET spdlog::spdlog)
+if(QRMCI_BUILD_INTEGRATION_TESTS)
+  add_subdirectory(integration)
 endif()
-
-target_link_libraries(submit_task PRIVATE qrmci)
-
-add_test(NAME submit_task COMMAND submit_task)
+if(QRMCI_BUILD_UNIT_TESTS)
+  add_subdirectory(unit)
+endif()

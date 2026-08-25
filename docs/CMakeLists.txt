@@ -9,7 +9,7 @@ include(FetchContent)
 FetchContent_Declare(
   doxygen-awesome-css
   GIT_REPOSITORY https://github.com/jothepro/doxygen-awesome-css.git
-  GIT_TAG v2.3.4)
+  GIT_TAG ${QRMCI_DOXYGEN_AWESOME_GIT_TAG})
 FetchContent_MakeAvailable(doxygen-awesome-css)
 FetchContent_GetProperties(doxygen-awesome-css SOURCE_DIR AWESOME_CSS_DIR)
 

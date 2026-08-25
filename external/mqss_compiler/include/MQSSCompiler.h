@@ -13,26 +13,27 @@
 
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
 #include <stdexcept>
 #include <string>
-#include <type_traits>
-#include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace mqss {
 
 struct CompilerOptions {
-  int optimization_level;
-  std::string result_type;
+  int optimizationLevel;
+  std::string resultType;
 };
 
 class MQSSCompiler {
 public:
   // Constructor for the MQSS Compiler.
-  // @param mqss_opt_path The path to the MQSS compiler executable.
-  MQSSCompiler(const std::string &mqss_opt_path = "mqss-opt")
-      : mqss_opt(mqss_opt_path) {
-    checkExecutable(mqss_opt);
+  // @param mqssOptPath The path to the MQSS compiler executable.
+  explicit MQSSCompiler(std::string mqssOptPath = "mqss-opt")
+      : mqssOpt(std::move(mqssOptPath)) {
+    checkExecutable(mqssOpt);
   }
 
   // Invokes the MQSS compiler with the provided arguments.
@@ -44,10 +45,11 @@ public:
   // hardware.
   // @param opts The compiler options.
   // @return The compiled circuit as a string.
-  std::string compile(const std::string &input_circuit,
-                      const std::string &backend_name,
-                      const std::vector<std::string> &native_gates,
-                      const std::unordered_map<int, int> &qubit_connectivity,
+  std::string compile(const std::string &inputCircuit,
+                      const std::string &backendName,
+                      const std::vector<std::string> &nativeGates,
+                      const std::vector<std::pair<std::uint32_t, std::uint32_t>>
+                          &qubitConnectivity,
                       const CompilerOptions &opts);
 
   // Overloaded compile method for cases where only the backend name is
@@ -56,10 +58,10 @@ public:
   // @param backend_name The name of the target backend.
   // @param opts The compiler options.
   // @return The compiled circuit as a string.
-  std::string compile(const std::string &input_circuit,
-                      const std::string &backend_name,
+  std::string compile(const std::string &inputCircuit,
+                      const std::string &backendName,
                       const CompilerOptions &opts) {
-    return compile(input_circuit, backend_name, {}, {}, opts);
+    return compile(inputCircuit, backendName, {}, {}, opts);
   }
 
   // Overloaded compile method for cases where only the input circuit and native
@@ -69,10 +71,25 @@ public:
   // hardware.
   // @param opts The compiler options.
   // @return The compiled circuit as a string.
-  std::string compile(const std::string &input_circuit,
-                      const std::vector<std::string> &native_gates,
+  std::string compile(const std::string &inputCircuit,
+                      const std::vector<std::string> &nativeGates,
                       const CompilerOptions &opts) {
-    return compile(input_circuit, "", native_gates, {}, opts);
+    return compile(inputCircuit, "", nativeGates, {}, opts);
+  }
+
+  // Overloaded compile method for cases where only the input circuit and native
+  // gates are provided.
+  // @param input_circuit The input circuit to compile.
+  // @param native_gates The list of native gates for the target quantum
+  // hardware.
+  // @param opts The compiler options.
+  // @return The compiled circuit as a string.
+  std::string compile(const std::string &inputCircuit,
+                      const std::vector<std::string> &nativeGates,
+                      const std::vector<std::pair<std::uint32_t, std::uint32_t>>
+                          &qubitConnectivity,
+                      const CompilerOptions &opts) {
+    return compile(inputCircuit, "", nativeGates, qubitConnectivity, opts);
   }
 
   // Overloaded compile method for cases where only the input circuit is
@@ -80,17 +97,17 @@ public:
   // @param input_circuit The input circuit to compile.
   // @param opts The compiler options.
   // @return The compiled circuit as a string.
-  std::string compile(const std::string &input_circuit,
+  std::string compile(const std::string &inputCircuit,
                       const CompilerOptions &opts) {
-    return compile(input_circuit, "", {}, {}, opts);
+    return compile(inputCircuit, "", {}, {}, opts);
   }
 
 private:
-  std::string mqss_opt;
+  std::string mqssOpt;
 
   static std::string stripSpuriousGateDefs(const std::string &qasm);
 
-  void checkExecutable(const std::string &executable) {
+  static void checkExecutable(const std::string &executable) {
     if (std::system((executable + " --version > /dev/null 2>&1").c_str()) !=
         0) {
       throw std::runtime_error(executable +

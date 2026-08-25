@@ -9,6 +9,6 @@ FetchContent_Declare(
   MQSSIntegrationDeploymentFramework
   GIT_REPOSITORY
     git@github.com:Munich-Quantum-Software-Stack/MQSS-Integration-Deployment-Framework.git
-  GIT_TAG develop)
+  GIT_TAG ${QRMCI_MQSS_IDF_GIT_TAG})
 
 FetchContent_MakeAvailable(MQSSIntegrationDeploymentFramework)

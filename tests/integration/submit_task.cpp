@@ -5,9 +5,9 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-#include "qrmci.hpp"
+#include "qrmci/CommunicationHandler.h"
+#include "qrmci/Config.h"
 
-#include <functional>
 #include <string>
 
 int main(int argc, char **argv) {
@@ -52,30 +52,30 @@ int main(int argc, char **argv) {
   qtask.set_circuit_file_type(std::string("mlir"));
   qtask.set_n_shots(100);
   qtask.set_optimisation_level(1);
-  qtask.set_preferred_qpu(std::string("EQE1"));
+  qtask.set_preferred_qpu(std::string("C++ Device with 5 qubits"));
+  // qtask.set_preferred_qpu(std::string("EQE1"));
   qtask.set_no_modify(false);
   qtask.set_result_destination(std::string("tester.tasks.queue"));
 
   mqss::qrmci::CommunicationHandler<mqss::RabbitMqSimple, mqss::ProtoJson>
-      communication_handler(config.rabbitmq);
+      communicationHandler(config.rabbitmq);
   std::cout << "Sending task with task_id: " << qtask.task_id()
-            << " to queue: " << config.queues.qrmci << std::endl;
-  communication_handler.send_quantum_task(qtask, config.queues.qrmci);
+            << " to queue: " << config.queues.qrmci << "\n";
+  communicationHandler.sendQuantumTask(qtask, config.queues.qrmci);
 
   // Wait for the result from the compiler
-  std::cout << "Waiting for result from queue: tester.tasks.queue" << std::endl;
-  auto opt_result = communication_handler.get_next_quantum_result(
+  std::cout << "Waiting for result from queue: tester.tasks.queue" << "\n";
+  auto optResult = communicationHandler.getNextQuantumResult(
       std::string("tester.tasks.queue"), std::chrono::milliseconds(0));
 
-  if (!opt_result.has_value()) {
-    std::cerr << "No result received from the queue." << std::endl;
+  if (!optResult.has_value()) {
+    std::cerr << "No result received from the queue." << "\n";
     return 1;
   }
 
-  mqss::QuantumResult task_result = opt_result.value();
-  assert(task_result.task_id() == 123);
-  std::cout << "Received result for task_id: " << task_result.task_id()
-            << std::endl;
+  const mqss::QuantumResult &taskResult = optResult.value();
+  assert(taskResult.task_id() == 123);
+  std::cout << "Received result for task_id: " << taskResult.task_id() << "\n";
 
-  std::cout << task_result.DebugString() << std::endl;
+  std::cout << taskResult.DebugString() << "\n";
 }

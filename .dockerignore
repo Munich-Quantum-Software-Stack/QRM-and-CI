@@ -1,6 +1,9 @@
+.devcontainer
 .git
+.github
 build
 dist
+docker
 target
 node_modules
 venv

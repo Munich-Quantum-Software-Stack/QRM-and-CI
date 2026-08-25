@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <concepts>
+#include <cstdint>
 #include <mutex>
 #include <optional>
 #include <vector>
@@ -21,31 +22,30 @@ concept Schedulable = requires(T job) {
   { job.priority() } -> std::convertible_to<int>;
 };
 
-enum class SchedulingPolicy { FirstInFirstOut, PriorityBased };
+enum class SchedulingPolicy : std::uint8_t { FirstInFirstOut, PriorityBased };
 
 template <Schedulable JobType> class Scheduler {
 public:
   explicit Scheduler(
       SchedulingPolicy policy = SchedulingPolicy::FirstInFirstOut)
-      : m_currentPolicy(policy) {}
+      : currentPolicy(policy) {}
 
   // Schedule a single job based on the current scheduling policy
   void scheduleJob(const JobType &job) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    if (m_currentPolicy == SchedulingPolicy::FirstInFirstOut) {
-      m_jobQueue.push_back(job);
-    } else if (m_currentPolicy == SchedulingPolicy::PriorityBased) {
-      auto it = std::find_if(m_jobQueue.begin(), m_jobQueue.end(),
+    std::lock_guard<std::mutex> lock(mutexJobQueue);
+    if (currentPolicy == SchedulingPolicy::FirstInFirstOut) {
+      jobQueue.push_back(job);
+    } else if (currentPolicy == SchedulingPolicy::PriorityBased) {
+      auto it = std::find_if(jobQueue.begin(), jobQueue.end(),
                              [&](const JobType &existingJob) {
                                return job.priority() > existingJob.priority();
                              });
-      m_jobQueue.insert(it, job);
+      jobQueue.insert(it, job);
     }
   }
 
   // Schedule multiple jobs at once
   void scheduleJobs(const std::vector<JobType> &jobs) {
-    std::lock_guard<std::mutex> lock(m_mutex);
     for (const auto &job : jobs) {
       scheduleJob(job);
     }
@@ -53,34 +53,34 @@ public:
 
   // Function to clear all jobs in the queue
   void clearJobs() {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    m_jobQueue.clear();
+    std::lock_guard<std::mutex> lock(mutexJobQueue);
+    jobQueue.clear();
   }
 
   // Function to get the current number of jobs in the queue
   size_t getJobCount() const {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    return m_jobQueue.size();
+    std::lock_guard<std::mutex> lock(mutexJobQueue);
+    return jobQueue.size();
   }
 
   // Function to get the current scheduling policy
-  SchedulingPolicy getSchedulingPolicy() const { return m_currentPolicy; }
+  SchedulingPolicy getSchedulingPolicy() const { return currentPolicy; }
 
   // Function to get the next ready job based on the current scheduling policy
   std::optional<JobType> getNextReadyJob() {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    if (m_jobQueue.empty()) {
+    std::lock_guard<std::mutex> lock(mutexJobQueue);
+    if (jobQueue.empty()) {
       return std::nullopt;
     }
-    JobType nextJob = m_jobQueue.front();
-    m_jobQueue.erase(m_jobQueue.begin());
+    JobType nextJob = jobQueue.front();
+    jobQueue.erase(jobQueue.begin());
     return nextJob;
   }
 
 private:
-  std::vector<JobType> m_jobQueue;
-  SchedulingPolicy m_currentPolicy;
-  mutable std::mutex m_mutex; // Mutex to protect access to the job queue
+  std::vector<JobType> jobQueue;
+  SchedulingPolicy currentPolicy;
+  mutable std::mutex mutexJobQueue; // Mutex to protect access to the job queue
 };
 
 } // namespace mqss

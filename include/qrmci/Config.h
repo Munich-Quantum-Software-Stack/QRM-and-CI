@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-/// @file Config.hpp
+/// @file Config.h
 /// @brief Configuration model for the QRM workflow daemon.
 ///
 /// This header defines the configuration structures used to assemble the
@@ -37,37 +37,24 @@ struct QueueConfig {
 
 /// @brief Logger names and log file locations for each component.
 struct LoggingConfig {
-  std::string log_dir; ///< Directory where log files are written.
+  std::string logDir; ///< Directory where log files are written.
 
-  std::string daemon_logger;    ///< Logger name for the daemon.
-  std::string scheduler_logger; ///< Logger name for the scheduler.
-  std::string compiler_logger;  ///< Logger name for the compiler.
-  std::string submitter_logger; ///< Logger name for the submitter.
+  std::string daemonLogger;    ///< Logger name for the daemon.
+  std::string schedulerLogger; ///< Logger name for the scheduler.
+  std::string compilerLogger;  ///< Logger name for the compiler.
+  std::string submitterLogger; ///< Logger name for the submitter.
 
-  std::string daemon_log;    ///< Log file for the daemon.
-  std::string scheduler_log; ///< Log file for the scheduler.
-  std::string compiler_log;  ///< Log file for the compiler.
-  std::string submitter_log; ///< Log file for the submitter.
-};
-
-/// @brief Filesystem paths used by the runtime.
-struct PathConfig {
-  std::string benchmark_dir; ///< Directory containing benchmark artifacts.
-  std::string
-      qdmi_device_objs_dir; ///< Directory containing QDMI device objects.
-};
-
-/// @brief QDMI device object metadata.
-struct QDMIDevices {
-  std::string qdmi_device_obj;    ///< QDMI device object name.
-  std::string qdmi_device_prefix; ///< Prefix used for QDMI device names.
+  std::string daemonLog;    ///< Log file for the daemon.
+  std::string schedulerLog; ///< Log file for the scheduler.
+  std::string compilerLog;  ///< Log file for the compiler.
+  std::string submitterLog; ///< Log file for the submitter.
 };
 
 /// @brief Submitter-specific QDMI credentials and device selection.
 struct SubmitterConfig {
-  std::string qdmi_driver_name;  ///< QDMI driver name.
-  std::string qdmi_device_name;  ///< QDMI device name.
-  std::string qdmi_client_token; ///< QDMI client token.
+  std::string qdmiDriverName;  ///< QDMI driver name.
+  std::string qdmiDeviceName;  ///< QDMI device name.
+  std::string qdmiClientToken; ///< QDMI client token.
 };
 
 /// @brief Aggregate configuration for the QRM daemon.
@@ -75,8 +62,6 @@ struct Config {
   RabbitMqConfig rabbitmq;   ///< RabbitMQ connection settings.
   QueueConfig queues;        ///< Queue configuration.
   LoggingConfig logging;     ///< Logging configuration.
-  PathConfig paths;          ///< Filesystem paths.
-  QDMIDevices devices;       ///< QDMI device metadata.
   SubmitterConfig submitter; ///< Submitter configuration.
 };
 

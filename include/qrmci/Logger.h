@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-/// @file Logger.hpp
+/// @file Logger.h
 /// @brief Logging helpers for the QRM workflow daemon.
 
 #pragma once
@@ -21,14 +21,14 @@ namespace mqss::qrmci {
 
 /// @brief Create a logger writing to both the console and an optional log file.
 inline std::shared_ptr<spdlog::logger>
-makeLogger(std::string_view name, std::string_view log_file = {}) {
+makeLogger(std::string_view name, std::string_view logFile = {}) {
   std::vector<spdlog::sink_ptr> sinks{
       std::make_shared<spdlog::sinks::stdout_color_sink_mt>(),
   };
 
-  if (!log_file.empty()) {
+  if (!logFile.empty()) {
     sinks.push_back(std::make_shared<spdlog::sinks::basic_file_sink_mt>(
-        std::string(log_file), true));
+        std::string(logFile), true));
   }
 
   auto logger = std::make_shared<spdlog::logger>(std::string(name),

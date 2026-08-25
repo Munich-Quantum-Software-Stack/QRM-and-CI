@@ -5,10 +5,9 @@
 
 cmake_minimum_required(VERSION 3.20)
 project(
-  QRMCI_AIO_DAEMON
+  QRMCI_STANDALONE_DAEMON
   VERSION 0.1.0
-  DESCRIPTION
-    "Quantum Resource Manager and Compiler Infrastructure Daemon All In One"
+  DESCRIPTION "Quantum Resource Manager and Compiler Infrastructure Daemon"
   LANGUAGES CXX)
 
 # Set the C++ standard
@@ -23,7 +22,6 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 find_package(Threads REQUIRED)
-find_package(spdlog REQUIRED)
 
 if(TARGET spdlog::spdlog_header_only)
   set(QRMCI_SPDLOG_TARGET spdlog::spdlog_header_only)
@@ -31,11 +29,12 @@ else()
   set(QRMCI_SPDLOG_TARGET spdlog::spdlog)
 endif()
 
-add_executable("qrmci_aio_daemon" main.cpp)
+add_executable("qrmcid-standalone" main.cpp)
+qrmci_enable_warnings(qrmcid-standalone)
 
-target_link_libraries("qrmci_aio_daemon" PUBLIC qrmci Threads::Threads
-                                                ${QRMCI_SPDLOG_TARGET})
+target_link_libraries("qrmcid-standalone" PUBLIC qrmci Threads::Threads
+                                                 ${QRMCI_SPDLOG_TARGET})
 
 target_include_directories(
-  "qrmci_aio_daemon" PUBLIC "${CMAKE_SOURCE_DIR}/include"
-                            "${CMAKE_BINARY_DIR}/generated")
+  "qrmcid-standalone" PUBLIC "${CMAKE_SOURCE_DIR}/include"
+                             "${CMAKE_BINARY_DIR}/generated")

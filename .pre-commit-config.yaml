@@ -63,6 +63,7 @@ repos:
     hooks:
       - id: clang-format
         types_or: [c++, c, cuda]
+        args: ["-i"] # in-place
 
   # CMake format the CMakeLists.txt files
   - repo: https://github.com/cheshirekow/cmake-format-precommit

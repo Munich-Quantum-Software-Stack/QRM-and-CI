@@ -25,7 +25,7 @@ find_package(MQSSCI REQUIRED)
 
 add_library(mqss_compiler SHARED src/MQSSCompiler.cpp)
 
-add_dependencies(mqss_compiler mqssci_external)
+add_dependencies(mqss_compiler mqss-ci::mqss-ci)
 
 target_include_directories(mqss_compiler
                            PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

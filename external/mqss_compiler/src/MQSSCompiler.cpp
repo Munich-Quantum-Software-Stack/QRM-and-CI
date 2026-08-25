@@ -5,65 +5,70 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-#include "MQSSCompiler.hpp"
+#include "MQSSCompiler.h"
 
+#include <array>
 #include <fstream>
 #include <sstream>
+#include <utility>
+#include <vector>
 
 namespace mqss {
 
 std::string
-MQSSCompiler::compile(const std::string &input_circuit,
-                      const std::string &backend_name,
-                      const std::vector<std::string> &native_gates,
-                      const std::unordered_map<int, int> &qubit_connectivity,
+MQSSCompiler::compile(const std::string &inputCircuit,
+                      const std::string & /*backendName*/,
+                      const std::vector<std::string> & /*nativeGates*/,
+                      const std::vector<std::pair<std::uint32_t, std::uint32_t>>
+                          & /*qubitConnectivity*/,
                       const CompilerOptions &opts) {
 
-  checkExecutable(mqss_opt);
+  checkExecutable(mqssOpt);
 
-  std::string input_file = "/tmp/input_circuit.mlir";
-  std::string output_file = "/tmp/output_circuit.mlir";
-  std::ofstream ofs(input_file);
+  std::string inputFile = "/tmp/input_circuit.mlir";
+  std::string outputFile = "/tmp/output_circuit.mlir";
+  std::ofstream ofs(inputFile);
   if (!ofs) {
     throw std::runtime_error("Failed to create temporary input file.");
   }
-  ofs << input_circuit;
+  ofs << inputCircuit;
   ofs.close();
 
-  std::string basis_gates = "phased_rx,cz";
+  std::string basisGates = "phased_rx,cz";
 
-  std::string shell_command =
-      mqss_opt + " " + input_file + " --O" +
-      std::to_string(opts.optimization_level) +
-      " --cse --canonicalize --BasisConversionPass=gates=" + basis_gates +
-      " > " + output_file;
+  std::string shellCommand =
+      mqssOpt + " " + inputFile + " --O" +
+      std::to_string(opts.optimizationLevel) +
+      " --cse --canonicalize --BasisConversionPass=gates=" + basisGates +
+      " > " + outputFile;
 
-  int ret = std::system(shell_command.c_str());
+  int ret = std::system(shellCommand.c_str());
   if (ret != 0) {
-    std::remove(output_file.c_str());
+    std::remove(outputFile.c_str());
     throw std::runtime_error("MQSS compiler pipeline failed with code: " +
                              std::to_string(ret));
   }
 
-  std::string output_circuit;
-  char buffer[4096];
-  std::ifstream ifs(output_file);
+  std::string outputCircuit;
+  std::array<char, 4096> buffer{};
+  std::ifstream ifs(outputFile);
   if (!ifs) {
     throw std::runtime_error("Failed to read output circuit file.");
   }
-  while (ifs.getline(buffer, sizeof(buffer))) {
-    output_circuit += buffer;
+  while (
+      ifs.getline(buffer.data(), static_cast<std::streamsize>(buffer.size()))) {
+    outputCircuit += buffer.data();
   }
   ifs.close();
-  std::remove(output_file.c_str());
+  std::remove(outputFile.c_str());
 
-  std::remove(input_file.c_str());
+  std::remove(inputFile.c_str());
 
-  if (opts.result_type == "openqasm2") {
-    output_circuit = stripSpuriousGateDefs(output_circuit);
+  if (opts.resultType == "openqasm2") {
+    outputCircuit = stripSpuriousGateDefs(outputCircuit);
   }
 
-  return output_circuit;
+  return outputCircuit;
 }
 
 std::string MQSSCompiler::stripSpuriousGateDefs(const std::string &qasm) {
@@ -72,13 +77,12 @@ std::string MQSSCompiler::stripSpuriousGateDefs(const std::string &qasm) {
   std::string line;
   bool inGateBlock = false;
   while (std::getline(stream, line)) {
-    if (line.find("gate ") != std::string::npos &&
-        line.find("{") != std::string::npos) {
+    if (line.contains("gate ") && line.contains("{")) {
       inGateBlock = true;
       continue;
     }
     if (inGateBlock) {
-      if (line.find("}") != std::string::npos) {
+      if (line.contains("}")) {
         inGateBlock = false;
       }
       continue;

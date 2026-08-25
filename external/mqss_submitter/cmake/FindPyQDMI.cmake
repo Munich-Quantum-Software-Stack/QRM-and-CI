@@ -8,7 +8,7 @@ include(FetchContent)
 FetchContent_Declare(
   PyQDMI
   GIT_REPOSITORY git@github.com:Munich-Quantum-Software-Stack/PyQDMI.git
-  GIT_TAG qdmi-v12x)
+  GIT_TAG ${QRMCI_PYQDMI_GIT_TAG})
 
 FetchContent_MakeAvailable(PyQDMI)
 
