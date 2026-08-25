@@ -8,7 +8,7 @@
 # branches (active co-development); the rest are pinned to reviewed tags.
 
 set(QRMCI_MQSSCI_GIT_TAG
-    "v2.1.0"
+    "v2.2.0"
     CACHE STRING "MQSS-Quantum-Compilation-Suite revision")
 set(QRMCI_MQSS_IDF_GIT_TAG
     "mnf/backend-proto"

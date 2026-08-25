@@ -8,7 +8,7 @@ project(
   QRMCI
   VERSION 0.1.0
   DESCRIPTION "Quantum Resource Manager and Compiler Infrastructure"
-  LANGUAGES CXX)
+  LANGUAGES C CXX)
 
 # Set the C++ standard
 set(CMAKE_CXX_STANDARD 23)
@@ -45,7 +45,7 @@ list(PREPEND CMAKE_PREFIX_PATH "${_qrm_boost_system_shim_dir}")
 find_package(GTest REQUIRED)
 find_package(fmt REQUIRED)
 find_package(Boost REQUIRED COMPONENTS chrono)
-find_package(MQSSCompiler REQUIRED)
+find_package(MQSSCI REQUIRED)
 find_package(MQSSScheduler REQUIRED)
 find_package(MQSSSubmitter REQUIRED)
 find_package(MQSSIntegrationDeploymentFramework REQUIRED)
@@ -77,7 +77,7 @@ configure_file(
 
 add_library(qrmci src/BackendWrapper.cpp src/CommunicationHandler.cpp
                   src/Config.cpp src/Runners.cpp)
-target_link_libraries(qrmci PUBLIC mqss mqss_compiler mqss_scheduler
+target_link_libraries(qrmci PUBLIC mqss mqss-ci::mqss-ci mqss_scheduler
                                    mqss_submitter ${QRMCI_SPDLOG_TARGET})
 target_include_directories(qrmci PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/"
                                         "${CMAKE_CURRENT_BINARY_DIR}/generated")

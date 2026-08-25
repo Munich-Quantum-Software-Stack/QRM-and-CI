@@ -3,6 +3,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+include(FetchContent)
+
 set(CUDAQ_AUTO_FETCH
     ON
     CACHE BOOL "" FORCE)

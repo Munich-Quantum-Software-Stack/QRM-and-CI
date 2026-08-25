@@ -115,12 +115,12 @@ COPY --from=builder --chown=${USER_UID}:${USER_GID} \
 
 COPY --from=builder --chown=${USER_UID}:${USER_GID} \
     /workspace/build/libqrmci* \
-    /workspace/build/_deps/mqsscompiler-build/libmqss_compiler.so \
     /workspace/build/_deps/mqsssubmitter-build/libmqss_submitter.so \
     /workspace/build/_deps/pyqdmi-build/src/cpp/libqdmi_cpp.so \
     /workspace/build/_deps/qdmi-build/examples/driver/libqdmi_example_driver.so \
     /workspace/build/_deps/qdmi-build/examples/device/src/libcxx-qdmi-device.so \
-    /workspace/build/_deps/mqssci-build/lib/Passes/libMQSS* \
+    /workspace/build/_deps/mqssci-build/lib/MQSSCIInterfaces/libMQSS* \
+    /workspace/build/_deps/mqssci-build/lib/Passes/Transforms/libMQSS* \
     /workspace/build/_deps/mqssintegrationdeploymentframework-build/libmqss_*.so \
     /workspace/build/_deps/simple_amqp_client-build/libSimple* \
     /usr/local/lib/qrmci/

@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
   mqss::QuantumTask qtask;
   qtask.set_task_id(123);
   qtask.add_circuit_files(_circuit_str);
-  qtask.set_circuit_file_type(std::string("mlir"));
+  qtask.set_circuit_file_type(std::string("quake"));
   qtask.set_n_shots(100);
   qtask.set_optimisation_level(1);
   qtask.set_preferred_qpu(std::string("C++ Device with 5 qubits"));
