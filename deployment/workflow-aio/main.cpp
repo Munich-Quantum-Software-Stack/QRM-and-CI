@@ -6,8 +6,8 @@
  */
 
 #include "Logger.hpp"
-#include "Scheduler.hpp"
 #include "qrmci.hpp"
+#include "scheduler/scheduler.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
     spdlog::info("Submitter thread started. Waiting for ready jobs to submit.");
     while (!g_terminate) {
       // Check if there are any ready jobs to send
-      if (auto nextJob = scheduler.getNextReadyJob()) {
+      if (auto nextJob = scheduler.getNextReadyTask()) {
         spdlog::info("Next job to send: {} with priority {}.",
                      nextJob->task_id(), nextJob->priority());
         try {
@@ -129,12 +129,12 @@ int main(int argc, char **argv) {
       spdlog::debug(c);
     }
 
-    scheduler.scheduleJob(task);
+    scheduler.scheduleTask(task);
 
     spdlog::info("Task {} scheduled with priority {}.", task.task_id(),
                  task.priority());
     spdlog::debug("Current job count in scheduler: {}",
-                  scheduler.getJobCount());
+                  scheduler.getTaskCount());
   }
 
   // Cleanup and shutdown
