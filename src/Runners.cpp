@@ -12,81 +12,45 @@
 #include "mqss/Protocol.hpp"
 #include "qdmi/constants.h"
 #include "qrmci/BackendWrapper.h"
+#include "qrmci/Constants.h"
 
 #include <algorithm>
 #include <cstddef>
 #include <cstdlib>
 #include <expected>
 #include <map>
+#include <ranges>
 #include <string>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
 namespace {
-mqss::mqssci::OptLevel getMQSSCIOptimizationLevel(int level) {
-  switch (level) {
-  case 1:
-    return mqss::mqssci::OptLevel::O1;
-  case 2:
-    return mqss::mqssci::OptLevel::O2;
-  case 3:
-    return mqss::mqssci::OptLevel::O3;
-  default:
-    return mqss::mqssci::OptLevel::O3; // Default to O3 if invalid level
+mqss::mqssci::OptLevel getCompilerOptimizationLevel(int level) {
+  auto it = IntToCompilerOptLevelMapping.find(level);
+  if (it != IntToCompilerOptLevelMapping.end()) {
+    return it->second;
   }
+  return mqss::mqssci::OptLevel::O3; // Default to O3 if invalid level
 }
 
 std::expected<mqss::mqssci::ResultFormat, std::string>
-getBackendCompatibleResultFormat(
+getBackendCompatibleMQSSCIResultFormat(
     const mqss::qrmci::BackendWrapper &backendInfo) {
-  /*
-  mqss::CircuitFormat::CIRCUIT_FORMAT_UNSPECIFIED = 0;
-  mqss::CircuitFormat::CIRCUIT_FORMAT_QASM2 = 1;
-  mqss::CircuitFormat::CIRCUIT_FORMAT_QASM3 = 2;
-  mqss::CircuitFormat::CIRCUIT_FORMAT_QIR = 3;
-  mqss::CircuitFormat::CIRCUIT_FORMAT_QIRBASESTRING = 4;
-  mqss::CircuitFormat::CIRCUIT_FORMAT_QIRBASEMODULE = 5;
-  mqss::CircuitFormat::CIRCUIT_FORMAT_QIRADAPTIVESTRING = 6;
-  mqss::CircuitFormat::CIRCUIT_FORMAT_QIRADAPTIVEMODULE = 7;
-  mqss::CircuitFormat::CIRCUIT_FORMAT_CALIBRATION = 8;
-  mqss::CircuitFormat::CIRCUIT_FORMAT_QPY = 9;
-  mqss::CircuitFormat::CIRCUIT_FORMAT_IQMJSON = 10;
-  mqss::CircuitFormat::CIRCUIT_FORMAT_BATCHJOB = 11;
-  */
-  /*
-  enum mqss::mqssci::ResultFormat { OPENQASM2, QIR, QIRBASE, QIRADAPTIVE,
-  QIRFULL };
-  */
   auto supportedFormats = backendInfo.getSupportedCircuitFormats();
   for (const auto &format : supportedFormats) {
-    switch (format) {
-    case mqss::CircuitFormat::CIRCUIT_FORMAT_QASM2:
-      return mqss::mqssci::ResultFormat::OPENQASM2;
-    case mqss::CircuitFormat::CIRCUIT_FORMAT_QIR:
-      return mqss::mqssci::ResultFormat::QIR;
-    case mqss::CircuitFormat::CIRCUIT_FORMAT_QIRBASESTRING:
-    case mqss::CircuitFormat::CIRCUIT_FORMAT_QIRBASEMODULE:
-      return mqss::mqssci::ResultFormat::QIRBASE;
-    case mqss::CircuitFormat::CIRCUIT_FORMAT_QIRADAPTIVESTRING:
-    case mqss::CircuitFormat::CIRCUIT_FORMAT_QIRADAPTIVEMODULE:
-      return mqss::mqssci::ResultFormat::QIRADAPTIVE;
-    default:
-      continue; // Skip unsupported formats
+    auto it = CircuitFormatToResultFormatMapping.find(format);
+    if (it != CircuitFormatToResultFormatMapping.end()) {
+      return it->second;
     }
   }
   return std::unexpected("No compatible result format found");
 }
 
-std::expected<void, std::string>
-validateInputFormat(std::string_view circuitFileFormat,
-                    std::vector<std::string_view> supportedInputFormats) {
-  std::unordered_map<std::string_view, std::string_view> formatMapping = {
-      {"quake", "cudaq-quake"},
-      {"catalyst", "catalyst-quantum"},
-  };
-  auto it = formatMapping.find(circuitFileFormat);
-  if (it != formatMapping.end()) {
+std::expected<void, std::string> validateInputFormatIsSupportedCircuitFormat(
+    std::string_view circuitFileFormat,
+    std::vector<std::string_view> supportedInputFormats) {
+  auto it = TaskCircuitTypeToCompilerInputFormatMapping.find(circuitFileFormat);
+  if (it != TaskCircuitTypeToCompilerInputFormatMapping.end()) {
     if (std::ranges::find(supportedInputFormats, it->second) !=
         supportedInputFormats.end()) {
       return {};
@@ -96,6 +60,29 @@ validateInputFormat(std::string_view circuitFileFormat,
                          std::string(circuitFileFormat));
 }
 
+bool isBackendOnline(const mqss::qrmci::BackendWrapper &backendInfo) {
+  return OnlineBackendStatuses.contains(backendInfo.getStatus());
+}
+
+bool isBackendCompatibleWithTask(
+    const mqss::QuantumTask &task,
+    const mqss::qrmci::BackendWrapper &backendInfo) {
+  if (task.n_qbits() > backendInfo.getNumQubits()) {
+    return false;
+  }
+  auto supportedFormats = backendInfo.getSupportedCircuitFormats();
+  for (auto it = TaskCircuitTypeToCompatibleCircuitFormatMapping.find(
+           task.circuit_file_type());
+       it != TaskCircuitTypeToCompatibleCircuitFormatMapping.end() &&
+       it->first == task.circuit_file_type();
+       ++it) {
+    if (std::ranges::find(supportedFormats, it->second) !=
+        supportedFormats.end()) {
+      return true;
+    }
+  }
+  return false;
+}
 } // namespace
 
 std::expected<void, std::string> mqss::qrmci::selectBackend(
@@ -106,9 +93,20 @@ std::expected<void, std::string> mqss::qrmci::selectBackend(
   // quantum task. For now, we will just select the first available backend
   // that matches the preferred QPU.
 
-  if (availableBackends.contains(task.preferred_qpu())) {
+  if (availableBackends.contains(task.preferred_qpu()) &&
+      isBackendOnline(availableBackends.at(task.preferred_qpu())) &&
+      isBackendCompatibleWithTask(task,
+                                  availableBackends.at(task.preferred_qpu()))) {
     task.set_scheduled_qpu(task.preferred_qpu());
     return {};
+  }
+
+  for (const auto &[backendName, backendInfo] : availableBackends) {
+    if (isBackendOnline(backendInfo) &&
+        isBackendCompatibleWithTask(task, backendInfo)) {
+      task.set_scheduled_qpu(backendName);
+      return {};
+    }
   }
 
   // If no preferred backend is found, set the scheduled QPU to an empty
@@ -126,7 +124,7 @@ std::expected<void, std::string> mqss::qrmci::compileQuantumTask(
     return {};
   }
 
-  auto inputFormatValidation = validateInputFormat(
+  auto inputFormatValidation = validateInputFormatIsSupportedCircuitFormat(
       task.circuit_file_type(),
       mqss::mqssci::MQSSCompiler::getSupportedInputFormats());
   if (!inputFormatValidation) {
@@ -141,8 +139,8 @@ std::expected<void, std::string> mqss::qrmci::compileQuantumTask(
 
     mqss::mqssci::CompilerOptions opts;
     opts.optimization_level =
-        getMQSSCIOptimizationLevel(task.optimisation_level());
-    auto resultFormat = getBackendCompatibleResultFormat(backendInfo);
+        getCompilerOptimizationLevel(task.optimisation_level());
+    auto resultFormat = getBackendCompatibleMQSSCIResultFormat(backendInfo);
     if (!resultFormat) {
       return std::unexpected(resultFormat.error());
     }

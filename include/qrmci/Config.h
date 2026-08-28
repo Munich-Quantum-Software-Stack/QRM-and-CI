@@ -20,7 +20,7 @@ namespace mqss::qrmci {
 /// @brief RabbitMQ connection settings.
 struct RabbitMqConfig {
   std::string host;     ///< RabbitMQ host name.
-  int port;             ///< RabbitMQ TCP port.
+  int port{};           ///< RabbitMQ TCP port.
   std::string user;     ///< RabbitMQ user name.
   std::string password; ///< RabbitMQ password.
   std::string vhost;    ///< RabbitMQ virtual host.

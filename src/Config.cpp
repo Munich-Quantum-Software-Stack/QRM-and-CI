@@ -14,6 +14,7 @@
 #include <charconv>
 #include <cstdlib>
 #include <filesystem>
+#include <string>
 #include <string_view>
 #include <system_error>
 #include <utility>
@@ -43,7 +44,7 @@ std::string getEnvOr(const char *name, std::string_view fallback) {
 int getEnvOr(const char *name, int fallback) {
   if (const char *value = std::getenv(name)) {
     int result = fallback;
-    std::string_view sv(value);
+    const std::string_view sv(value);
 
     auto [ptr, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), result);
     if (ec == std::errc{} && ptr == sv.data() + sv.size()) {

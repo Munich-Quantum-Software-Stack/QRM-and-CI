@@ -53,7 +53,7 @@ fresh directory and does not depend on an existing local build.
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
-ctest --test-dir build --output-on-failure
+ctest --test-dir build/tests/unit --output-on-failure
 ```
 
 QRM&CI requires CMake 3.20 or newer and C++23. The supported compiler

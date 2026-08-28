@@ -12,7 +12,11 @@
 #include "qdmi/constants.h"
 
 #include <algorithm>
-#include <memory>
+#include <cstddef>
+#include <cstdint>
+#include <iterator>
+#include <utility>
+#include <vector>
 
 namespace {
 [[nodiscard]] mqss::BackendStatus
@@ -27,10 +31,10 @@ mqss::qrmci::BackendWrapper::BackendWrapper(
       numQubits(static_cast<std::uint32_t>(submitter.getDeviceNumQubits())),
       type(mqss::BackendType::BACKEND_TYPE_UNSPECIFIED),
       status(mapBackendStatus(submitter.getDeviceStatus())), queueLength(0),
-      currentLoad(0.0f), queueName("") {
+      currentLoad(0.0F) {
 
   instructions = submitter.getDeviceInstructions();
-  std::vector<std::pair<size_t, size_t>> connectivityPairs =
+  std::vector<std::pair<size_t, size_t>> const connectivityPairs =
       submitter.getDeviceConnectivity();
   qubitConnectivity.reserve(connectivityPairs.size());
   for (const auto &pair : connectivityPairs) {

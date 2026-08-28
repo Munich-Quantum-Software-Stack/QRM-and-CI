@@ -112,11 +112,11 @@ public:
 
 private:
   std::string name;
-  std::uint32_t numQubits;
+  std::uint32_t numQubits{};
   mqss::BackendType type;
   mqss::BackendStatus status;
-  std::uint32_t queueLength;
-  float currentLoad;
+  std::uint32_t queueLength{};
+  float currentLoad{};
   std::string queueName;
   std::vector<std::string> instructions;
   std::vector<std::pair<std::uint32_t, std::uint32_t>> qubitConnectivity;
