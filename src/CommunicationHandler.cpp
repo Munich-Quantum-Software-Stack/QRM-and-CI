@@ -9,6 +9,7 @@
 
 #include "qrmci/Config.h"
 
+#include <iostream>
 #include <stdexcept>
 
 namespace mqss::qrmci {
@@ -60,13 +61,27 @@ CommunicationHandler<Communicator, SerializationFormat>::getNextQuantumTask(
                           ? timeout
                           : std::chrono::milliseconds(500);
   do { // NOLINT(cppcoreguidelines-avoid-do-while)
-    auto res = messenger.template receive<mqss::QuantumTask>(
+    // Manual ack (rather than Auto) matters here: the transport opens a new
+    // channel per receive() call and only ever consumes one message from it
+    // before cancelling. With Auto ack, RabbitMQ still pushes every message
+    // already queued down that channel unthrottled (auto-ack disables
+    // prefetch-based flow control), so anything beyond the one message this
+    // call actually reads is acked-and-removed server-side yet never
+    // delivered to the app - permanently lost. Manual ack keeps prefetch=1
+    // in effect, so RabbitMQ holds back further messages until we ack, and
+    // requeues this one if the channel is torn down before we do.
+    auto res = messenger.template receiveExtended<mqss::QuantumTask>(
         {queueName}, mqss::ReceiveArgs{
                          .timeout = localTimeout,
-                         .ack_mode = mqss::AckMode::Auto,
+                         .ack_mode = mqss::AckMode::Manual,
                      });
     if (res.has_value()) {
-      return *res;
+      auto &[task, msg] = *res;
+      if (auto ackStatus = msg.ack(); !ackStatus.ok()) {
+        std::cerr << "Warning: failed to ack task " << task.task_id() << ": "
+                  << ackStatus.reason() << "\n";
+      }
+      return task;
     }
     if (!res.has_value() && res.error().code() != mqss::StatusCode::Timeout) {
 
@@ -86,14 +101,20 @@ CommunicationHandler<Communicator, SerializationFormat>::getNextQuantumResult(
                           ? timeout
                           : std::chrono::milliseconds(500);
   do { // NOLINT(cppcoreguidelines-avoid-do-while)
-    auto res = messenger.template receive<mqss::QuantumResult>(
+    // See getNextQuantumTask() for why Manual ack is required here.
+    auto res = messenger.template receiveExtended<mqss::QuantumResult>(
         {queueName}, mqss::ReceiveArgs{
                          .timeout = localTimeout,
-                         .ack_mode = mqss::AckMode::Auto,
+                         .ack_mode = mqss::AckMode::Manual,
                      });
 
     if (res.has_value()) {
-      return *res;
+      auto &[result, msg] = *res;
+      if (auto ackStatus = msg.ack(); !ackStatus.ok()) {
+        std::cerr << "Warning: failed to ack result for task "
+                  << result.task_id() << ": " << ackStatus.reason() << "\n";
+      }
+      return result;
     }
     if (!res.has_value() && res.error().code() != mqss::StatusCode::Timeout) {
       throw std::runtime_error("Receive error: " + res.error().reason());
