@@ -6,46 +6,81 @@ This guide is for contributors extending QRM&CI functionality, debugging workflo
 
 Key directories:
 
-- include/: public interfaces used by QRM&CI daemon components
-- src/: daemon implementation and workflow orchestration
-- tests/: CTest targets and integration-style checks
+- apps/standalone/: standalone QRM&CI daemon entrypoint and executable definition
+- include/qrmci/: public QRM&CI interfaces and generated configuration template
+- src/: QRM&CI library implementation and workflow orchestration
+- tests/: CTest registration and integration-style checks
 - docs/: Doxygen main page and static documentation content
 - cmake/: package find or build dependency modules
 
-## Core Runtime Architecture
+## QRM&CI Standalone Architecture
 
-The daemon entrypoint is `src/main.cpp`. At startup it:
+The QRM&CI standalone daemon entrypoint is `apps/standalone/main.cpp`. At startup it:
 
 1. Loads and initializes configuration (`loadConfig`, `initConfig`).
-2. Creates the process logger and MQSS messenger.
+2. Creates the process logger and RabbitMQ communication handler.
 3. Instantiates scheduler and submitter components.
 4. Enters a continuous loop that:
-   - receives the next quantum task,
-   - selects backend metadata,
-   - compiles circuits,
-   - schedules execution,
-   - submits to QDMI,
-   - and sends result payloads back.
+
+- receives the next quantum task from the configured QRM&CI queue,
+- selects an available backend,
+- compiles the task,
+- schedules ready jobs by priority,
+- submits jobs through QDMI,
+- and sends execution or cancellation results back.
+
+The loop polls for work and exits cleanly when it receives `SIGINT` or
+`SIGTERM`.
 
 Primary component responsibilities:
 
-- `include/Config.hpp`, `src/Config.cpp`
+- `include/qrmci/Config.h`, `src/Config.cpp`
   - Environment-backed configuration model and process-wide config lifecycle.
-- `include/BackendSelector.hpp`, `src/BackendSelector.cpp`
-  - Backend selection logic and target annotation.
-- `include/Runners.hpp`, `src/Runners.cpp`
-  - Compilation stage orchestration (`compile_quantum_task`).
-- `include/Messaging.hpp`, `src/Messaging.cpp`
-  - Transport and protocol glue for receiving tasks and publishing results.
+- `include/qrmci/BackendWrapper.h`, `src/BackendWrapper.cpp`
+  - Backend metadata wrapper.
+- `include/qrmci/CommunicationHandler.h`, `src/CommunicationHandler.cpp`
+  - RabbitMQ transport and message handling.
+- `include/qrmci/Runners.h`, `src/Runners.cpp`
+  - Backend selection, compilation, and execution orchestration.
+- `include/qrmci/Logger.h`
+  - Process and component logger construction.
 
 ## Build and Test Workflow
 
-Standard local workflow:
+Standard local workflow. Treat `build/` as disposable output; CI always uses a
+fresh directory and does not depend on an existing local build.
 
 ```bash
-cmake -S . -B build
-cmake --build build -j
-ctest --test-dir build --output-on-failure
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+ctest --test-dir build/tests/unit --output-on-failure
+```
+
+QRM&CI requires CMake 3.20 or newer and C++23. The supported compiler
+baseline is GCC 13 or newer and Clang 17 or newer on Linux. CI currently
+tests GCC 13, GCC 14, Clang 17, and Clang 18 on Ubuntu 24.04.
+
+### Build Options
+
+- `QRMCI_BUILD_UNIT_TESTS` (default `ON`): build the unit test targets.
+- `QRMCI_BUILD_INTEGRATION_TESTS` (default `ON`): build the integration test targets.
+- `QRMCI_BUILD_APPS` (default `ON`): build the standalone daemon.
+- `BUILD_QRMCI_DOCS` (default `OFF`): build the Doxygen `docs` target.
+- `QRMCI_WARNINGS_AS_ERRORS` (default `OFF`): treat QRM-owned target warnings as errors.
+
+### Dependency Pinning
+
+FetchContent revisions are centralized in `cmake/DependenciesVersion.cmake`.
+
+To run the local formatting and analysis checks:
+
+```bash
+pre-commit run -a
+cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+clang-tidy -p build \
+  src/CommunicationHandler.cpp src/Config.cpp src/Runners.cpp \
+  src/BackendWrapper.cpp apps/standalone/main.cpp \
+  tests/integration/submit_task.cpp
 ```
 
 Useful variants:
@@ -76,7 +111,7 @@ Output:
 
 - build/docs/html/index.html
 
-When adding public interfaces, prefer documenting declarations in `include/` so generated API pages stay complete.
+When adding public interfaces, prefer documenting declarations in `include/qrmci/` so generated API pages stay complete.
 
 ## Contributor Guidelines
 
@@ -85,52 +120,3 @@ When adding public interfaces, prefer documenting declarations in `include/` so 
 - Prefer small, focused commits touching one behavior at a time.
 - Add or update tests in `tests/` for behavior changes.
 - Ensure docs are updated alongside new user-facing behavior.
-
-## Troubleshooting
-
-### Configure Fails on Missing Packages
-
-Symptoms:
-
-- CMake fails to resolve MQSS or logging dependencies.
-
-Checks:
-
-- Confirm required packages are installed and discoverable by CMake.
-- Verify `CMAKE_PREFIX_PATH` and custom package locations.
-- Re-run configure after environment fixes.
-
-### Docs Target Is Missing
-
-Symptoms:
-
-- `docs` target does not appear in build tooling.
-
-Checks:
-
-- Configure with `-DBUILD_QRMCI_DOCS=ON`.
-- Confirm Doxygen is installed and visible in PATH.
-
-### Tests Do Not Execute
-
-Symptoms:
-
-- `ctest` reports no tests or fails to locate binaries.
-
-Checks:
-
-- Build completed successfully before running CTest.
-- Run from repository root using `ctest --test-dir build --output-on-failure`.
-- Inspect test registration in `tests/CMakeLists.txt`.
-
-### Runtime Queue/Connection Problems
-
-Symptoms:
-
-- Daemon waits indefinitely or cannot exchange messages.
-
-Checks:
-
-- Verify RabbitMQ environment variables (`QRM_AMQP_*`).
-- Confirm queue naming variables (`QRM_*_QUEUE`) match your setup.
-- Check logs written by configured logger paths from config.

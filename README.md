@@ -86,6 +86,19 @@ QRM&CI is released under the Apache License v2.0 with LLVM Exceptions. See [LICE
 
 <!-- [DOXYGEN FAQ] -->
 
+## Build & Test
+
+From the repository root, configure into a disposable build directory and run the registered tests:
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
+```
+
+See [docs/getting-started.md](docs/getting-started.md) for prerequisites and
+[docs/development-guide.md](docs/development-guide.md) for the full contributor workflow.
+
 ## Contact
 
 Please use the public GitHub channels whenever possible:

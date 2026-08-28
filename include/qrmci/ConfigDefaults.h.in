@@ -1,0 +1,33 @@
+/*
+ * Copyright (c) 2026 MQSS Maintainers
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+ */
+
+#pragma once
+
+#include <string_view>
+
+namespace mqss::qrmci::defaults {
+
+// Static defaults.
+inline constexpr std::string_view AMPQHost = "host.docker.internal";
+inline constexpr int AMPQPort = 5672;
+inline constexpr std::string_view AMPQUser = "guest";
+inline constexpr std::string_view AMPQPassword = "guest";
+inline constexpr std::string_view AMPQVHost = "/";
+
+inline constexpr std::string_view QRMCIQueue = "qrmci.tasks.queue";
+inline constexpr std::string_view SchedulerQueue = "scheduler.tasks.queue";
+inline constexpr std::string_view CompilerQueue = "compiler.tasks.queue";
+inline constexpr std::string_view ResultsQueue = "test.results.queue";
+inline constexpr std::string_view SubmitterQueue = "submitter.tasks.queue";
+
+inline constexpr std::string_view LogDir = "/var/log/qrmci";
+inline constexpr std::string_view CompilerLog = "compiler.log";
+inline constexpr std::string_view SchedulerLog = "scheduler.log";
+inline constexpr std::string_view DaemonLog = "daemon.log";
+inline constexpr std::string_view SubmitterLog = "submitter.log";
+
+} // namespace mqss::qrmci::defaults

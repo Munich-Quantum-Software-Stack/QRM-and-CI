@@ -8,6 +8,9 @@
 include(FetchContent)
 
 FetchContent_Declare(
-  MQSSScheduler SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/mqss_scheduler)
+  mqss_scheduler
+  GIT_REPOSITORY
+    git@github.com:Munich-Quantum-Software-Stack/MQSS-Scheduler.git
+  GIT_TAG ${QRMCI_MQSS_SCHEDULER_GIT_TAG})
 
-FetchContent_MakeAvailable(MQSSScheduler)
+FetchContent_MakeAvailable(mqss_scheduler)
