@@ -1,7 +1,7 @@
-export LD_LIBRARY_PATH=/workspace/build/_deps/qdmi-build/examples/driver:/workspace/build/_deps/qdmi-build/examples/device:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/workspace/build/_deps/qdmi-build/examples/driver:/workspace/build/_deps/qdmi-build/examples/device/src:$LD_LIBRARY_PATH
 export QDMI_CONF=/workspace/build/apps/standalone/qdmi.conf
 
-echo "/workspace/build/_deps/qdmi-build/examples/device/libcxx_device.so CXX" > "${QDMI_CONF}"
+echo "/workspace/build/_deps/qdmi-build/examples/device/src/libcxx-qdmi-device.so CXX" > "${QDMI_CONF}"
 
 # include/qrmci/ConfigDefaults.h.in defaults QRM_AMQP_HOST (AMPQHost) to
 # host.docker.internal (a RabbitMQ running on the Docker host), but our dev

@@ -44,6 +44,13 @@ list(PREPEND CMAKE_PREFIX_PATH "${_qrm_boost_system_shim_dir}")
 
 find_package(GTest REQUIRED)
 find_package(fmt REQUIRED)
+
+# CMake 3.30+ removed the bundled FindBoost module in favor of Boost's own
+# config-mode package files; guarded for compatibility with older CMake
+# versions that don't know this policy yet.
+if(POLICY CMP0167)
+  cmake_policy(SET CMP0167 NEW)
+endif()
 find_package(Boost REQUIRED COMPONENTS chrono)
 find_package(MQSSCI REQUIRED)
 find_package(MQSSScheduler REQUIRED)
