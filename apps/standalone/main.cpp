@@ -77,8 +77,8 @@ int main(int argc, char **argv) {
   // Initialize the scheduler with a priority-based scheduling policy. The
   // scheduler will manage the execution order of quantum tasks based on their
   // priority.
-  mqss::Scheduler<mqss::QuantumTask> scheduler(
-      mqss::SchedulingPolicy::PriorityBased);
+  mqss::scheduler::Scheduler<mqss::QuantumTask> scheduler(
+      mqss::scheduler::SchedulingPolicy::PriorityBased);
 
   // Initialize the submitter to connect to the QDMI backend using the provided
   // driver name, device name, device ID, and authentication token. The

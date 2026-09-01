@@ -28,6 +28,10 @@ endif()
 target_link_libraries(submit_task PRIVATE qrmci)
 
 add_test(NAME submit_task COMMAND submit_task)
+# Config defaults QRM_AMQP_HOST to host.docker.internal (a RabbitMQ
+# on the Docker host); the dev workflow runs RabbitMQ inside this same
+# container instead, so point ctest at it locally.
+set_tests_properties(submit_task PROPERTIES ENVIRONMENT "QRM_AMQP_HOST=localhost")
 
 add_executable(
   schedule_task
@@ -46,3 +50,5 @@ target_include_directories(
 target_link_libraries(schedule_task PRIVATE qrmci)
 
 add_test(NAME schedule_task COMMAND schedule_task)
+# See the submit_task ENVIRONMENT comment above.
+set_tests_properties(schedule_task PROPERTIES ENVIRONMENT "QRM_AMQP_HOST=localhost")
