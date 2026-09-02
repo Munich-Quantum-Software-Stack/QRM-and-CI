@@ -22,6 +22,7 @@ set(QRMCI_DOXYGEN_INPUT_DIRS
     "${PROJECT_SOURCE_DIR}/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/index.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/getting-started.md"
+    "${CMAKE_CURRENT_SOURCE_DIR}/using-the-library.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/development-guide.md"
     "${CMAKE_CURRENT_SOURCE_DIR}/api-reference.md")
 string(REPLACE ";" " " QRMCI_DOXYGEN_INPUT_DIRS "${QRMCI_DOXYGEN_INPUT_DIRS}")

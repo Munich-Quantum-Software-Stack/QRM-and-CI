@@ -1,0 +1,43 @@
+name: Publish Documentation
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  documentation:
+    name: Build & Check Doxygen
+    runs-on: ubuntu-latest
+    container:
+      image: "ghcr.io/akshay9594/mqss-passes-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0-amd64"
+    steps:
+      - uses: actions/checkout@v3
+      - name: Configure (docs only)
+        run: |
+          cmake -S . -B build \
+            -DQRMCI_BUILD_UNIT_TESTS=OFF \
+            -DQRMCI_BUILD_INTEGRATION_TESTS=OFF \
+            -DQRMCI_BUILD_APPS=OFF \
+            -DBUILD_QRMCI_DOCS=ON
+      - name: Build documentation
+        run: cmake --build build --target docs
+      - name: Check for Doxygen errors
+        run: |
+          if [ -f build/docs/doxygen_warnings.txt ]; then
+            if [ -s build/docs/doxygen_warnings.txt ]; then
+              echo "Doxygen warnings found:"
+              cat build/docs/doxygen_warnings.txt
+              exit 1
+            fi
+          fi
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/docs/html
+          force_orphan: true

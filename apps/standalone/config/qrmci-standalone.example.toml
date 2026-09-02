@@ -1,0 +1,56 @@
+# Copyright (c) 2026 MQSS Maintainers
+# All rights reserved.
+#
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Example configuration for qrmcid-standalone.
+#
+# Copy this file to the path QRMCI_CONFIG_FILE points at (or to the default
+# relative path `config/qrmci.toml`, resolved against the daemon's working
+# directory) and edit the values below. Every field here can also be set via
+# environment variable, which always takes precedence over this file -- see
+# docs/getting-started.md's "Runtime Configuration" section for the full
+# defaults < file < environment variable precedence and the complete env var
+# list. Do not commit a copy of this file containing real credentials.
+#
+# The standalone daemon runs the whole pipeline (selection, compilation,
+# scheduling, submission) in one process without going through a selector or
+# compiler queue, so it only reads the sections below -- [selector] and
+# [compiler] are for the distributed apps only.
+
+[common]
+# Log directory; per-stage log file names are joined onto it automatically.
+logDir = "/var/log/qrmci"
+# Input queue the daemon receives incoming tasks from.
+qrmciQueue = "qrmci.tasks.queue"
+# Queue that carries execution results (informational; result delivery
+# actually uses each task's own result_destination).
+resultsQueue = "test.results.queue"
+# Queue used by the scheduler (scheduling never runs as its own distributed
+# process, so it lives here rather than under its own section).
+schedulerQueue = "scheduler.tasks.queue"
+# Sleep between turns of the daemon's poll loop, in milliseconds.
+stagePollInterval = 100
+
+[common.connection]
+host = "host.docker.internal"
+port = 5672
+user = "guest"
+# Prefer QRMCI_AMQP_PASSWORD at deploy time over a password in this file.
+password = "guest"
+vhost = "/"
+
+[submitter]
+# Queue used by the submitter stage.
+queue = "submitter.tasks.queue"
+qdmiDriverName = "qdmi_example_driver"
+qdmiDeviceName = "C++ Device with 5 qubits"
+# Prefer QRMCI_SUBMITTER_QDMI_CLIENT_TOKEN at deploy time over a token here.
+qdmiClientToken = "token"
+# Minimum spacing (milliseconds) between two of this daemon's own
+# backend-status refreshes.
+backendStatusPublishInterval = 5000
+
+[submitter.backendRegistry]
+# How long (seconds) a backend entry stays usable after its last refresh.
+entryTimeToLive = 30

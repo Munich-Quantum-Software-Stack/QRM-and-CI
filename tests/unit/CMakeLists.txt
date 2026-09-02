@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.25)
 
 set(BUILD_QDMI_EXAMPLES
     ON
@@ -12,8 +12,16 @@ set(BUILD_QDMI_EXAMPLES
 find_package(GTest REQUIRED)
 
 set(TEST_TARGETS
-    TestRunnersBackendSelection TestRunnersTaskCompilation
-    TestRunnersTaskExecution TestCommunicationHandler TestBackendWrapper)
+    TestRunnersBackendSelection
+    TestRunnersTaskCompilation
+    TestRunnersTaskExecution
+    TestCommunicationHandler
+    TestBackendRegistry
+    TestBackendWrapper
+    TestConfig
+    TestConstantsMapping
+    TestError
+    TestLogger)
 
 foreach(target IN LISTS TEST_TARGETS)
   add_executable(${target} ${target}.cpp)
@@ -39,9 +47,17 @@ add_custom_command(
   COMMENT "Generating qdmi.conf for Testing")
 set_tests_properties(
   TestRunnersTaskExecution
-  PROPERTIES ENVIRONMENT "QDMI_CONF=${CMAKE_CURRENT_BINARY_DIR}/qdmi.conf")
-set_tests_properties(
-  TestRunnersTaskExecution
   PROPERTIES
     ENVIRONMENT
-    "LD_LIBRARY_PATH=<TARGET_FILE_DIR:qdmi_example_driver>:${LD_LIBRARY_PATH}")
+    "QDMI_CONF=${CMAKE_CURRENT_BINARY_DIR}/qdmi.conf;LD_LIBRARY_PATH=$<TARGET_FILE_DIR:qdmi_example_driver>:${LD_LIBRARY_PATH}"
+)
+
+# BackendWrapperFromSubmitterTest (in TestBackendWrapper) also drives the real
+# example QDMI driver, so it needs the same environment as
+# TestRunnersTaskExecution above.
+set_tests_properties(
+  TestBackendWrapper
+  PROPERTIES
+    ENVIRONMENT
+    "QDMI_CONF=${CMAKE_CURRENT_BINARY_DIR}/qdmi.conf;LD_LIBRARY_PATH=$<TARGET_FILE_DIR:qdmi_example_driver>:${LD_LIBRARY_PATH}"
+)

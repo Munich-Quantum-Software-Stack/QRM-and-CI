@@ -1,0 +1,63 @@
+# Copyright (c) 2026 MQSS Maintainers
+# All rights reserved.
+#
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Example configuration for qrmcid-distributed-worker.
+#
+# Copy this file to the path QRMCI_CONFIG_FILE points at (or to the default
+# relative path `config/qrmci.toml`, resolved against the daemon's working
+# directory) and edit the values below. Every field here can also be set via
+# environment variable, which always takes precedence over this file -- see
+# docs/getting-started.md's "Runtime Configuration" section for the full
+# defaults < file < environment variable precedence and the complete env var
+# list. Do not commit a copy of this file containing real credentials.
+#
+# The distributed worker never selects a backend -- it only compiles,
+# schedules and submits tasks the selector has already routed to it -- so it
+# only reads the sections below; [selector] is for the distributed selector
+# (or the standalone daemon, which needs neither [selector] nor [compiler]).
+# Its [common] connection must match the selector's, since they share the
+# same broker.
+
+[common]
+logDir = "/var/log/qrmci"
+qrmciQueue = "qrmci.tasks.queue"
+resultsQueue = "test.results.queue"
+schedulerQueue = "scheduler.tasks.queue"
+# Sleep between turns of the daemon's poll loop, in milliseconds.
+stagePollInterval = 100
+
+[common.connection]
+host = "host.docker.internal"
+port = 5672
+user = "guest"
+# Prefer QRMCI_AMQP_PASSWORD at deploy time over a password in this file.
+password = "guest"
+vhost = "/"
+
+[selector]
+# Queue this worker publishes its own backend status to, for the distributed
+# selector to read; must match the selector's [selector] queue name.
+backendStatusQueue = "backend.status.queue"
+
+[compiler]
+# Queue this worker receives already-selected tasks from; must match the
+# selector's [compiler] queue name.
+queue = "compiler.tasks.queue"
+# Timeout (milliseconds) for this worker's receive() from that queue.
+taskReceiveTimeout = 500
+
+[submitter]
+queue = "submitter.tasks.queue"
+qdmiDriverName = "qdmi_example_driver"
+qdmiDeviceName = "C++ Device with 5 qubits"
+# Prefer QRMCI_SUBMITTER_QDMI_CLIENT_TOKEN at deploy time over a token here.
+qdmiClientToken = "token"
+# Minimum spacing (milliseconds) between two of this worker's own
+# backend-status publications.
+backendStatusPublishInterval = 5000
+
+[submitter.backendRegistry]
+# How long (seconds) a backend entry stays usable after its last refresh.
+entryTimeToLive = 30

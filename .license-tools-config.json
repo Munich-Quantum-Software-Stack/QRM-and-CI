@@ -15,6 +15,7 @@
     ".td": "SLASH_STYLE",
     ".yaml": "POUND_STYLE",
     ".toml": "POUND_STYLE",
+    ".hcl": "POUND_STYLE",
     ".proto": "SLASH_STYLE"
   },
   "exclude": [

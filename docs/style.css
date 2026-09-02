@@ -34,6 +34,49 @@ dl.note .tt {
   color: var(--primary-dark-color);
 }
 
+/*
+ * Doxygen's Markdown converter renders inline `code` spans as
+ * `span.tt`, styled in doxygen.css with a hardcoded near-white
+ * background and no paired text color. doxygen-awesome-css only themes
+ * actual `<code>` elements for dark mode, never `span.tt`, so on
+ * Markdown pages (e.g. docs/getting-started.md) inline code became
+ * near-illegible light-gray-on-near-white in dark mode. Style it like
+ * `code` instead, using the same theme variables.
+ */
+span.tt {
+  background-color: var(--code-background);
+  color: var(--code-foreground);
+  border-radius: var(--border-radius-small);
+  border: 1px solid var(--separator-color);
+  padding: 2px 6px;
+}
+
+/*
+ * Doxygen's native right-hand "page outline" split pane (#page-nav, emitted
+ * fresh into navtree.css on every build) hardcodes light colors and has no
+ * dark-mode variant, because this Doxygen feature postdates the vendored
+ * doxygen-awesome-css release. Reuse the same theme variables the left
+ * sidebar uses so this pane actually follows the dark/light toggle instead
+ * of staying stuck light.
+ */
+#page-nav {
+  background: var(--side-nav-background);
+  border-left: 1px solid var(--separator-color);
+}
+
+#page-nav-resize-handle {
+  background-color: var(--separator-color);
+}
+
+#page-nav-resize-handle:after {
+  border-left: 1px solid var(--separator-color);
+  border-right: 1px solid var(--separator-color);
+}
+
+ul.page-outline li.vis {
+  background-color: var(--menu-selected-background);
+}
+
 /* Keep navigation in the left tree only; hide the top menu/header links. */
 #main-nav {
   display: none !important;
@@ -69,8 +112,7 @@ dl.note .tt {
     left: 360px !important;
   }
 
-  #doc-content,
-  #container {
+  #doc-content {
     margin-left: 360px !important;
   }
 }

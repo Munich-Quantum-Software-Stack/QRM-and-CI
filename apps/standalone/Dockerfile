@@ -2,6 +2,9 @@
 # ==========================================
 # STAGE 1: Builder
 # ==========================================
+ARG DEPS_IMAGE=ghcr.io/akshay9594/mqss-passes-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0
+FROM ${DEPS_IMAGE}-${TARGETARCH} AS deps
+
 FROM ubuntu:26.10 AS builder
 
 USER root
@@ -45,7 +48,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     && rm -rf /var/lib/apt/lists/*
 
 # --- External toolchains (Needed for MQSSCI) ------------
-RUN curl -fsSL https://pyenv.run | bash
+COPY --from=deps /opt/deps /opt/deps
+ENV LLVM_DIR=/opt/deps/llvm/lib/cmake/llvm \
+    MLIR_DIR=/opt/deps/llvm/lib/cmake/mlir \
+    CUDAQ_INSTALL_PREFIX=/opt/deps/cudaq \
+    CATALYST_INSTALL_PREFIX=/opt/deps/catalyst
+
 
 # SSH setup for cloning private repos
 RUN mkdir -p /root/.ssh && \
@@ -95,7 +103,7 @@ ARG USER_UID=1001
 ARG USER_GID=$USER_UID
 
 ENV HOME=/home/${USERNAME} \
-    QRM_LOG_DIR=/home/${USERNAME}/logs \
+    QRMCI_LOG_DIR=/home/${USERNAME}/logs \
     QDMI_DRIVER_LIB_NAME=qdmi_example_driver \
     QDMI_CONF=/home/${USERNAME}/qdmi.conf \
     LD_LIBRARY_PATH=/usr/local/lib/qrmci:/usr/local/lib \

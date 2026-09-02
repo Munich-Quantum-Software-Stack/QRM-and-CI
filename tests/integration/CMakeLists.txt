@@ -3,28 +3,33 @@
 #
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.25)
 
-add_executable(
-  submit_task
-  ${CMAKE_CURRENT_SOURCE_DIR}/../../src/Config.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/../../src/CommunicationHandler.cpp
-  submit_task.cpp)
+# Client-only integration tests: each sends task(s) to a live QRM&CI deployment
+# (apps/standalone or apps/distributed) over a real RabbitMQ/QDMI setup and
+# asserts on the result(s) that come back. They require that deployment to
+# already be running externally (e.g. via the MQSSIntegrationDeploymentFramework
+# docker-compose setup); they are not wired into CI.
+set(INTEGRATION_TEST_TARGETS
+    submit_task submit_task_distributed submit_task_unsupported_backend
+    submit_task_compile_failure submit_task_concurrent)
 
-target_compile_features(submit_task PRIVATE cxx_std_23)
-target_compile_definitions(submit_task PRIVATE FMT_HEADER_ONLY)
-qrmci_enable_warnings(submit_task)
+foreach(target IN LISTS INTEGRATION_TEST_TARGETS)
+  add_executable(
+    ${target}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/Config.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../src/CommunicationHandler.cpp
+    ${target}.cpp)
 
-target_include_directories(
-  submit_task PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../include
+  target_compile_features(${target} PRIVATE cxx_std_23)
+  target_compile_definitions(${target} PRIVATE FMT_HEADER_ONLY)
+  qrmci_enable_warnings(${target})
+
+  target_include_directories(
+    ${target} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../include
                       ${CMAKE_CURRENT_BINARY_DIR}/../generated)
 
-if(TARGET spdlog::spdlog_header_only)
-  set(QRMCI_SPDLOG_TARGET spdlog::spdlog_header_only)
-else()
-  set(QRMCI_SPDLOG_TARGET spdlog::spdlog)
-endif()
+  target_link_libraries(${target} PRIVATE qrmci)
 
-target_link_libraries(submit_task PRIVATE qrmci)
-
-add_test(NAME submit_task COMMAND submit_task)
+  add_test(NAME ${target} COMMAND ${target})
+endforeach()

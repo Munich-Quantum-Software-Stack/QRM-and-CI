@@ -9,21 +9,17 @@
 
 #include "Submitter.h"
 #include "mqss/Protocol.hpp"
-#include "qdmi/constants.h"
+#include "qrmci/ConstantsMapping.h"
+#include "qrmci/Error.h"
 
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <expected>
 #include <iterator>
+#include <string>
 #include <utility>
 #include <vector>
-
-namespace {
-[[nodiscard]] mqss::BackendStatus
-mapBackendStatus(QDMI_Device_Status status) noexcept;
-[[nodiscard]] mqss::CircuitFormat
-mapCircuitFormat(QDMI_Program_Format format) noexcept;
-} // namespace
 
 mqss::qrmci::BackendWrapper::BackendWrapper(
     mqss::submitter::Submitter &submitter)
@@ -32,7 +28,6 @@ mqss::qrmci::BackendWrapper::BackendWrapper(
       type(mqss::BackendType::BACKEND_TYPE_UNSPECIFIED),
       status(mapBackendStatus(submitter.getDeviceStatus())), queueLength(0),
       currentLoad(0.0F) {
-
   instructions = submitter.getDeviceInstructions();
   std::vector<std::pair<size_t, size_t>> const connectivityPairs =
       submitter.getDeviceConnectivity();
@@ -63,11 +58,11 @@ mqss::qrmci::BackendWrapper::BackendWrapper(const mqss::Backend &backend)
   supportedCircuitFormats.reserve(
       static_cast<size_t>(backend.supported_circuit_formats().size()));
   for (const auto &format : backend.supported_circuit_formats()) {
-    supportedCircuitFormats.push_back(static_cast<mqss::CircuitFormat>(format));
+    supportedCircuitFormats.push_back(mapProtoCircuitFormat(format));
   }
 }
 
-[[nodiscard]] mqss::Backend mqss::qrmci::BackendWrapper::makeBackend() {
+mqss::Backend mqss::qrmci::BackendWrapper::toBackend() const {
   mqss::Backend backend;
   backend.set_name(name);
   backend.set_num_qubits(numQubits);
@@ -92,52 +87,26 @@ mqss::qrmci::BackendWrapper::BackendWrapper(const mqss::Backend &backend)
   return backend;
 }
 
-namespace {
-[[nodiscard]] mqss::BackendStatus
-mapBackendStatus(QDMI_Device_Status status) noexcept {
-  switch (status) {
-  case QDMI_DEVICE_STATUS_OFFLINE:
-    return mqss::BackendStatus::BACKEND_STATUS_OFFLINE;
-  case QDMI_DEVICE_STATUS_IDLE:
-    return mqss::BackendStatus::BACKEND_STATUS_IDLE;
-  case QDMI_DEVICE_STATUS_BUSY:
-    return mqss::BackendStatus::BACKEND_STATUS_BUSY;
-  case QDMI_DEVICE_STATUS_ERROR:
-    return mqss::BackendStatus::BACKEND_STATUS_ERROR;
-  case QDMI_DEVICE_STATUS_MAINTENANCE:
-    return mqss::BackendStatus::BACKEND_STATUS_MAINTENANCE;
-  case QDMI_DEVICE_STATUS_CALIBRATION:
-    return mqss::BackendStatus::BACKEND_STATUS_CALIBRATION;
-  default:
-    return mqss::BackendStatus::BACKEND_STATUS_UNSPECIFIED;
-  }
+bool mqss::qrmci::BackendWrapper::isOnline() const noexcept {
+  return isOnlineBackendStatus(status);
 }
 
-[[nodiscard]] mqss::CircuitFormat
-mapCircuitFormat(QDMI_Program_Format format) noexcept {
-  switch (format) {
-  case QDMI_PROGRAM_FORMAT_QASM2:
-    return mqss::CircuitFormat::CIRCUIT_FORMAT_QASM2;
-  case QDMI_PROGRAM_FORMAT_QASM3:
-    return mqss::CircuitFormat::CIRCUIT_FORMAT_QASM3;
-  case QDMI_PROGRAM_FORMAT_QIRBASESTRING:
-    return mqss::CircuitFormat::CIRCUIT_FORMAT_QIRBASESTRING;
-  case QDMI_PROGRAM_FORMAT_QIRBASEMODULE:
-    return mqss::CircuitFormat::CIRCUIT_FORMAT_QIRBASEMODULE;
-  case QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING:
-    return mqss::CircuitFormat::CIRCUIT_FORMAT_QIRADAPTIVESTRING;
-  case QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE:
-    return mqss::CircuitFormat::CIRCUIT_FORMAT_QIRADAPTIVEMODULE;
-  case QDMI_PROGRAM_FORMAT_CALIBRATION:
-    return mqss::CircuitFormat::CIRCUIT_FORMAT_CALIBRATION;
-  case QDMI_PROGRAM_FORMAT_QPY:
-    return mqss::CircuitFormat::CIRCUIT_FORMAT_QPY;
-  case QDMI_PROGRAM_FORMAT_IQMJSON:
-    return mqss::CircuitFormat::CIRCUIT_FORMAT_IQMJSON;
-  case QDMI_PROGRAM_FORMAT_BATCHJOB:
-    return mqss::CircuitFormat::CIRCUIT_FORMAT_BATCHJOB;
-  default:
-    return mqss::CircuitFormat::CIRCUIT_FORMAT_UNSPECIFIED;
+bool mqss::qrmci::BackendWrapper::canRun(const mqss::QuantumTask &task) const {
+  if (task.n_qbits() < 0 ||
+      static_cast<std::uint32_t>(task.n_qbits()) > numQubits) {
+    return false;
   }
+  return isCircuitTypeCompatibleWithFormats(task.circuit_file_type(),
+                                            supportedCircuitFormats);
 }
-} // namespace
+
+std::expected<mqss::mqssci::ResultFormat, mqss::qrmci::Error>
+mqss::qrmci::BackendWrapper::compilerResultFormat() const {
+  for (const auto &format : supportedCircuitFormats) {
+    if (auto resultFormat = mapCircuitFormatToResultFormat(format)) {
+      return *resultFormat;
+    }
+  }
+  return std::unexpected(Error{Error::Kind::UnsupportedFormat,
+                               "No compatible result format found"});
+}

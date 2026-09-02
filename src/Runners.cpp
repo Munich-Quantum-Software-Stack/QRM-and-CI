@@ -11,148 +11,129 @@
 #include "Submitter.h"
 #include "mqss/Protocol.hpp"
 #include "qdmi/constants.h"
+#include "qrmci/BackendRegistry.h"
 #include "qrmci/BackendWrapper.h"
-#include "qrmci/Constants.h"
+#include "qrmci/ConstantsMapping.h"
+#include "qrmci/Error.h"
 
-#include <algorithm>
-#include <cstddef>
-#include <cstdlib>
+#include <cstdint>
 #include <expected>
-#include <map>
-#include <ranges>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
 namespace {
-mqss::mqssci::OptLevel getCompilerOptimizationLevel(int level) {
-  auto it = IntToCompilerOptLevelMapping.find(level);
-  if (it != IntToCompilerOptLevelMapping.end()) {
-    return it->second;
-  }
-  return mqss::mqssci::OptLevel::O3; // Default to O3 if invalid level
-}
 
-std::expected<mqss::mqssci::ResultFormat, std::string>
-getBackendCompatibleMQSSCIResultFormat(
-    const mqss::qrmci::BackendWrapper &backendInfo) {
-  auto supportedFormats = backendInfo.getSupportedCircuitFormats();
-  for (const auto &format : supportedFormats) {
-    auto it = CircuitFormatToResultFormatMapping.find(format);
-    if (it != CircuitFormatToResultFormatMapping.end()) {
-      return it->second;
+/// @brief Whether @p candidate should displace @p incumbent under @p policy.
+/// Both candidates are already known to be online and able to run the task.
+/// Every policy ends in a name comparison, so the ordering is total and the
+/// winner never depends on iteration order.
+bool beatsIncumbent(const mqss::qrmci::BackendWrapper &candidate,
+                    const mqss::qrmci::BackendWrapper &incumbent,
+                    mqss::qrmci::BackendSelectionPolicy policy) {
+  switch (policy) {
+  case mqss::qrmci::BackendSelectionPolicy::SmallestSufficient:
+    if (candidate.getNumQubits() != incumbent.getNumQubits()) {
+      return candidate.getNumQubits() < incumbent.getNumQubits();
     }
+    break;
+  case mqss::qrmci::BackendSelectionPolicy::LowestName:
+    break;
   }
-  return std::unexpected("No compatible result format found");
+  return candidate.getName() < incumbent.getName();
 }
 
-std::expected<void, std::string> validateInputFormatIsSupportedCircuitFormat(
-    std::string_view circuitFileFormat,
-    std::vector<std::string_view> supportedInputFormats) {
-  auto it = TaskCircuitTypeToCompilerInputFormatMapping.find(circuitFileFormat);
-  if (it != TaskCircuitTypeToCompilerInputFormatMapping.end()) {
-    if (std::ranges::find(supportedInputFormats, it->second) !=
-        supportedInputFormats.end()) {
-      return {};
-    }
-  }
-  return std::unexpected("Unsupported circuit file format: " +
-                         std::string(circuitFileFormat));
-}
-
-bool isBackendOnline(const mqss::qrmci::BackendWrapper &backendInfo) {
-  return OnlineBackendStatuses.contains(backendInfo.getStatus());
-}
-
-bool isBackendCompatibleWithTask(
-    const mqss::QuantumTask &task,
-    const mqss::qrmci::BackendWrapper &backendInfo) {
-  if (task.n_qbits() > backendInfo.getNumQubits()) {
-    return false;
-  }
-  auto supportedFormats = backendInfo.getSupportedCircuitFormats();
-  for (auto it = TaskCircuitTypeToCompatibleCircuitFormatMapping.find(
-           task.circuit_file_type());
-       it != TaskCircuitTypeToCompatibleCircuitFormatMapping.end() &&
-       it->first == task.circuit_file_type();
-       ++it) {
-    if (std::ranges::find(supportedFormats, it->second) !=
-        supportedFormats.end()) {
-      return true;
-    }
-  }
-  return false;
-}
 } // namespace
 
-std::expected<void, std::string> mqss::qrmci::selectBackend(
-    mqss::QuantumTask &task,
-    const std::unordered_map<std::string, mqss::qrmci::BackendWrapper>
-        &availableBackends) {
-  // This function should implement the logic to select a backend for the
-  // quantum task. For now, we will just select the first available backend
-  // that matches the preferred QPU.
+std::expected<std::string, mqss::qrmci::Error> mqss::qrmci::chooseBackend(
+    const mqss::QuantumTask &task,
+    const mqss::qrmci::BackendRegistry &availableBackends,
+    mqss::qrmci::BackendSelectionPolicy policy) {
 
-  if (availableBackends.contains(task.preferred_qpu()) &&
-      isBackendOnline(availableBackends.at(task.preferred_qpu())) &&
-      isBackendCompatibleWithTask(task,
-                                  availableBackends.at(task.preferred_qpu()))) {
-    task.set_scheduled_qpu(task.preferred_qpu());
-    return {};
+  // The task's preferred QPU wins outright whenever it can actually run the
+  // task, whatever the policy would otherwise have picked.
+  if (const auto *preferred = availableBackends.find(task.preferred_qpu());
+      preferred != nullptr && preferred->isOnline() &&
+      preferred->canRun(task)) {
+    return preferred->getName();
   }
 
-  for (const auto &[backendName, backendInfo] : availableBackends) {
-    if (isBackendOnline(backendInfo) &&
-        isBackendCompatibleWithTask(task, backendInfo)) {
-      task.set_scheduled_qpu(backendName);
-      return {};
-    }
-  }
+  const mqss::qrmci::BackendWrapper *chosen = nullptr;
+  availableBackends.forEachBackend(
+      [&](const std::string & /*backendName*/,
+          const mqss::qrmci::BackendWrapper &backendInfo) {
+        if (!backendInfo.isOnline() || !backendInfo.canRun(task)) {
+          return;
+        }
+        if (chosen == nullptr || beatsIncumbent(backendInfo, *chosen, policy)) {
+          chosen = &backendInfo;
+        }
+      });
 
-  // If no preferred backend is found, set the scheduled QPU to an empty
-  // string or handle it as needed.
-  task.set_scheduled_qpu("");
-  return std::unexpected("No suitable backend found");
+  if (chosen == nullptr) {
+    return std::unexpected(
+        Error{Error::Kind::NoBackendAvailable, "No suitable backend found"});
+  }
+  return chosen->getName();
 }
 
-std::expected<void, std::string> mqss::qrmci::compileQuantumTask(
-    mqss::QuantumTask &task, const mqss::qrmci::BackendWrapper &backendInfo) {
-
+std::expected<void, mqss::qrmci::Error>
+mqss::qrmci::compileQuantumTask(mqss::QuantumTask &task,
+                                const mqss::qrmci::BackendWrapper &backendInfo,
+                                mqss::mqssci::MQSSCompiler &compiler) {
   if (task.no_modify()) {
     // If the task is marked as no_modify, we skip compilation and return
     // success.
     return {};
   }
 
+  const std::vector<std::string_view> supportedInputFormats =
+      mqss::mqssci::MQSSCompiler::getSupportedInputFormats();
   auto inputFormatValidation = validateInputFormatIsSupportedCircuitFormat(
-      task.circuit_file_type(),
-      mqss::mqssci::MQSSCompiler::getSupportedInputFormats());
+      task.circuit_file_type(), supportedInputFormats);
   if (!inputFormatValidation) {
     return std::unexpected(inputFormatValidation.error());
   }
 
   try {
-
     std::unordered_map<int, std::string> updatedCircuitFiles;
     auto inputCircuitFiles = task.circuit_files();
-    mqss::mqssci::MQSSCompiler compiler;
 
     mqss::mqssci::CompilerOptions opts;
     opts.optimization_level =
         getCompilerOptimizationLevel(task.optimisation_level());
-    auto resultFormat = getBackendCompatibleMQSSCIResultFormat(backendInfo);
+    auto resultFormat = backendInfo.compilerResultFormat();
     if (!resultFormat) {
       return std::unexpected(resultFormat.error());
     }
     opts.result_format = resultFormat.value();
 
-    for (int i = 0; i < inputCircuitFiles.size(); ++i) {
+    for (int i = 0; i < static_cast<int>(inputCircuitFiles.size()); ++i) {
       const auto &circuitFile = inputCircuitFiles[i];
+      if (circuitFile.empty()) {
+        // MQSSCompiler::compileSource() segfaults on an empty source instead
+        // of returning a diagnostic (mqss-ci's CommonMappingPass dereferences
+        // kernel-analysis state that a module with no kernels never
+        // populates), so this must be rejected before it ever reaches the
+        // compiler.
+        return std::unexpected(Error{Error::Kind::CompilationFailed,
+                                     "Compilation failed for circuit file " +
+                                         std::to_string(i) +
+                                         ": circuit is empty."});
+      }
       auto compiledCircuit =
           compiler.compileSource(circuitFile, "", backendInfo.getInstructions(),
                                  backendInfo.getQubitConnectivity(), opts);
       if (!compiledCircuit) {
-        return std::unexpected("Compilation failed.");
+        // MQSSCompiler::compileSource() builds and owns its MLIRContext
+        // entirely internally (see MQSSCIInterfaces/MQSSCompiler.cpp), so the
+        // real MLIR diagnostic it emits on failure never reaches this caller
+        // -- the circuit file index is the most specific detail available
+        // here without changing that dependency's public API.
+        return std::unexpected(Error{Error::Kind::CompilationFailed,
+                                     "Compilation failed for circuit file " +
+                                         std::to_string(i) + "."});
       }
       updatedCircuitFiles[i] = compiledCircuit.value();
     }
@@ -162,53 +143,63 @@ std::expected<void, std::string> mqss::qrmci::compileQuantumTask(
     }
     return {}; // Compilation successful
   } catch (const std::exception &e) {
-    return std::unexpected(std::string("Compilation failed: ") + e.what());
+    return std::unexpected(
+        Error{Error::Kind::CompilationFailed,
+              std::string("Compilation failed: ") + e.what()});
   }
 }
 
-std::expected<mqss::QuantumResult, std::string>
-mqss::qrmci::executeQuantumTask(const mqss::QuantumTask &task,
-                                mqss::submitter::Submitter &submitter) {
+std::expected<void, mqss::qrmci::Error> mqss::qrmci::compileQuantumTask(
+    mqss::QuantumTask &task, const mqss::qrmci::BackendWrapper &backendInfo) {
+  mqss::mqssci::MQSSCompiler compiler;
+  return mqss::qrmci::compileQuantumTask(task, backendInfo, compiler);
+}
+
+std::expected<std::uint32_t, mqss::qrmci::Error>
+mqss::qrmci::submitQuantumTask(const mqss::QuantumTask &task,
+                               mqss::submitter::Submitter &submitter) {
   try {
-    auto results =
-        submitter
-            .getJobResultHistogram(submitter.submitJob(
-                {task.circuit_files().begin(), task.circuit_files().end()},
-                static_cast<size_t>(task.n_shots()),
-                QDMI_PROGRAM_FORMAT_QIRBASESTRING))
-            .value();
+    return submitter.submitJob(
+        {task.circuit_files().begin(), task.circuit_files().end()},
+        static_cast<size_t>(task.n_shots()), QDMI_PROGRAM_FORMAT_QIRBASESTRING);
+  } catch (const std::exception &e) {
+    return std::unexpected(
+        Error{Error::Kind::SubmissionFailed,
+              std::string("Submission failed: ") + e.what()});
+  }
+}
 
-    mqss::QuantumResult quantumResult;
-    quantumResult.set_task_id(task.task_id());
-    quantumResult.set_destination(task.result_destination());
-    quantumResult.set_executed_qpu(task.scheduled_qpu());
-
-    if (std::ranges::any_of(
-            results, [](const std::optional<std::map<std::string, size_t>> &r) {
-              return r.has_value();
-            })) {
-      quantumResult.set_execution_status(true);
-      quantumResult.set_additional_information("COMPLETED");
-      quantumResult.mutable_results()->Reserve(
-          static_cast<int>(results.size()));
-      for (const auto &optMap : results) {
-        if (optMap.has_value()) {
-          auto *protoCounts = quantumResult.add_results()->mutable_counts();
-          for (const auto &[key, val] : *optMap) {
-            (*protoCounts)[key] = static_cast<int32_t>(val);
-          }
-        }
-      }
-
-      return quantumResult;
+std::expected<mqss::QuantumResult, mqss::qrmci::Error>
+mqss::qrmci::collectQuantumResult(const mqss::QuantumTask &task,
+                                  std::uint32_t jobId,
+                                  mqss::submitter::Submitter &submitter) {
+  try {
+    auto histogram = submitter.getJobResultHistogram(jobId);
+    if (!histogram) {
+      // Submitter::getJobResultHistogram() erases a job from activeJobs once
+      // retrieved, so nullopt here means this job ID was already consumed or
+      // never existed -- kept explicit rather than a bare .value() since a
+      // caller's usage pattern isn't guaranteed to be strictly sequential.
+      return std::unexpected(Error{
+          Error::Kind::Internal,
+          "Execution failed: no result found for job " + std::to_string(jobId) +
+              " (it may already have been retrieved or was "
+              "never submitted)."});
     }
 
-    return std::unexpected(
-        "Execution failed: No valid results returned from the backend.");
-
+    return buildQuantumResult(task, *histogram);
   } catch (const std::exception &e) {
-    return std::unexpected(std::string("Execution failed: ") + e.what());
+    return std::unexpected(Error{Error::Kind::DeviceError,
+                                 std::string("Execution failed: ") + e.what()});
   }
+}
+
+std::expected<mqss::QuantumResult, mqss::qrmci::Error>
+mqss::qrmci::executeQuantumTask(const mqss::QuantumTask &task,
+                                mqss::submitter::Submitter &submitter) {
+  return submitQuantumTask(task, submitter).and_then([&](std::uint32_t jobId) {
+    return collectQuantumResult(task, jobId, submitter);
+  });
 }
 
 mqss::QuantumResult

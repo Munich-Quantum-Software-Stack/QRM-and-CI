@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.25)
 project(
   QRMCI_STANDALONE_DAEMON
   VERSION 0.1.0
@@ -22,12 +22,6 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 find_package(Threads REQUIRED)
-
-if(TARGET spdlog::spdlog_header_only)
-  set(QRMCI_SPDLOG_TARGET spdlog::spdlog_header_only)
-else()
-  set(QRMCI_SPDLOG_TARGET spdlog::spdlog)
-endif()
 
 add_executable("qrmcid-standalone" main.cpp)
 qrmci_enable_warnings(qrmcid-standalone)

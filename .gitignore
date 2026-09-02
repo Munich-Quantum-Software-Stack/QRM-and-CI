@@ -175,3 +175,6 @@ out/build
 
 node_modules/
 wheelhouse/
+
+# Git worktrees
+.worktrees/

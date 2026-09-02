@@ -23,11 +23,19 @@ inline constexpr std::string_view SchedulerQueue = "scheduler.tasks.queue";
 inline constexpr std::string_view CompilerQueue = "compiler.tasks.queue";
 inline constexpr std::string_view ResultsQueue = "test.results.queue";
 inline constexpr std::string_view SubmitterQueue = "submitter.tasks.queue";
+inline constexpr std::string_view BackendStatusQueue = "backend.status.queue";
 
 inline constexpr std::string_view LogDir = "/var/log/qrmci";
 inline constexpr std::string_view CompilerLog = "compiler.log";
 inline constexpr std::string_view SchedulerLog = "scheduler.log";
 inline constexpr std::string_view DaemonLog = "daemon.log";
 inline constexpr std::string_view SubmitterLog = "submitter.log";
+inline constexpr std::string_view SelectorLog = "selector.log";
+
+inline constexpr std::string_view SubmitterQdmiDriverName =
+    "qdmi_example_driver";
+inline constexpr std::string_view SubmitterQdmiDeviceName =
+    "C++ Device with 5 qubits";
+inline constexpr std::string_view SubmitterQdmiClientToken = "token";
 
 } // namespace mqss::qrmci::defaults

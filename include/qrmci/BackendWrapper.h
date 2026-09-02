@@ -11,110 +11,128 @@
 
 #pragma once
 
-#include "Submitter.h"
 #include "mqss/Protocol.hpp"
+#include "qdmi/constants.h"
+#include "qrmci/ConstantsMapping.h"
+#include "qrmci/Error.h"
 
+#include <MQSSCIInterfaces/MQSSCompiler.h>
+#include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <expected>
+#include <iterator>
 #include <string>
 #include <utility>
 #include <vector>
 
+namespace mqss::submitter {
+class Submitter;
+} // namespace mqss::submitter
+
 namespace mqss::qrmci {
 
-/// @brief BackendWrapper is a wrapper class for the MQSS Backend object,
-///        providing a simplified interface for accessing backend properties
-///        and methods. It allows for easy retrieval of backend information such
-///        as name, number of qubits, type, status, queue length, current
-///        load, queue name, supported instructions, qubit connectivity, and
-///        supported circuit formats.
+/// @brief BackendWrapper is a wrapper class for the MQSS Backend object. It
+///        holds a backend's capabilities -- name, qubit count, status,
+///        supported instructions, qubit connectivity and circuit formats --
+///        as read from a live QDMI device or from a backend-status message,
+///        and answers the questions the pipeline asks of a backend: whether
+///        it is online, whether it can run a given task, and which compiler
+///        result format to target for it.
 class BackendWrapper {
 
 public:
+  /// @brief Default-construct an empty BackendWrapper.
   BackendWrapper() = default;
+  /// @brief Copy-construct a BackendWrapper.
   BackendWrapper(const BackendWrapper &) = default;
+  /// @brief Move-construct a BackendWrapper.
   BackendWrapper(BackendWrapper &&) = default;
+  /// @brief Copy-assign a BackendWrapper.
   BackendWrapper &operator=(const BackendWrapper &) = default;
+  /// @brief Move-assign a BackendWrapper.
   BackendWrapper &operator=(BackendWrapper &&) = default;
 
-  /// @brief Construct a BackendWrapper from a Submitter object. This
+  /// @brief Construct a BackendWrapper from a submitter object. This
   /// constructor initializes the wrapper with the backend information retrieved
-  /// from the Submitter.
-  /// @param submitter The Submitter object from which to retrieve backend
+  /// from the submitter.
+  /// @param submitter The submitter object from which to retrieve backend
   ///        information.
   explicit BackendWrapper(mqss::submitter::Submitter &submitter);
 
   /// @brief Construct a BackendWrapper from a MQSS Backend object. This
   /// constructor initializes the wrapper with the backend information retrieved
-  /// from the MQSS Backend object.
+  /// from the MQSS Backend object. Circuit formats arrive over the wire and
+  /// are translated through mapProtoCircuitFormat(), so an enumerator this
+  /// build does not know becomes CIRCUIT_FORMAT_UNSPECIFIED rather than an
+  /// out-of-range value.
   /// @param backend The MQSS Backend object from which to retrieve backend
   ///        information.
   explicit BackendWrapper(const mqss::Backend &backend);
 
   /// @brief Create a MQSS Backend object from the information stored in the
-  ///        BackendWrapper. This method allows for easy conversion back to the
-  ///        original MQSS Backend object.
+  ///        BackendWrapper, for publication to other QRM&CI processes. This
+  ///        is the inverse of BackendWrapper(const mqss::Backend &).
   /// @return A MQSS Backend object constructed from the information stored in
   ///         the BackendWrapper.
-  [[nodiscard]] mqss::Backend makeBackend();
+  [[nodiscard]] mqss::Backend toBackend() const;
 
-  /// @brief Accessor methods to retrieve backend information
+  /// @brief Check whether this backend is currently able to accept tasks.
+  /// @return True if the backend's status counts as online.
+  [[nodiscard]] bool isOnline() const noexcept;
+
+  /// @brief Check whether this backend can run a given task.
+  /// @param task The task to check.
+  /// @return True if the backend has enough qubits and supports a circuit
+  ///         format compatible with the task's circuit file type.
+  [[nodiscard]] bool canRun(const mqss::QuantumTask &task) const;
+
+  /// @brief Find a compiler result format supported by both this backend and
+  ///        the mqss-ci compiler.
+  /// @return The first backend-supported circuit format that has a known
+  ///         result-format mapping, or an UnsupportedFormat error if none is
+  ///         found.
+  [[nodiscard]] std::expected<mqss::mqssci::ResultFormat, Error>
+  compilerResultFormat() const;
+
+  /// @brief Get the backend name.
+  /// @return The backend name.
   [[nodiscard]] const std::string &getName() const noexcept { return name; }
+  /// @brief Get the number of qubits supported by the backend.
+  /// @return The number of qubits.
   [[nodiscard]] std::uint32_t getNumQubits() const noexcept {
     return numQubits;
   }
-  [[nodiscard]] mqss::BackendType getType() const noexcept { return type; }
+  /// @brief Get the backend status.
+  /// @return The backend status.
   [[nodiscard]] mqss::BackendStatus getStatus() const noexcept {
     return status;
   }
-  [[nodiscard]] std::uint32_t getQueueLength() const noexcept {
-    return queueLength;
-  }
-  [[nodiscard]] float getCurrentLoad() const noexcept { return currentLoad; }
-  [[nodiscard]] const std::string &getQueueName() const noexcept {
-    return queueName;
-  }
+  /// @brief Get the instructions supported by the backend.
+  /// @return The supported instructions.
   [[nodiscard]] const std::vector<std::string> &
   getInstructions() const noexcept {
     return instructions;
   }
+  /// @brief Get the qubit connectivity of the backend.
+  /// @return The qubit connectivity as a list of connected qubit index
+  ///         pairs.
   [[nodiscard]] const std::vector<std::pair<std::uint32_t, std::uint32_t>> &
   getQubitConnectivity() const noexcept {
     return qubitConnectivity;
   }
+  /// @brief Get the circuit formats supported by the backend.
+  /// @return The supported circuit formats.
   [[nodiscard]] const std::vector<mqss::CircuitFormat> &
   getSupportedCircuitFormats() const noexcept {
     return supportedCircuitFormats;
   }
 
-  /// @brief Mutator methods to set backend information
-  void setName(const std::string &newName) { name = newName; }
-  void setNumQubits(std::uint32_t newNumQubits) { numQubits = newNumQubits; }
-  void setType(mqss::BackendType newType) { type = newType; }
-  void setStatus(mqss::BackendStatus newStatus) { status = newStatus; }
-  void setQueueLength(std::uint32_t newQueueLength) {
-    queueLength = newQueueLength;
-  }
-  void setCurrentLoad(float newCurrentLoad) { currentLoad = newCurrentLoad; }
-  void setQueueName(const std::string &newQueueName) {
-    queueName = newQueueName;
-  }
-  void setInstructions(const std::vector<std::string> &newInstructions) {
-    instructions = newInstructions;
-  }
-  void setQubitConnectivity(
-      const std::vector<std::pair<std::uint32_t, std::uint32_t>>
-          &newQubitConnectivity) {
-    qubitConnectivity = newQubitConnectivity;
-  }
-  void setSupportedCircuitFormats(
-      const std::vector<mqss::CircuitFormat> &newSupportedCircuitFormats) {
-    supportedCircuitFormats = newSupportedCircuitFormats;
-  }
-
 private:
   std::string name;
   std::uint32_t numQubits{};
-  mqss::BackendType type;
-  mqss::BackendStatus status;
+  mqss::BackendType type{};
+  mqss::BackendStatus status{};
   std::uint32_t queueLength{};
   float currentLoad{};
   std::string queueName;

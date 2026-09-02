@@ -1,0 +1,55 @@
+# Copyright (c) 2026 MQSS Maintainers
+# All rights reserved.
+#
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Example configuration for qrmcid-distributed-selector.
+#
+# Copy this file to the path QRMCI_CONFIG_FILE points at (or to the default
+# relative path `config/qrmci.toml`, resolved against the daemon's working
+# directory) and edit the values below. Every field here can also be set via
+# environment variable, which always takes precedence over this file -- see
+# docs/getting-started.md's "Runtime Configuration" section for the full
+# defaults < file < environment variable precedence and the complete env var
+# list. Do not commit a copy of this file containing real credentials.
+#
+# The distributed selector only chooses backends and forwards tasks on to
+# the compiler queue -- it opens no QDMI connection, compiles nothing and
+# submits nothing -- so it only reads the sections below; [compiler] and
+# [submitter] are for the distributed worker (or the standalone daemon).
+# Its [common] queue names and connection must match the worker's, since
+# they share the same broker and front-door/compiler queues.
+
+[common]
+logDir = "/var/log/qrmci"
+# Input queue this selector receives incoming tasks from.
+qrmciQueue = "qrmci.tasks.queue"
+resultsQueue = "test.results.queue"
+schedulerQueue = "scheduler.tasks.queue"
+# Sleep between turns of the daemon's poll loop, in milliseconds.
+stagePollInterval = 100
+
+[common.connection]
+host = "host.docker.internal"
+port = 5672
+user = "guest"
+# Prefer QRMCI_AMQP_PASSWORD at deploy time over a password in this file.
+password = "guest"
+vhost = "/"
+
+[selector]
+# Queue backend status is published on by the workers this selector reads
+# from, and forwards to the compiler queue below once a task is selected.
+backendStatusQueue = "backend.status.queue"
+# Timeouts (milliseconds) for this selector's two receive() calls.
+backendStatusReceiveTimeout = 500
+taskReceiveTimeout = 500
+
+[selector.backendRegistry]
+# How long (seconds) a backend entry stays usable after its last refresh.
+entryTimeToLive = 30
+
+[compiler]
+# Queue a selected task is forwarded to; must match the worker's [compiler]
+# queue name.
+queue = "compiler.tasks.queue"

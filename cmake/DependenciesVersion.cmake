@@ -22,3 +22,6 @@ set(QRMCI_PYQDMI_GIT_TAG
 set(QRMCI_DOXYGEN_AWESOME_GIT_TAG
     "v2.3.4"
     CACHE STRING "doxygen-awesome-css revision")
+set(QRMCI_TOMLPLUSPLUS_GIT_TAG
+    "v3.4.0"
+    CACHE STRING "toml++ revision")

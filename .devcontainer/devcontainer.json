@@ -2,6 +2,7 @@
   "name": "QRMCI-dev",
   "build": {
     "dockerfile": "Dockerfile",
+    "options": ["--build-arg", "BUILDKIT_INLINE_CACHE=1"],
     "args": {
       "destination": "workspaces/QRM"
     }
@@ -40,6 +41,7 @@
         "ritwickdey.liveserver"
       ],
       "settings": {
+        "dev.containers.useBuildKit": "always",
         "files.associations": {
           "CMakeLists.txt": "cmake",
           "*.cmake.in": "cmake",

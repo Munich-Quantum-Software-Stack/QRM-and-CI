@@ -5,6 +5,7 @@
   <navindex>
     <tab type="user" title="Overview" url="index.html"/>
     <tab type="user" title="Getting Started" url="md_docs_2getting-started.html"/>
+    <tab type="user" title="Build custom QRM&amp;CI workflow" url="md_docs_2using-the-library.html"/>
     <tab type="user" title="Development Guide" url="md_docs_2development-guide.html"/>
     <tab type="user" title="API Reference" url="md_docs_2api-reference.html"/>
     <tab type="files" visible="yes" title="">
@@ -19,7 +20,7 @@
     <includes visible="no"/>
     <inheritancegraph visible="yes"/>
     <collaborationgraph visible="yes"/>
-    <memberdecl visible="no">
+    <memberdecl>
       <nestedclasses visible="yes" title=""/>
       <publictypes visible="yes" title=""/>
       <services visible="yes" title=""/>
@@ -75,7 +76,7 @@
   <!-- Layout definition for a namespace page -->
   <namespace>
     <briefdescription visible="yes"/>
-    <memberdecl visible="no">
+    <memberdecl>
       <nestednamespaces visible="yes" title=""/>
       <constantgroups visible="yes" title=""/>
       <interfaces visible="yes" title=""/>
@@ -122,7 +123,7 @@
     <includegraph visible="yes"/>
     <includedbygraph visible="yes"/>
     <sourcelink visible="no"/>
-    <memberdecl visible="no">
+    <memberdecl>
       <interfaces visible="yes" title=""/>
       <classes visible="yes" title=""/>
       <structs visible="yes" title=""/>

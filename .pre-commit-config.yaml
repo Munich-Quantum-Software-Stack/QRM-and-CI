@@ -12,6 +12,8 @@ ci:
   autoupdate_schedule: quarterly
   autofix_commit_msg: "🎨 pre-commit fixes"
 
+exclude: ^docs/_static/
+
 repos:
   # Standard hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks

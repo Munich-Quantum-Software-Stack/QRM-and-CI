@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.25)
 project(
   QRMCI
   VERSION 0.1.0
@@ -23,6 +23,15 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+
+# mqt-core (fetched transitively via MQSSCI/MQT-QMAP below) force-enables
+# CMAKE_INTERPROCEDURAL_OPTIMIZATION (LTO). With LTO on, GCC fails to externally
+# emit weak/inline LLVM ADT symbols (e.g.
+# llvm::SmallPtrSetImplBase::insert_imp), causing "undefined reference" link
+# failures in any target that pulls in the prebuilt LLVM/MLIR
+set(ENABLE_IPO
+    OFF
+    CACHE BOOL "Disable IPO/LTO globally" FORCE)
 
 include(cmake/DependenciesVersion.cmake)
 
@@ -49,6 +58,7 @@ find_package(MQSSCI REQUIRED)
 find_package(MQSSScheduler REQUIRED)
 find_package(MQSSSubmitter REQUIRED)
 find_package(MQSSIntegrationDeploymentFramework REQUIRED)
+find_package(TomlPlusPlus REQUIRED)
 
 if(TARGET SimpleAmqpClient AND Rabbitmqc_LIBRARY)
   target_link_libraries(SimpleAmqpClient "${Rabbitmqc_LIBRARY}")
@@ -62,23 +72,25 @@ if(NOT TARGET spdlog::spdlog AND NOT TARGET spdlog::spdlog_header_only)
   find_package(spdlog REQUIRED)
 endif()
 
-if(TARGET spdlog::spdlog_header_only)
-  set(QRMCI_SPDLOG_TARGET spdlog::spdlog_header_only)
-else()
-  set(QRMCI_SPDLOG_TARGET spdlog::spdlog)
-endif()
-
 include(cmake/Config.cmake)
 include(cmake/Warnings.cmake)
+
+qrmci_treat_as_system(mqss)
+qrmci_treat_as_system(MQSSCIInterfaces)
+qrmci_treat_as_system(MQSSCIPasses)
+qrmci_treat_as_system(mqss_scheduler)
+qrmci_treat_as_system(mqss_submitter)
 
 configure_file(
   include/qrmci/ConfigDefaults.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/generated/qrmci/ConfigDefaults.h @ONLY)
 
-add_library(qrmci src/BackendWrapper.cpp src/CommunicationHandler.cpp
-                  src/Config.cpp src/Runners.cpp)
-target_link_libraries(qrmci PUBLIC mqss mqss-ci::mqss-ci mqss_scheduler
-                                   mqss_submitter ${QRMCI_SPDLOG_TARGET})
+file(GLOB_RECURSE QRMCI_SOURCES "src/*.cpp")
+
+add_library(qrmci ${QRMCI_SOURCES})
+target_link_libraries(
+  qrmci PUBLIC mqss mqss-ci::mqss-ci mqss_scheduler mqss_submitter
+               ${QRMCI_SPDLOG_TARGET} tomlplusplus::tomlplusplus)
 target_include_directories(qrmci PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/"
                                         "${CMAKE_CURRENT_BINARY_DIR}/generated")
 qrmci_enable_warnings(qrmci)
@@ -86,6 +98,7 @@ qrmci_enable_warnings(qrmci)
 option(QRMCI_BUILD_APPS "Build deployment artifacts" ON)
 if(QRMCI_BUILD_APPS)
   add_subdirectory(apps/standalone)
+  add_subdirectory(apps/distributed)
 endif()
 
 enable_testing()

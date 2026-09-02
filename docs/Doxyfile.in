@@ -15,6 +15,7 @@ INPUT                  = @QRMCI_DOXYGEN_INPUT_DIRS@
 RECURSIVE              = YES
 FILE_PATTERNS          = *.hpp *.h *.md
 USE_MDFILE_AS_MAINPAGE = "@CMAKE_CURRENT_SOURCE_DIR@/index.md"
+IMAGE_PATH             = "./_static"
 
 MARKDOWN_SUPPORT       = YES
 AUTOLINK_SUPPORT       = YES
@@ -22,6 +23,7 @@ JAVADOC_AUTOBRIEF      = YES
 QUIET                  = YES
 WARN_IF_UNDOCUMENTED   = YES
 WARN_IF_DOC_ERROR      = YES
+WARN_LOGFILE           = "@QRMCI_DOXYGEN_OUTPUT_DIR@/doxygen_warnings.txt"
 INPUT_ENCODING         = UTF-8
 
 TOC_INCLUDE_HEADINGS   = 0
