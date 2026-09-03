@@ -22,7 +22,7 @@ little friction as possible.
 <!-- [DOXYGEN MAIN] -->
 
 <div align="center">
-    <img src="./docs/_static/MQSS-overall-with-QRM-inset.png" alt="QRM&CI" width="45%">
+    <img src="./docs/_static/MQSS-overall-with-QRM-inset.png" alt="QRM&CI" width="85%">
 </div>
 
 ## Components of QRM&CI
