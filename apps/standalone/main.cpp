@@ -5,7 +5,6 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-#include "Scheduler.hpp"
 #include "Submitter.h"
 #include "mqss/protocol/ProtoProtocol.hpp"
 #include "qrmci/BackendRegistry.h"
@@ -15,6 +14,7 @@
 #include "qrmci/Error.h"
 #include "qrmci/Logger.h"
 #include "qrmci/Runners.h"
+#include "scheduler/scheduler.hpp"
 
 #include <MQSSCIInterfaces/MQSSCompiler.h>
 #include <atomic>
@@ -78,8 +78,8 @@ int main() {
   // Initialize the scheduler with a priority-based scheduling policy. The
   // scheduler will manage the execution order of quantum tasks for the
   // submitter based on their priority.
-  mqss::Scheduler<mqss::QuantumTask> scheduler(
-      mqss::SchedulingPolicy::PriorityBased);
+  mqss::scheduler::Scheduler<mqss::QuantumTask> scheduler(
+      mqss::scheduler::SchedulingPolicy::PriorityBased);
 
   // Initialize the submitter to connect to the QDMI backend using the provided
   // driver name, device name, device ID, and authentication token. The
@@ -160,12 +160,12 @@ int main() {
               .and_then([&task, &scheduler]() {
                 spdlog::info("Task {} compiled. Scheduling for execution.",
                              task.task_id());
-                scheduler.scheduleJob(task);
+                scheduler.scheduleTask(task);
 
                 spdlog::debug("Task {} scheduled with priority {}. total "
-                              "scheduled jobs: {}",
+                              "scheduled tasks: {}",
                               task.task_id(), task.priority(),
-                              scheduler.getJobCount());
+                              scheduler.getTaskCount());
                 return std::expected<void, mqss::qrmci::Error>{};
               });
 
@@ -178,10 +178,10 @@ int main() {
       }
     }
 
-    // Check if there are any ready jobs to execute and submit them to the
+    // Check if there are any ready tasks to execute and submit them to the
     // backend.
-    while (auto nextJob = scheduler.getNextReadyJob()) {
-      spdlog::info("Next job to execute: {} with priority {}.",
+    while (auto nextJob = scheduler.getNextReadyTask()) {
+      spdlog::info("Next task to execute: {} with priority {}.",
                    nextJob->task_id(), nextJob->priority());
 
       auto executionResult =

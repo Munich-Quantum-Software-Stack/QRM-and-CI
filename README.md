@@ -27,7 +27,7 @@ little friction as possible.
 
 ## Components of QRM&CI
 
-1. **QOffload** hands work into the QRM&CI side from an MQSS frontend interfaces.
+1. **QOffload** hands work into the QRM&CI side from MQSS frontend interfaces.
 2. **Platform Selector** chooses the backend on which a quantum task should run.
 3. **Compiler** applies target-agnostic and target-specific passes, including optimization and transpilation.
 4. **Scheduler** orders ready work according to the configured scheduling policy before submission.

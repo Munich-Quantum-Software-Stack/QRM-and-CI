@@ -5,7 +5,6 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-#include "Scheduler.hpp"
 #include "Submitter.h"
 #include "mqss/protocol/ProtoProtocol.hpp"
 #include "qrmci/BackendRegistry.h"
@@ -15,6 +14,7 @@
 #include "qrmci/Error.h"
 #include "qrmci/Logger.h"
 #include "qrmci/Runners.h"
+#include "scheduler/scheduler.hpp"
 
 #include <MQSSCIInterfaces/MQSSCompiler.h>
 #include <atomic>
@@ -69,8 +69,8 @@ int main() {
   auto communicationHandler =
       mqss::qrmci::CommunicationHandler(config.common.connection);
 
-  mqss::Scheduler<mqss::QuantumTask> scheduler(
-      mqss::SchedulingPolicy::PriorityBased);
+  mqss::scheduler::Scheduler<mqss::QuantumTask> scheduler(
+      mqss::scheduler::SchedulingPolicy::PriorityBased);
 
   auto submitter = mqss::submitter::Submitter(
       config.submitter.qdmiDriverName, config.submitter.qdmiDeviceName,
@@ -135,7 +135,7 @@ int main() {
                               -> std::expected<void, mqss::qrmci::Error> {
                   spdlog::info("Task {} compiled. Scheduling for execution.",
                                task.task_id());
-                  scheduler.scheduleJob(task);
+                  scheduler.scheduleTask(task);
                   return {};
                 });
       }
@@ -152,7 +152,7 @@ int main() {
     // Submit every ready job before collecting any result, so several jobs are
     // in flight on the device at once instead of one at a time.
     std::vector<std::pair<mqss::QuantumTask, std::uint32_t>> submittedJobs;
-    while (auto nextJob = scheduler.getNextReadyJob()) {
+    while (auto nextJob = scheduler.getNextReadyTask()) {
       spdlog::info("Submitting job: {} with priority {}.", nextJob->task_id(),
                    nextJob->priority());
       auto jobId = mqss::qrmci::submitQuantumTask(*nextJob, submitter);

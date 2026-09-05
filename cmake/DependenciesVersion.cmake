@@ -7,6 +7,9 @@
 # MQSSIntegrationDeploymentFramework and PyQDMI intentionally track development
 # branches (active co-development); the rest are pinned to reviewed tags.
 
+set(QRMCI_MQSS_SCHEDULER_GIT_TAG
+    "mc/sscheduler"
+    CACHE STRING "MQSS-Scheduler revision (tracks branch by design)")
 set(QRMCI_MQSSCI_GIT_TAG
     "v2.2.1"
     CACHE STRING "MQSS-Quantum-Compilation-Suite revision")

@@ -12,7 +12,7 @@ cmake_minimum_required(VERSION 3.25)
 # docker-compose setup); they are not wired into CI.
 set(INTEGRATION_TEST_TARGETS
     submit_task submit_task_distributed submit_task_unsupported_backend
-    submit_task_compile_failure submit_task_concurrent)
+    submit_task_compile_failure submit_task_concurrent schedule_task)
 
 foreach(target IN LISTS INTEGRATION_TEST_TARGETS)
   add_executable(

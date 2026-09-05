@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
+#include "IntegrationTestHelpers.h"
 #include "qrmci/CommunicationHandler.h"
 #include "qrmci/Config.h"
 
@@ -20,39 +21,9 @@ int main() {
     return 1;
   }
 
-  std::string _circuit_str = R"(
-  func.func @__nvqpp__mlirgen__testILm2EE() attributes {"cudaq-entrypoint", "cudaq-kernel"} {
-  %0 = quake.alloca !quake.veq<2>
-  %1 = quake.extract_ref %0[1] : (!quake.veq<2>) -> !quake.ref
-  quake.x %1 : (!quake.ref) -> ()
-  %2 = quake.extract_ref %0[0] : (!quake.veq<2>) -> !quake.ref
-  %3 = quake.extract_ref %0[1] : (!quake.veq<2>) -> !quake.ref
-  quake.x [%2] %3 : (!quake.ref, !quake.ref) -> ()
-  %4 = quake.extract_ref %0[0] : (!quake.veq<2>) -> !quake.ref
-  %5 = quake.extract_ref %0[1] : (!quake.veq<2>) -> !quake.ref
-  quake.x [%4] %5 : (!quake.ref, !quake.ref) -> ()
-  %6 = quake.extract_ref %0[0] : (!quake.veq<2>) -> !quake.ref
-  %7 = quake.extract_ref %0[1] : (!quake.veq<2>) -> !quake.ref
-  quake.x [%6] %7 : (!quake.ref, !quake.ref) -> ()
-  %8 = quake.extract_ref %0[0] : (!quake.veq<2>) -> !quake.ref
-  %9 = quake.extract_ref %0[1] : (!quake.veq<2>) -> !quake.ref
-  quake.x [%8] %9 : (!quake.ref, !quake.ref) -> ()
-  %10 = quake.extract_ref %0[0] : (!quake.veq<2>) -> !quake.ref
-  %11 = quake.extract_ref %0[1] : (!quake.veq<2>) -> !quake.ref
-  quake.x [%10] %11 : (!quake.ref, !quake.ref) -> ()
-  %12 = quake.extract_ref %0[1] : (!quake.veq<2>) -> !quake.ref
-  quake.x %12 : (!quake.ref) -> ()
-  %13 = quake.extract_ref %0[1] : (!quake.veq<2>) -> !quake.ref
-  %14 = quake.extract_ref %0[0] : (!quake.veq<2>) -> !quake.ref
-  quake.x [%13] %14 : (!quake.ref, !quake.ref) -> ()
-  %measOut = quake.mz %0 : (!quake.veq<2>) -> !cc.stdvec<!quake.measure>
-  return
-  }
-  )";
-
   mqss::QuantumTask qtask;
   qtask.set_task_id(123);
-  qtask.add_circuit_files(_circuit_str);
+  qtask.add_circuit_files(mqss::qrmci::test::sampleQuakeCircuit());
   qtask.set_circuit_file_type(std::string("quake"));
   qtask.set_n_shots(100);
   qtask.set_optimisation_level(1);
