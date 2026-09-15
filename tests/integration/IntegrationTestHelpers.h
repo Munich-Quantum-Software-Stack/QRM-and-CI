@@ -12,9 +12,36 @@
 
 #pragma once
 
+#include <chrono>
+#include <cstdint>
+#include <random>
 #include <string>
 
 namespace mqss::qrmci::test {
+
+/// @brief Budget for a client waiting on exactly one result. Comfortably
+///        under the 120s ctest TIMEOUT set on every tests/integration
+///        target (tests/integration/CMakeLists.txt), which is the hard
+///        backstop if a broker or daemon problem makes this too short.
+inline constexpr std::chrono::seconds kResultTimeout{30};
+
+/// @brief Per-receive budget for a client that polls the same queue
+///        multiple times in one run (submit_task_concurrent,
+///        schedule_task): sized so the worst case, every poll timing out,
+///        still finishes inside the 120s ctest TIMEOUT.
+inline constexpr std::chrono::seconds kPolledResultTimeout{10};
+
+/// @brief A task id unlikely to collide with a result an earlier run left
+///        on a durable queue. RabbitMQ queues here are durable, so a fixed
+///        id lets a stale leftover satisfy this run's assertions without
+///        the daemon having done anything.
+/// @return A fresh random id in [1, INT32_MAX] on every call.
+inline std::int32_t uniqueTaskId() {
+  static std::random_device entropy;
+  static std::mt19937 engine(entropy());
+  static std::uniform_int_distribution<std::int32_t> dist(1, 2147483647);
+  return dist(engine);
+}
 
 /// @brief A compilable/executable 2-qubit Quake circuit, identical to the one
 ///        used by submit_task.cpp. Shared by the integration test client

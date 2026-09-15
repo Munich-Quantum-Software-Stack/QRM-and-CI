@@ -17,22 +17,26 @@
 // result_destination queue so a mismatch is caught directly rather than
 // inferred from delivery order. Works against apps/standalone too, since it
 // shares the same front-door queue, but the pipelining this is meant to
-// exercise is specific to apps/distributed's worker.
+// exercise is specific to apps/distributed's worker -- this binary still
+// spawns apps/standalone's daemon (like every other single-daemon test
+// here) since only the invariant, not the batching itself, is asserted.
 //
 // Task kinds are interleaved (success / unsupported backend / compile
 // failure, repeated) rather than grouped, so a mix-up would have to land on
 // two tasks with different expected outcomes to go unnoticed -- a stronger
 // signal than an all-success or all-failure batch. See
-// submit_task_unsupported_backend.cpp and submit_task_compile_failure.cpp
+// TestSubmitTaskUnsupportedBackend.cpp and TestSubmitTaskCompileFailure.cpp
 // for why these two particular inputs deterministically force each
 // cancellation path.
 
+#include "DaemonProcess.h"
 #include "IntegrationTestHelpers.h"
+#include "RunWithDaemons.h"
 #include "qrmci/CommunicationHandler.h"
 #include "qrmci/Config.h"
 
-#include <chrono>
-#include <iostream>
+#include <cstdint>
+#include <gtest/gtest.h>
 #include <string>
 #include <vector>
 
@@ -49,7 +53,6 @@ struct ExpectedTask {
   TaskKind kind;
 };
 
-constexpr std::int32_t kFirstTaskId = 2001;
 constexpr int kKindRepeats = 2;
 
 std::string kindLabel(TaskKind kind) {
@@ -95,16 +98,18 @@ mqss::QuantumTask makeTask(TaskKind kind, std::int32_t taskId) {
   return qtask;
 }
 
-} // namespace
-
-int main() {
-
-  auto config = mqss::qrmci::loadConfig();
-  if (!config) {
-    std::cerr << config.error().detail << "\n";
-    return 1;
+class SubmitTaskConcurrentTest : public ::testing::Test {
+protected:
+  void SetUp() override {
+    auto loadedConfig = mqss::qrmci::loadConfig();
+    ASSERT_TRUE(loadedConfig) << loadedConfig.error().detail;
+    config = *loadedConfig;
   }
 
+  mqss::qrmci::Config config;
+};
+
+TEST_F(SubmitTaskConcurrentTest, KeepsConcurrentResultsSeparate) {
   constexpr TaskKind kKindOrder[] = {
       TaskKind::Success,
       TaskKind::UnsupportedBackend,
@@ -113,111 +118,83 @@ int main() {
 
   std::vector<ExpectedTask> tasks;
   tasks.reserve(kKindRepeats * std::size(kKindOrder));
-  std::int32_t nextTaskId = kFirstTaskId;
   for (int repeat = 0; repeat < kKindRepeats; ++repeat) {
     for (const TaskKind kind : kKindOrder) {
-      tasks.push_back(ExpectedTask{makeTask(kind, nextTaskId), kind});
-      ++nextTaskId;
+      tasks.push_back(ExpectedTask{
+          makeTask(kind, mqss::qrmci::test::uniqueTaskId()), kind});
     }
   }
 
   mqss::qrmci::CommunicationHandler communicationHandler(
-      config->common.connection);
+      config.common.connection);
 
   for (const auto &expected : tasks) {
-    std::cout << "Sending " << kindLabel(expected.kind)
-              << " task with task_id: " << expected.task.task_id()
-              << " to queue: " << config->common.qrmciQueue << "\n";
-    if (auto sent =
-            communicationHandler.send(expected.task, config->common.qrmciQueue);
-        !sent) {
-      std::cerr << sent.error().detail << "\n";
-      return 1;
-    }
+    auto sent =
+        communicationHandler.send(expected.task, config.common.qrmciQueue);
+    ASSERT_TRUE(sent) << "Sending " << kindLabel(expected.kind)
+                      << " task_id=" << expected.task.task_id() << ": "
+                      << sent.error().detail;
   }
 
-  int failureCount = 0;
   for (const auto &expected : tasks) {
     const auto &qtask = expected.task;
-    std::cout << "Waiting for result from queue: " << qtask.result_destination()
-              << "\n";
+    SCOPED_TRACE("task_id=" + std::to_string(qtask.task_id()) +
+                 " kind=" + kindLabel(expected.kind));
+
     auto received = communicationHandler.receive<mqss::QuantumResult>(
-        qtask.result_destination(), std::chrono::milliseconds(0));
+        qtask.result_destination(), mqss::qrmci::test::kPolledResultTimeout);
     if (!received.has_value()) {
-      std::cerr << "Could not read from queue " << qtask.result_destination()
-                << ": " << received.error().detail << "\n";
-      ++failureCount;
+      ADD_FAILURE() << "Could not read from queue "
+                    << qtask.result_destination() << ": "
+                    << received.error().detail;
       continue;
     }
-    const auto &optResult = *received;
-
-    if (!optResult.has_value()) {
-      std::cerr << "No result received for task_id " << qtask.task_id()
-                << " on queue " << qtask.result_destination() << "\n";
-      ++failureCount;
+    if (!received->has_value()) {
+      ADD_FAILURE() << "No result received on queue "
+                    << qtask.result_destination();
       continue;
     }
 
-    const mqss::QuantumResult &taskResult = optResult.value();
-    if (taskResult.task_id() != qtask.task_id()) {
-      std::cerr << "Result on queue " << qtask.result_destination()
-                << " belongs to task_id " << taskResult.task_id()
-                << ", expected " << qtask.task_id() << "\n";
-      ++failureCount;
-      continue;
-    }
+    const mqss::QuantumResult &taskResult = received->value();
+    EXPECT_EQ(taskResult.task_id(), qtask.task_id())
+        << "Result on queue " << qtask.result_destination()
+        << " belongs to a different task_id than expected.";
 
     switch (expected.kind) {
-    case TaskKind::Success: {
-      if (!taskResult.execution_status()) {
-        std::cerr << "Task " << taskResult.task_id()
-                  << " expected to execute successfully but was cancelled: "
-                  << taskResult.additional_information() << "\n";
-        ++failureCount;
-        continue;
-      }
+    case TaskKind::Success:
+      EXPECT_TRUE(taskResult.execution_status())
+          << "Expected to execute successfully but was cancelled: "
+          << taskResult.additional_information();
       break;
-    }
     case TaskKind::UnsupportedBackend: {
       const std::string expectedPrefix = "CANCELLED: No suitable backend found";
-      if (taskResult.execution_status() ||
-          !taskResult.additional_information().starts_with(expectedPrefix)) {
-        std::cerr << "Task " << taskResult.task_id()
-                  << " expected cancellation starting with '" << expectedPrefix
-                  << "', got execution_status=" << taskResult.execution_status()
-                  << ", additional_information='"
-                  << taskResult.additional_information() << "'\n";
-        ++failureCount;
-        continue;
-      }
+      EXPECT_FALSE(taskResult.execution_status());
+      EXPECT_TRUE(
+          taskResult.additional_information().starts_with(expectedPrefix))
+          << "Expected cancellation starting with '" << expectedPrefix
+          << "', got: '" << taskResult.additional_information() << "'";
       break;
     }
     case TaskKind::CompileFailure: {
       const std::string expectedPrefix =
           "CANCELLED: Compilation failed for circuit file 0: circuit is "
           "empty.";
-      if (taskResult.execution_status() ||
-          !taskResult.additional_information().starts_with(expectedPrefix)) {
-        std::cerr << "Task " << taskResult.task_id()
-                  << " expected cancellation starting with '" << expectedPrefix
-                  << "', got execution_status=" << taskResult.execution_status()
-                  << ", additional_information='"
-                  << taskResult.additional_information() << "'\n";
-        ++failureCount;
-        continue;
-      }
+      EXPECT_FALSE(taskResult.execution_status());
+      EXPECT_TRUE(
+          taskResult.additional_information().starts_with(expectedPrefix))
+          << "Expected cancellation starting with '" << expectedPrefix
+          << "', got: '" << taskResult.additional_information() << "'";
       break;
     }
     }
-
-    std::cout << "Received expected " << kindLabel(expected.kind)
-              << " result for task_id: " << taskResult.task_id() << "\n";
   }
+}
 
-  if (failureCount > 0) {
-    std::cerr << failureCount << " of " << tasks.size()
-              << " concurrent tasks did not match their expected outcome."
-              << "\n";
-    return 1;
-  }
+} // namespace
+
+int main(int argc, char **argv) {
+  std::vector<mqss::qrmci::test::DaemonProcess> daemons;
+  daemons.emplace_back("qrmcid-standalone", QRMCI_STANDALONE_DAEMON_PATH,
+                       QRMCI_DAEMON_LOG_DIR);
+  return mqss::qrmci::test::runWithDaemons(argc, argv, std::move(daemons));
 }
