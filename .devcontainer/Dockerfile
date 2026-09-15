@@ -1,8 +1,7 @@
 ARG DEPS_IMAGE=ghcr.io/akshay9594/mqss-passes-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0
 FROM ${DEPS_IMAGE}-${TARGETARCH} AS deps
 
-ARG base_image=ubuntu:26.10
-FROM ${base_image}
+FROM ubuntu:26.10
 
 SHELL ["/bin/bash", "-c"]
 ARG DEBIAN_FRONTEND=noninteractive

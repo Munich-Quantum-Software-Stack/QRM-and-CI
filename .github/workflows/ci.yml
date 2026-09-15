@@ -20,6 +20,7 @@ jobs:
   pre-commit:
     name: Pre-commit (Formatting & Linting)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -37,6 +38,7 @@ jobs:
   static-analysis:
     name: Static Analysis (clang-tidy)
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     container:
       image: "ghcr.io/akshay9594/mqss-passes-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0-amd64"
     needs: pre-commit
@@ -55,9 +57,11 @@ jobs:
   build:
     name: Build & Test (${{ matrix.compiler }} ${{ matrix.version }})
     runs-on: ubuntu-24.04
+    timeout-minutes: 90
     needs: pre-commit
     strategy:
       fail-fast: false
+      # Clang is not currently supported: `clang++-17 -std=c++23` fails to compile `#include <expected>`.
       matrix:
         include:
           - compiler: gcc
@@ -68,14 +72,6 @@ jobs:
             version: "15"
             cc: gcc-15
             cxx: g++-15
-          - compiler: clang
-            version: "17"
-            cc: clang-17
-            cxx: clang++-17
-          - compiler: clang
-            version: "22"
-            cc: clang-22
-            cxx: clang++-22
     container:
       image: "ghcr.io/akshay9594/mqss-passes-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0-amd64"
     services:
@@ -104,7 +100,10 @@ jobs:
           fi
           rm -rf /var/lib/apt/lists/*
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DQRMCI_WARNINGS_AS_ERRORS=ON
       - name: Build
         run: cmake --build build --parallel
       - name: Run tests

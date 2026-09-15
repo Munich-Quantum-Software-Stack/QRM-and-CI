@@ -41,6 +41,7 @@
     ".*\\.jpeg",
     ".*\\.svg",
     ".*\\.pdf",
+    ".*\\.patch",
     "uv\\.lock",
     "py\\.typed",
     ".*build.*",

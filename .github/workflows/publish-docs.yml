@@ -13,6 +13,7 @@ jobs:
   documentation:
     name: Build & Check Doxygen
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     container:
       image: "ghcr.io/akshay9594/mqss-passes-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0-amd64"
     steps:
