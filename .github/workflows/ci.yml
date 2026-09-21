@@ -39,10 +39,20 @@ jobs:
     name: Static Analysis (clang-tidy)
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    container:
-      image: "ghcr.io/akshay9594/mqss-passes-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0-amd64"
     needs: pre-commit
+    env:
+      LLVM_DIR: "/opt/deps/llvm/lib/cmake/llvm"
+      MLIR_DIR: "/opt/deps/llvm/lib/cmake/mlir"
+      CUDAQ_INSTALL_PREFIX: "/opt/deps/cudaq"
+      CATALYST_INSTALL_PREFIX: "/opt/deps/catalyst"
     steps:
+      - name: Extract files from deps image without running it
+        run: |
+          IMAGE="ghcr.io/akshay9594/mqss-passes-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0-amd64"
+          docker pull $IMAGE
+          CONTAINER_ID=$(docker create $IMAGE true)
+          docker cp $CONTAINER_ID:/opt/deps /opt/deps
+          docker rm $CONTAINER_ID
       - uses: actions/checkout@v4
       - name: Install clang-tidy
         run: |
@@ -72,8 +82,6 @@ jobs:
             version: "15"
             cc: gcc-15
             cxx: g++-15
-    container:
-      image: "ghcr.io/akshay9594/mqss-passes-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0-amd64"
     services:
       rabbitmq:
         image: rabbitmq:3-management-alpine
@@ -88,7 +96,19 @@ jobs:
       CC: ${{ matrix.cc }}
       CXX: ${{ matrix.cxx }}
       QRMCI_AMQP_HOST: rabbitmq
+      LLVM_DIR: "/opt/deps/llvm/lib/cmake/llvm"
+      MLIR_DIR: "/opt/deps/llvm/lib/cmake/mlir"
+      CUDAQ_INSTALL_PREFIX: "/opt/deps/cudaq"
+      CATALYST_INSTALL_PREFIX: "/opt/deps/catalyst"
     steps:
+      - name: Extract files from deps image without running it
+        run: |
+          IMAGE="ghcr.io/akshay9594/mqss-passes-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0-amd64"
+          docker pull $IMAGE
+          CONTAINER_ID=$(docker create $IMAGE true)
+          docker cp $CONTAINER_ID:/opt/deps /opt/deps
+          docker rm $CONTAINER_ID
+
       - uses: actions/checkout@v4
       - name: Install compiler (${{ matrix.compiler }} ${{ matrix.version }})
         run: |

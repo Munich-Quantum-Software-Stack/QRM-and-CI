@@ -14,9 +14,20 @@ jobs:
     name: Build & Check Doxygen
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    container:
-      image: "ghcr.io/akshay9594/mqss-passes-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0-amd64"
+    env:
+      LLVM_DIR: "/opt/deps/llvm/lib/cmake/llvm"
+      MLIR_DIR: "/opt/deps/llvm/lib/cmake/mlir"
+      CUDAQ_INSTALL_PREFIX: "/opt/deps/cudaq"
+      CATALYST_INSTALL_PREFIX: "/opt/deps/catalyst"
     steps:
+      - name: Extract files from deps image without running it
+        run: |
+          IMAGE="ghcr.io/akshay9594/mqss-passes-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0-amd64"
+          docker pull $IMAGE
+          CONTAINER_ID=$(docker create $IMAGE true)
+          docker cp $CONTAINER_ID:/opt/deps /opt/deps
+          docker rm $CONTAINER_ID
+
       - uses: actions/checkout@v3
       - name: Configure (docs only)
         run: |
