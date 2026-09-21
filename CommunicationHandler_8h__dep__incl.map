@@ -1,0 +1,5 @@
+<map id="CommunicationHandler.h" name="CommunicationHandler.h">
+<area shape="rect" id="Node000001" title="The RabbitMQ send/receive helpers that carry tasks, results and backend status between QRM&amp;CI stages." alt="" coords="5,5,192,33"/>
+<area shape="rect" id="Node000002" href="$DaemonMessaging_8h.html" title="The queue I/O every QRM&amp;CI daemon work loop shares: receiving and draining a queue,..." alt="" coords="19,81,178,109"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="100,47,101,82,96,80,97,51"/>
+</map>

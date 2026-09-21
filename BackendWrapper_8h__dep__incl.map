@@ -1,0 +1,18 @@
+<map id="BackendWrapper.h" name="BackendWrapper.h">
+<area shape="rect" id="Node000001" title="One backend&#39;s capabilities as the QRM&amp;CI pipeline sees them, read either from a live device or from a..." alt="" coords="229,5,371,33"/>
+<area shape="rect" id="Node000002" href="$BackendRegistry_8h.html" title="The set of backends a QRM&amp;CI process may schedule onto, and the time&#45;to&#45;live after which an entry nob..." alt="" coords="176,81,317,109"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="283,44,258,82,254,79,280,48"/>
+<area shape="rect" id="Node000007" href="$Runners_8h.html" title="The QRM&amp;CI pipeline stages as free functions: choosing a backend, compiling a task for it,..." alt="" coords="298,157,384,184"/>
+<area shape="poly" id="edge9_Node000001_Node000007" title=" " alt="" coords="316,44,332,80,340,122,343,157,338,155,335,122,327,82,314,49"/>
+<area shape="rect" id="Node000003" href="$Config_8h.html" title="The runtime configuration model shared by every QRM&amp;CI daemon." alt="" coords="148,157,222,184"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="228,119,198,158,194,154,224,123"/>
+<area shape="rect" id="Node000006" href="$Daemon_8h.html" title="The scaffolding every QRM&amp;CI daemon entrypoint shares: process bring&#45;up, opening the configured QDMI ..." alt="" coords="216,232,304,260"/>
+<area shape="poly" id="edge6_Node000002_Node000006" title=" " alt="" coords="251,122,261,232,256,231,247,126"/>
+<area shape="poly" id="edge7_Node000002_Node000007" title=" " alt="" coords="276,116,327,156,322,156,275,121"/>
+<area shape="rect" id="Node000004" href="$CommunicationHandler_8h.html" title="The RabbitMQ send/receive helpers that carry tasks, results and backend status between QRM&amp;CI stages." alt="" coords="5,232,192,260"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="156,196,116,234,112,230,160,193"/>
+<area shape="poly" id="edge5_Node000003_Node000006" title=" " alt="" coords="210,193,249,232,244,232,209,198"/>
+<area shape="rect" id="Node000005" href="$DaemonMessaging_8h.html" title="The queue I/O every QRM&amp;CI daemon work loop shares: receiving and draining a queue,..." alt="" coords="141,308,299,336"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="134,266,201,307,196,308,132,271"/>
+<area shape="poly" id="edge8_Node000007_Node000005" title=" " alt="" coords="340,198,333,231,318,262,287,290,253,310,251,305,284,286,314,258,328,229,336,202"/>
+</map>

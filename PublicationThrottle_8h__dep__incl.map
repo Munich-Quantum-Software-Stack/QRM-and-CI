@@ -1,0 +1,5 @@
+<map id="PublicationThrottle.h" name="PublicationThrottle.h">
+<area shape="rect" id="Node000001" title="Paces how often a device&#45;owning process re&#45;reads and publishes its own status, independently of how f..." alt="" coords="5,5,162,33"/>
+<area shape="rect" id="Node000002" href="$Daemon_8h.html" title="The scaffolding every QRM&amp;CI daemon entrypoint shares: process bring&#45;up, opening the configured QDMI ..." alt="" coords="39,81,128,109"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="85,47,86,81,81,80,82,51"/>
+</map>

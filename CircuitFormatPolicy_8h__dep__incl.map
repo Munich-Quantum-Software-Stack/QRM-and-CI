@@ -1,0 +1,20 @@
+<map id="CircuitFormatPolicy.h" name="CircuitFormatPolicy.h">
+<area shape="rect" id="Node000001" title="The one policy that decides whether a task is directly submittable or compilable for a backend,..." alt="" coords="221,5,379,33"/>
+<area shape="rect" id="Node000002" href="$BackendWrapper_8h.html" title="One backend&#39;s capabilities as the QRM&amp;CI pipeline sees them, read either from a live device or from a..." alt="" coords="229,81,371,109"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="301,46,302,81,297,80,299,51"/>
+<area shape="rect" id="Node000003" href="$BackendRegistry_8h.html" title="The set of backends a QRM&amp;CI process may schedule onto, and the time&#45;to&#45;live after which an entry nob..." alt="" coords="176,157,317,184"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="283,119,258,158,254,155,280,123"/>
+<area shape="rect" id="Node000008" href="$Runners_8h.html" title="The QRM&amp;CI pipeline stages as free functions: choosing a backend, compiling a task for it,..." alt="" coords="298,232,384,260"/>
+<area shape="poly" id="edge10_Node000002_Node000008" title=" " alt="" coords="316,120,332,156,340,197,343,233,338,231,335,198,327,157,314,125"/>
+<area shape="rect" id="Node000004" href="$Config_8h.html" title="The runtime configuration model shared by every QRM&amp;CI daemon." alt="" coords="148,232,222,260"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="228,194,198,234,194,230,224,198"/>
+<area shape="rect" id="Node000007" href="$Daemon_8h.html" title="The scaffolding every QRM&amp;CI daemon entrypoint shares: process bring&#45;up, opening the configured QDMI ..." alt="" coords="216,308,304,336"/>
+<area shape="poly" id="edge7_Node000003_Node000007" title=" " alt="" coords="251,198,261,308,256,307,247,202"/>
+<area shape="poly" id="edge8_Node000003_Node000008" title=" " alt="" coords="276,191,327,232,322,232,275,197"/>
+<area shape="rect" id="Node000005" href="$CommunicationHandler_8h.html" title="The RabbitMQ send/receive helpers that carry tasks, results and backend status between QRM&amp;CI stages." alt="" coords="5,308,192,336"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="156,272,116,310,112,306,160,268"/>
+<area shape="poly" id="edge6_Node000004_Node000007" title=" " alt="" coords="210,269,249,308,244,308,209,274"/>
+<area shape="rect" id="Node000006" href="$DaemonMessaging_8h.html" title="The queue I/O every QRM&amp;CI daemon work loop shares: receiving and draining a queue,..." alt="" coords="141,384,299,411"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="134,341,201,383,196,384,132,347"/>
+<area shape="poly" id="edge9_Node000008_Node000006" title=" " alt="" coords="340,273,333,307,318,337,287,366,253,386,251,381,284,362,314,334,328,305,336,277"/>
+</map>

@@ -1,0 +1,5 @@
+<map id="mqss::qrmci::CommonConfig" name="mqss::qrmci::CommonConfig">
+<area shape="rect" id="Node000001" title="Settings shared by every pipeline stage: the RabbitMQ connection, logging, the queues common to more ..." alt="" coords="23,123,232,151"/>
+<area shape="rect" id="Node000002" href="$structmqss_1_1qrmci_1_1RabbitMqConnectionConfig.html" title="RabbitMQ connection settings, shared by every stage&#39;s messaging." alt="" coords="5,5,250,50"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="130,64,130,124,125,122,125,67"/>
+</map>
