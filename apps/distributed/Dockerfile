@@ -26,7 +26,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     curl \
     gnupg \
     lsb-release \
-    openssh-client \
     librabbitmq-dev \
     libspdlog-dev \
     nlohmann-json3-dev \
@@ -54,15 +53,21 @@ ENV LLVM_DIR=/opt/deps/llvm/lib/cmake/llvm \
     CUDAQ_INSTALL_PREFIX=/opt/deps/cudaq \
     CATALYST_INSTALL_PREFIX=/opt/deps/catalyst
 
-# SSH setup for cloning private repos
-RUN mkdir -p /root/.ssh && \
-    ssh-keyscan github.com > /root/.ssh/known_hosts
-
 ENV CCACHE_DIR=/root/.cache/ccache
-# --- QRMCI and dependencies build ------------------------------------------------
-RUN --mount=type=ssh \
+# --- QRM&CI and dependencies build -----------------------------------------
+# github_token is an optional BuildKit secret (see Makefile/docker-bake.hcl): when
+# provided, it authenticates the FetchContent git clones (e.g. MQSS-Submitter) over
+# HTTPS via a per-process git config override -- never written to disk, so it
+# never lands in an image layer. Without the secret the clones fall back to
+# unauthenticated HTTPS, which only works while those repositories are public.
+RUN --mount=type=secret,id=github_token \
     --mount=type=bind,source=.,target=/workspace/src,rw=false \
     --mount=type=cache,target=/root/.cache/ccache,sharing=locked \
+    if [ -s /run/secrets/github_token ]; then \
+    export GIT_CONFIG_COUNT=1 \
+    GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" \
+    GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$(cat /run/secrets/github_token)" | base64 -w0)"; \
+    fi && \
     cmake -S /workspace/src -B /workspace/build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_QDMI_EXAMPLES=ON \
@@ -103,6 +108,7 @@ ARG USER_GID=$USER_UID
 
 ENV HOME=/home/${USERNAME} \
     QRMCI_LOG_DIR=/home/${USERNAME}/logs \
+    QRMCI_AMQP_HOST=localhost \
     LD_LIBRARY_PATH=/usr/local/lib/qrmci:/usr/local/lib \
     PATH=/usr/local/bin:${PATH}
 
@@ -117,11 +123,18 @@ COPY --from=builder --chown=${USER_UID}:${USER_GID} \
 
 COPY --from=builder --chown=${USER_UID}:${USER_GID} \
     /workspace/build/libqrmci* \
-    /workspace/build/_deps/mqsssubmitter-build/libmqss_submitter.so \
-    /workspace/build/_deps/pyqdmi-build/src/cpp/libqdmi_cpp.so \
+    /workspace/build/_deps/mqss_submitter-build/src/libmqss_submitter.so \
+    /workspace/build/_deps/mqss_scheduler-build/libscheduler.so \
     /workspace/build/_deps/qdmi-build/examples/driver/libqdmi_example_driver.so \
+    /workspace/build/_deps/mqssci-build/lib/Dialects/libMQSS* \
     /workspace/build/_deps/mqssci-build/lib/MQSSCIInterfaces/libMQSS* \
+    /workspace/build/_deps/mqssci-build/lib/Passes/CodeGen/libMQSS* \
     /workspace/build/_deps/mqssci-build/lib/Passes/Transforms/libMQSS* \
+    /workspace/build/_deps/mqt-core-build/src/na/libmqt-core-na* \
+    /workspace/build/_deps/mqt-core-build/src/ir/libmqt-core-ir* \
+    /workspace/build/_deps/mqt-core-build/src/circuit_optimizer/libmqt-core-circuit-optimizer* \
+    /workspace/build/_deps/mqt-qmap-build/src/sc/libmqt-qmap-sc* \
+    /workspace/build/_deps/mqt-qmap-build/src/sc/heuristic/libmqt-qmap-sc-heuristic* \
     /workspace/build/_deps/mqssintegrationdeploymentframework-build/libmqss_*.so \
     /workspace/build/_deps/simple_amqp_client-build/libSimple* \
     /usr/local/lib/qrmci/
@@ -151,6 +164,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libgcc-s1 \
     libstdc++6 \
     zlib1g \
+    curl \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
@@ -162,6 +176,7 @@ ENV HOME=/home/${USERNAME} \
     QRMCI_LOG_DIR=/home/${USERNAME}/logs \
     QDMI_DRIVER_LIB_NAME=qdmi_example_driver \
     QDMI_CONF=/home/${USERNAME}/qdmi.conf \
+    QRMCI_AMQP_HOST=localhost \
     LD_LIBRARY_PATH=/usr/local/lib/qrmci:/usr/local/lib \
     PATH=/usr/local/bin:${PATH}
 
@@ -177,12 +192,19 @@ COPY --from=builder --chown=${USER_UID}:${USER_GID} \
 
 COPY --from=builder --chown=${USER_UID}:${USER_GID} \
     /workspace/build/libqrmci* \
-    /workspace/build/_deps/mqsssubmitter-build/libmqss_submitter.so \
-    /workspace/build/_deps/pyqdmi-build/src/cpp/libqdmi_cpp.so \
+    /workspace/build/_deps/mqss_submitter-build/src/libmqss_submitter.so \
+    /workspace/build/_deps/mqss_scheduler-build/libscheduler.so \
     /workspace/build/_deps/qdmi-build/examples/driver/libqdmi_example_driver.so \
     /workspace/build/_deps/qdmi-build/examples/device/src/libcxx-qdmi-device.so \
+    /workspace/build/_deps/mqssci-build/lib/Dialects/libMQSS* \
     /workspace/build/_deps/mqssci-build/lib/MQSSCIInterfaces/libMQSS* \
+    /workspace/build/_deps/mqssci-build/lib/Passes/CodeGen/libMQSS* \
     /workspace/build/_deps/mqssci-build/lib/Passes/Transforms/libMQSS* \
+    /workspace/build/_deps/mqt-core-build/src/na/libmqt-core-na* \
+    /workspace/build/_deps/mqt-core-build/src/ir/libmqt-core-ir* \
+    /workspace/build/_deps/mqt-core-build/src/circuit_optimizer/libmqt-core-circuit-optimizer* \
+    /workspace/build/_deps/mqt-qmap-build/src/sc/libmqt-qmap-sc* \
+    /workspace/build/_deps/mqt-qmap-build/src/sc/heuristic/libmqt-qmap-sc-heuristic* \
     /workspace/build/_deps/mqssintegrationdeploymentframework-build/libmqss_*.so \
     /workspace/build/_deps/simple_amqp_client-build/libSimple* \
     /usr/local/lib/qrmci/

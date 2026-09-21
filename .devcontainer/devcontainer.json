@@ -81,10 +81,9 @@
           "forceToTop": false,
           "blankLinesAfter": 1,
           "license": "Apache-2.0",
-          "company": "NVIDIA",
-          "copyrightHolder": "NVIDIA Corporation & Affiliates"
+          "copyrightHolder": "MQSS Maintainers"
         },
-        "psi-header.variables": [["projectCreationYear", "2022"]],
+        "psi-header.variables": [["projectCreationYear", "2024"]],
         "psi-header.changes-tracking": {
           "isActive": true,
           "enforceHeader": false,

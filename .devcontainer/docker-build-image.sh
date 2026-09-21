@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the QRM dev image from .devcontainer/Dockerfile.
+# Builds the QRM&CI dev image from .devcontainer/Dockerfile.
 set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

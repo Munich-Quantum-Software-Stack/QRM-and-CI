@@ -6,101 +6,133 @@
  */
 
 #include "RunnersTestHelpers.h"
-#include "Submitter.h"
 #include "mqss/Protocol.hpp"
 #include "qrmci/BackendWrapper.h"
 #include "qrmci/Error.h"
 #include "qrmci/Runners.h"
 
+#include <atomic>
+#include <chrono>
+#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
-#include <fstream>
 #include <gtest/gtest.h>
-#include <iostream>
-#include <map>
+#include <limits>
+#include <mqss/submitter/Client.h>
+#include <mqss/submitter/Device.h>
+#include <mqss/submitter/Job.h>
 #include <optional>
 #include <string>
-#include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace mqss::qrmci::test {
 
-// ===========================================================================
-// executeQuantumTask (real Submitter, live QDMI driver)
-// ===========================================================================
-class ExecuteQuantumTaskTest : public ::testing::Test {
-public:
-  ExecuteQuantumTaskTest() = default;
+namespace {
 
+// QRMCI_TEST_QDMI_DRIVER_PATH is set in tests/unit/CMakeLists.txt to the built
+// example driver's own file. Client::openDevice() existence-checks the path, so
+// a bare library stem is not enough. QDMI_CONF and LD_LIBRARY_PATH are injected
+// by the same file's set_tests_properties(), which is why these tests must be
+// run through ctest rather than by invoking the binary directly.
+constexpr const char *kDriverPath = QRMCI_TEST_QDMI_DRIVER_PATH;
+constexpr const char *kDeviceName = "C++ Device with 5 qubits";
+
+/// @brief Waiting indefinitely, the same as the shipped default.
+constexpr std::chrono::seconds kWaitForever{0};
+
+/// @brief Opens the real example QDMI device shared by the fixtures below.
+class DeviceFixture : public ::testing::Test {
 protected:
-  // QDMI_CONF is set in CMakeLists.txt to point to the qdmi.conf file generated
-  // during the build process. It contains the path to the example device
-  // cxx-qdmi-device shared library from QDMI repo.
-  mqss::submitter::Submitter submitter = mqss::submitter::Submitter(
-      "qdmi_example_driver", "C++ Device with 5 qubits",
-      "C++ Device with 5 qubits", "example_token");
-
+  mqss::submitter::Client client;
+  std::optional<mqss::submitter::Device> opened;
   mqss::QuantumTask task;
 
   void SetUp() override {
-    task = makeTask();
+    mqss::submitter::SessionConfig session;
+    session.token = "example_token";
+
+    auto result =
+        client.openDevice(std::filesystem::path{kDriverPath}, kDeviceName,
+                          session, mqss::submitter::DeviceConfig{});
+    ASSERT_TRUE(result.has_value()) << result.error().message();
+    opened.emplace(std::move(*result));
+
+    // "qasm2", not makeTask()'s own default "qasm3": the real example driver
+    // this fixture opens only ever advertises {QASM2, QIRBASESTRING,
+    // QIRBASEMODULE, CALIBRATION} as
+    // QDMI_DEVICE_PROPERTY_SUPPORTEDPROGRAMFORMATS
+    // (examples/device/src/cxx_device.cpp in every vendored QDMI version,
+    // 1.3.0-1.3.3) -- QASM3 was never one of them, so a task left at the
+    // helper's own default fails at the device with QDMI_ERROR_NOTSUPPORTED
+    // before it ever gets to execute anything.
+    task = makeTask("OPENQASM 2.0;", 2, "qasm2");
     task.set_task_id(42);
     task.set_result_destination("results-queue");
     task.set_scheduled_qpu("qdmi_example_driver");
   }
+
+  mqss::submitter::Device &device() { return *opened; }
 };
 
-TEST_F(ExecuteQuantumTaskTest, ValidTaskWithValidSubmitter) {
-  auto result = mqss::qrmci::executeQuantumTask(task, submitter);
-  ASSERT_TRUE(result.has_value());
+} // namespace
+
+// ===========================================================================
+// executeQuantumTask (real Device, live QDMI driver)
+// ===========================================================================
+using ExecuteQuantumTaskTest = DeviceFixture;
+
+TEST_F(ExecuteQuantumTaskTest, ValidTaskWithValidDevice) {
+  auto result = executeQuantumTask(task, device(), kWaitForever);
+  ASSERT_TRUE(result.has_value()) << result.error().detail;
   EXPECT_EQ(result->execution_status(), true);
 }
 
 TEST_F(ExecuteQuantumTaskTest, ResultPreservesTaskId) {
-  auto result = mqss::qrmci::executeQuantumTask(task, submitter);
-  ASSERT_TRUE(result.has_value());
+  auto result = executeQuantumTask(task, device(), kWaitForever);
+  ASSERT_TRUE(result.has_value()) << result.error().detail;
   EXPECT_EQ(result->task_id(), task.task_id());
 }
 
 TEST_F(ExecuteQuantumTaskTest, ResultPreservesDestination) {
-  auto result = mqss::qrmci::executeQuantumTask(task, submitter);
-  ASSERT_TRUE(result.has_value());
+  auto result = executeQuantumTask(task, device(), kWaitForever);
+  ASSERT_TRUE(result.has_value()) << result.error().detail;
   EXPECT_EQ(result->destination(), task.result_destination());
 }
 
 TEST_F(ExecuteQuantumTaskTest, ResultPreservesExecutedQpu) {
-  auto result = mqss::qrmci::executeQuantumTask(task, submitter);
-  ASSERT_TRUE(result.has_value());
+  auto result = executeQuantumTask(task, device(), kWaitForever);
+  ASSERT_TRUE(result.has_value()) << result.error().detail;
   EXPECT_EQ(result->executed_qpu(), task.scheduled_qpu());
 }
 
-TEST_F(ExecuteQuantumTaskTest, EmptyCircuitFilesWithValidSubmitter) {
+TEST_F(ExecuteQuantumTaskTest, EmptyCircuitFilesIsASubmissionFailure) {
   task.clear_circuit_files();
-  auto result = mqss::qrmci::executeQuantumTask(task, submitter);
-  EXPECT_FALSE(result.has_value());
-  EXPECT_EQ(result.error().kind, mqss::qrmci::Error::Kind::SubmissionFailed);
+  auto result = executeQuantumTask(task, device(), kWaitForever);
+  ASSERT_FALSE(result.has_value());
+  EXPECT_EQ(result.error().kind, Error::Kind::SubmissionFailed);
   EXPECT_FALSE(result.error().detail.empty());
 }
 
-TEST_F(ExecuteQuantumTaskTest, ZeroNumShotsWithValidSubmitter) {
+TEST_F(ExecuteQuantumTaskTest, ZeroNumShotsIsASubmissionFailure) {
   task.set_n_shots(0);
-  auto result = mqss::qrmci::executeQuantumTask(task, submitter);
-  EXPECT_FALSE(result.has_value());
-  EXPECT_EQ(result.error().kind, mqss::qrmci::Error::Kind::SubmissionFailed);
+  auto result = executeQuantumTask(task, device(), kWaitForever);
+  ASSERT_FALSE(result.has_value());
+  EXPECT_EQ(result.error().kind, Error::Kind::SubmissionFailed);
   EXPECT_FALSE(result.error().detail.empty());
 }
 
 TEST_F(ExecuteQuantumTaskTest, MatchesSubmitThenCollectForTheSameTask) {
   // executeQuantumTask is defined as submitQuantumTask().and_then(
   // collectQuantumResult); pin the two paths together so they can't diverge.
-  auto viaExecute = mqss::qrmci::executeQuantumTask(task, submitter);
-  ASSERT_TRUE(viaExecute.has_value());
+  auto viaExecute = executeQuantumTask(task, device(), kWaitForever);
+  ASSERT_TRUE(viaExecute.has_value()) << viaExecute.error().detail;
 
-  auto jobId = mqss::qrmci::submitQuantumTask(task, submitter);
-  ASSERT_TRUE(jobId.has_value());
-  auto viaSubmitAndCollect =
-      mqss::qrmci::collectQuantumResult(task, *jobId, submitter);
-  ASSERT_TRUE(viaSubmitAndCollect.has_value());
+  auto jobs = submitQuantumTask(task, device());
+  ASSERT_TRUE(jobs.has_value()) << jobs.error().detail;
+  auto viaSubmitAndCollect = collectQuantumResult(task, *jobs, kWaitForever);
+  ASSERT_TRUE(viaSubmitAndCollect.has_value())
+      << viaSubmitAndCollect.error().detail;
 
   EXPECT_EQ(viaExecute->task_id(), viaSubmitAndCollect->task_id());
   EXPECT_EQ(viaExecute->destination(), viaSubmitAndCollect->destination());
@@ -113,155 +145,204 @@ TEST_F(ExecuteQuantumTaskTest, MatchesSubmitThenCollectForTheSameTask) {
 }
 
 // ===========================================================================
-// submitQuantumTask / collectQuantumResult (real Submitter, live QDMI driver)
-// Confirms the two functions, composed, behave equivalently to
-// executeQuantumTask -- this composition is exactly what the distributed
-// worker's pipelined submit-then-collect flow relies on.
+// submitQuantumTask / collectQuantumResult (real Device, live QDMI driver)
+// The composition the distributed worker's pipelined submit-then-collect flow
+// relies on.
 // ===========================================================================
-class SubmitAndCollectQuantumTaskTest : public ::testing::Test {
-protected:
-  mqss::submitter::Submitter submitter = mqss::submitter::Submitter(
-      "qdmi_example_driver", "C++ Device with 5 qubits",
-      "C++ Device with 5 qubits", "example_token");
+using SubmitAndCollectQuantumTaskTest = DeviceFixture;
 
-  mqss::QuantumTask task;
-
-  void SetUp() override {
-    task = makeTask();
-    task.set_task_id(42);
-    task.set_result_destination("results-queue");
-    task.set_scheduled_qpu("qdmi_example_driver");
-  }
-};
-
-TEST_F(SubmitAndCollectQuantumTaskTest, ValidTaskWithValidSubmitter) {
-  auto jobId = mqss::qrmci::submitQuantumTask(task, submitter);
-  ASSERT_TRUE(jobId.has_value());
-  auto result = mqss::qrmci::collectQuantumResult(task, *jobId, submitter);
-  ASSERT_TRUE(result.has_value());
+TEST_F(SubmitAndCollectQuantumTaskTest, ValidTaskWithValidDevice) {
+  auto jobs = submitQuantumTask(task, device());
+  ASSERT_TRUE(jobs.has_value()) << jobs.error().detail;
+  auto result = collectQuantumResult(task, *jobs, kWaitForever);
+  ASSERT_TRUE(result.has_value()) << result.error().detail;
   EXPECT_EQ(result->execution_status(), true);
 }
 
+TEST_F(SubmitAndCollectQuantumTaskTest, OneJobPerCircuitFile) {
+  // A Job carries exactly one payload, so a task with two circuit files
+  // becomes two Jobs -- in the files' own order.
+  task.add_circuit_files("OPENQASM 3.0;");
+  ASSERT_EQ(task.circuit_files().size(), 2);
+
+  auto jobs = submitQuantumTask(task, device());
+  ASSERT_TRUE(jobs.has_value()) << jobs.error().detail;
+  EXPECT_EQ(jobs->size(), 2U);
+}
+
 TEST_F(SubmitAndCollectQuantumTaskTest, ResultPreservesTaskId) {
-  auto jobId = mqss::qrmci::submitQuantumTask(task, submitter);
-  ASSERT_TRUE(jobId.has_value());
-  auto result = mqss::qrmci::collectQuantumResult(task, *jobId, submitter);
-  ASSERT_TRUE(result.has_value());
+  auto jobs = submitQuantumTask(task, device());
+  ASSERT_TRUE(jobs.has_value()) << jobs.error().detail;
+  auto result = collectQuantumResult(task, *jobs, kWaitForever);
+  ASSERT_TRUE(result.has_value()) << result.error().detail;
   EXPECT_EQ(result->task_id(), task.task_id());
 }
 
 TEST_F(SubmitAndCollectQuantumTaskTest, ResultPreservesDestination) {
-  auto jobId = mqss::qrmci::submitQuantumTask(task, submitter);
-  ASSERT_TRUE(jobId.has_value());
-  auto result = mqss::qrmci::collectQuantumResult(task, *jobId, submitter);
-  ASSERT_TRUE(result.has_value());
+  auto jobs = submitQuantumTask(task, device());
+  ASSERT_TRUE(jobs.has_value()) << jobs.error().detail;
+  auto result = collectQuantumResult(task, *jobs, kWaitForever);
+  ASSERT_TRUE(result.has_value()) << result.error().detail;
   EXPECT_EQ(result->destination(), task.result_destination());
 }
 
 TEST_F(SubmitAndCollectQuantumTaskTest, ResultPreservesExecutedQpu) {
-  auto jobId = mqss::qrmci::submitQuantumTask(task, submitter);
-  ASSERT_TRUE(jobId.has_value());
-  auto result = mqss::qrmci::collectQuantumResult(task, *jobId, submitter);
-  ASSERT_TRUE(result.has_value());
+  auto jobs = submitQuantumTask(task, device());
+  ASSERT_TRUE(jobs.has_value()) << jobs.error().detail;
+  auto result = collectQuantumResult(task, *jobs, kWaitForever);
+  ASSERT_TRUE(result.has_value()) << result.error().detail;
   EXPECT_EQ(result->executed_qpu(), task.scheduled_qpu());
 }
 
-TEST_F(SubmitAndCollectQuantumTaskTest, EmptyCircuitFilesWithValidSubmitter) {
+TEST_F(SubmitAndCollectQuantumTaskTest,
+       EmptyCircuitFilesIsRefusedBeforeTheDevice) {
   task.clear_circuit_files();
-  auto jobId = mqss::qrmci::submitQuantumTask(task, submitter);
-  EXPECT_FALSE(jobId.has_value());
-  EXPECT_EQ(jobId.error().kind, mqss::qrmci::Error::Kind::SubmissionFailed);
-  // Transient: the device refusing a job now says nothing about the next
-  // attempt, so the pipeline may requeue it.
-  EXPECT_TRUE(jobId.error().isRetryable());
+  auto jobs = submitQuantumTask(task, device());
+  ASSERT_FALSE(jobs.has_value());
+  EXPECT_EQ(jobs.error().kind, Error::Kind::SubmissionFailed);
 }
 
-TEST_F(SubmitAndCollectQuantumTaskTest, ZeroNumShotsWithValidSubmitter) {
+TEST_F(SubmitAndCollectQuantumTaskTest, ZeroNumShotsIsRefusedBeforeTheDevice) {
   task.set_n_shots(0);
-  auto jobId = mqss::qrmci::submitQuantumTask(task, submitter);
-  EXPECT_FALSE(jobId.has_value());
-  EXPECT_EQ(jobId.error().kind, mqss::qrmci::Error::Kind::SubmissionFailed);
+  auto jobs = submitQuantumTask(task, device());
+  ASSERT_FALSE(jobs.has_value());
+  EXPECT_EQ(jobs.error().kind, Error::Kind::SubmissionFailed);
 }
 
 TEST_F(SubmitAndCollectQuantumTaskTest,
        PipelinedSubmissionOfMultipleTasksBeforeCollecting) {
   // The distributed worker submits every ready job first, then collects
   // results afterward (pipelined batch submission), instead of blocking on
-  // each task's result before submitting the next. Two independent tasks
-  // must each get their own job ID, and both must still be collectible
-  // afterward.
-  mqss::QuantumTask secondTask = makeTask();
+  // each task's result before submitting the next. Two independent tasks must
+  // each get their own jobs, and both must still be collectible afterward.
+  mqss::QuantumTask secondTask = makeTask("OPENQASM 2.0;", 2, "qasm2");
   secondTask.set_task_id(43);
   secondTask.set_result_destination("results-queue");
   secondTask.set_scheduled_qpu("qdmi_example_driver");
 
-  auto firstJobId = mqss::qrmci::submitQuantumTask(task, submitter);
-  auto secondJobId = mqss::qrmci::submitQuantumTask(secondTask, submitter);
-  ASSERT_TRUE(firstJobId.has_value());
-  ASSERT_TRUE(secondJobId.has_value());
-  EXPECT_NE(*firstJobId, *secondJobId);
+  auto firstJobs = submitQuantumTask(task, device());
+  auto secondJobs = submitQuantumTask(secondTask, device());
+  ASSERT_TRUE(firstJobs.has_value()) << firstJobs.error().detail;
+  ASSERT_TRUE(secondJobs.has_value()) << secondJobs.error().detail;
 
-  auto firstResult =
-      mqss::qrmci::collectQuantumResult(task, *firstJobId, submitter);
+  auto firstResult = collectQuantumResult(task, *firstJobs, kWaitForever);
   auto secondResult =
-      mqss::qrmci::collectQuantumResult(secondTask, *secondJobId, submitter);
-  ASSERT_TRUE(firstResult.has_value());
-  ASSERT_TRUE(secondResult.has_value());
+      collectQuantumResult(secondTask, *secondJobs, kWaitForever);
+  ASSERT_TRUE(firstResult.has_value()) << firstResult.error().detail;
+  ASSERT_TRUE(secondResult.has_value()) << secondResult.error().detail;
   EXPECT_EQ(firstResult->task_id(), task.task_id());
   EXPECT_EQ(secondResult->task_id(), secondTask.task_id());
 }
 
-TEST_F(SubmitAndCollectQuantumTaskTest, NoResultFoundForUnsubmittedJobId) {
-  // No submission ever happened for this ID, so getJobResultHistogram() must
-  // report nullopt -- this is the "never submitted" half of the comment on
-  // collectQuantumResult's Internal error.
-  auto result =
-      mqss::qrmci::collectQuantumResult(task, /*jobId=*/99999U, submitter);
+TEST_F(SubmitAndCollectQuantumTaskTest, NoJobsIsADeviceError) {
+  // Nothing was submitted, so the histogram is empty while the task still
+  // names a circuit file. buildQuantumResult's cardinality-mismatch check
+  // covers it.
+  std::vector<mqss::submitter::Job> none;
+  auto result = collectQuantumResult(task, none, kWaitForever);
   ASSERT_FALSE(result.has_value());
-  // A job ID with no result is an invariant violation, not something a retry
-  // can fix.
-  EXPECT_EQ(result.error().kind, mqss::qrmci::Error::Kind::Internal);
-  EXPECT_FALSE(result.error().isRetryable());
-  EXPECT_NE(result.error().detail.find("no result found for job"),
-            std::string::npos);
-}
-
-TEST_F(SubmitAndCollectQuantumTaskTest,
-       NoResultFoundOnSecondCollectionOfSameJobId) {
-  // Submitter::getJobResultHistogram() erases a job from activeJobs once
-  // retrieved, so collecting the same job ID a second time is the "already
-  // retrieved" half of the same comment.
-  auto jobId = mqss::qrmci::submitQuantumTask(task, submitter);
-  ASSERT_TRUE(jobId.has_value());
-  auto first = mqss::qrmci::collectQuantumResult(task, *jobId, submitter);
-  ASSERT_TRUE(first.has_value());
-
-  auto second = mqss::qrmci::collectQuantumResult(task, *jobId, submitter);
-  ASSERT_FALSE(second.has_value());
-  EXPECT_EQ(second.error().kind, mqss::qrmci::Error::Kind::Internal);
-  EXPECT_FALSE(second.error().isRetryable());
-  EXPECT_NE(second.error().detail.find("no result found for job"),
-            std::string::npos);
+  EXPECT_EQ(result.error().kind, Error::Kind::DeviceError);
 }
 
 // ===========================================================================
-// buildQuantumResult (direct, no submitter)
+// Interruptible overloads (real Device, live QDMI driver): the flag is
+// consulted before any device work, so a pre-set flag proves the shutdown
+// path is taken instead of racing a real device/job to prove it mid-flight --
+// the same "pre-set flag" style TestCommunicationHandler.cpp's own
+// termination-flag tests use for the same reason.
 // ===========================================================================
-TEST(BuildQuantumResultTest, DeviceErrorWhenEveryHistogramEntryIsNullopt) {
+using InterruptibleRunnersTest = DeviceFixture;
+
+TEST_F(InterruptibleRunnersTest,
+       SubmitQuantumTaskReturnsShutdownRequestedWhenFlagIsPreSet) {
+  const std::atomic<bool> terminationFlag{true};
+  auto jobs = submitQuantumTask(task, device(), terminationFlag);
+  ASSERT_FALSE(jobs.has_value());
+  EXPECT_EQ(jobs.error().kind, Error::Kind::ShutdownRequested);
+}
+
+TEST_F(InterruptibleRunnersTest,
+       CollectQuantumResultReturnsShutdownRequestedWhenFlagIsPreSet) {
+  auto jobs = submitQuantumTask(task, device());
+  ASSERT_TRUE(jobs.has_value()) << jobs.error().detail;
+
+  const std::atomic<bool> terminationFlag{true};
+  auto result =
+      collectQuantumResult(task, *jobs, kWaitForever, terminationFlag);
+  ASSERT_FALSE(result.has_value());
+  EXPECT_EQ(result.error().kind, Error::Kind::ShutdownRequested);
+}
+
+TEST_F(InterruptibleRunnersTest,
+       ExecuteQuantumTaskReturnsShutdownRequestedWhenFlagIsPreSet) {
+  const std::atomic<bool> terminationFlag{true};
+  auto result =
+      executeQuantumTask(task, device(), kWaitForever, terminationFlag);
+  ASSERT_FALSE(result.has_value());
+  EXPECT_EQ(result.error().kind, Error::Kind::ShutdownRequested);
+}
+
+TEST_F(InterruptibleRunnersTest,
+       ExecuteQuantumTaskWithAnUnsetFlagStillSucceeds) {
+  // Pins the interruptible overload's happy path to the same behavior as the
+  // uninterruptible one, since the latter is now implemented in terms of it.
+  const std::atomic<bool> terminationFlag{false};
+  auto result =
+      executeQuantumTask(task, device(), kWaitForever, terminationFlag);
+  ASSERT_TRUE(result.has_value()) << result.error().detail;
+  EXPECT_TRUE(result->execution_status());
+}
+
+// ===========================================================================
+// executeQuantumTask (real Device) for every circuit type
+// mapTaskCircuitTypeToCircuitFormat resolves to a CircuitFormat the real
+// example driver actually advertises as supported -- confirms the mapping's
+// translation reaches the device successfully rather than merely
+// type-checking against ConstantsMapping.cpp's own table in isolation.
+// ===========================================================================
+class SupportedCircuitTypeTest
+    : public DeviceFixture,
+      public ::testing::WithParamInterface<std::string> {};
+
+TEST_P(SupportedCircuitTypeTest, SubmitsAndExecutesSuccessfully) {
+  task = makeTask("OPENQASM 2.0;", 2, GetParam());
+  task.set_task_id(42);
+  task.set_result_destination("results-queue");
+  task.set_scheduled_qpu("qdmi_example_driver");
+
+  auto result = executeQuantumTask(task, device(), kWaitForever);
+  ASSERT_TRUE(result.has_value()) << result.error().detail;
+  EXPECT_TRUE(result->execution_status());
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    CircuitTypes, SupportedCircuitTypeTest,
+    // "qasm2" maps directly to CIRCUIT_FORMAT_QASM2 (device-supported); "qir"
+    // maps to the abstract CIRCUIT_FORMAT_QIR marker, which
+    // mapTaskCircuitTypeToCircuitFormat resolves to the concrete
+    // CIRCUIT_FORMAT_QIRBASESTRING (also device-supported) rather than
+    // forwarding the marker itself.
+    ::testing::Values("qasm2", "qir"),
+    [](const ::testing::TestParamInfo<std::string> &info) {
+      return info.param;
+    });
+
+// ===========================================================================
+// buildQuantumResult (direct, no device)
+// ===========================================================================
+TEST(BuildQuantumResultTest, DeviceErrorWhenTheOnlyHistogramEntryIsNullopt) {
   mqss::QuantumTask task = makeTask();
   task.set_task_id(42);
   task.set_result_destination("results-queue");
   task.set_scheduled_qpu("fake-device");
 
-  const std::vector<std::optional<std::map<std::string, size_t>>> histogram{
+  const std::vector<std::optional<mqss::submitter::Counts>> histogram{
       std::nullopt};
-  auto result = mqss::qrmci::buildQuantumResult(task, histogram);
+  auto result = buildQuantumResult(task, histogram);
   ASSERT_FALSE(result.has_value());
-  // The device took the job and returned nothing usable -- transient, so
-  // this one may be retried.
-  EXPECT_EQ(result.error().kind, mqss::qrmci::Error::Kind::DeviceError);
-  EXPECT_TRUE(result.error().isRetryable());
-  EXPECT_NE(result.error().detail.find("No valid results"), std::string::npos);
+  // The device took the job and returned nothing usable.
+  EXPECT_EQ(result.error().kind, Error::Kind::DeviceError);
+  EXPECT_NE(result.error().detail.find("circuit 0"), std::string::npos);
 }
 
 TEST(BuildQuantumResultTest, SingleCircuitWithCountsProducesOneResultEntry) {
@@ -270,10 +351,10 @@ TEST(BuildQuantumResultTest, SingleCircuitWithCountsProducesOneResultEntry) {
   task.set_result_destination("results-queue");
   task.set_scheduled_qpu("alpha");
 
-  const std::vector<std::optional<std::map<std::string, size_t>>> histogram{
-      std::map<std::string, size_t>{{"00", 6}, {"11", 4}}};
-  auto result = mqss::qrmci::buildQuantumResult(task, histogram);
-  ASSERT_TRUE(result.has_value());
+  const std::vector<std::optional<mqss::submitter::Counts>> histogram{
+      mqss::submitter::Counts{{"00", 6}, {"11", 4}}};
+  auto result = buildQuantumResult(task, histogram);
+  ASSERT_TRUE(result.has_value()) << result.error().detail;
   EXPECT_TRUE(result->execution_status());
   ASSERT_EQ(result->results_size(), 1);
   const auto &counts = result->results(0).counts();
@@ -282,24 +363,87 @@ TEST(BuildQuantumResultTest, SingleCircuitWithCountsProducesOneResultEntry) {
   EXPECT_EQ(counts.at("11"), 4);
 }
 
-TEST(BuildQuantumResultTest,
-     MixedHistogramOnlyEmitsEntriesForSucceededCircuits) {
-  // One circuit produced counts, the other produced nothing; the overall
-  // result must still be marked successful (any real result is enough), and
-  // only the succeeding circuit's counts are carried through -- this pins
-  // the current skip-on-nullopt behavior so a change to it (e.g. an
-  // "index-alignment fix" that emits an empty entry for the nullopt one
-  // instead) is a deliberate, visible decision rather than an accident.
+TEST(BuildQuantumResultTest, MixedHistogramFailsWithTheMissingCircuitIndex) {
+  // One circuit produced counts, the other produced nothing. Cardinality must
+  // be preserved rather than silently collapsed, so a missing entry is a
+  // DeviceError naming the circuit it belongs to, not a partial success.
   mqss::QuantumTask task = makeTask();
+  task.add_circuit_files("OPENQASM 3.0;");
   task.set_task_id(8);
 
-  const std::vector<std::optional<std::map<std::string, size_t>>> histogram{
-      std::map<std::string, size_t>{{"0", 10}}, std::nullopt};
-  auto result = mqss::qrmci::buildQuantumResult(task, histogram);
-  ASSERT_TRUE(result.has_value());
-  EXPECT_TRUE(result->execution_status());
-  ASSERT_EQ(result->results_size(), 1);
+  const std::vector<std::optional<mqss::submitter::Counts>> histogram{
+      mqss::submitter::Counts{{"0", 10}}, std::nullopt};
+  auto result = buildQuantumResult(task, histogram);
+  ASSERT_FALSE(result.has_value());
+  EXPECT_EQ(result.error().kind, Error::Kind::DeviceError);
+  EXPECT_NE(result.error().detail.find("circuit 1"), std::string::npos);
+}
+
+TEST(BuildQuantumResultTest, ShorterHistogramThanCircuitCountFails) {
+  mqss::QuantumTask task = makeTask();
+  task.add_circuit_files("OPENQASM 3.0;");
+  ASSERT_EQ(task.circuit_files_size(), 2);
+
+  const std::vector<std::optional<mqss::submitter::Counts>> histogram{
+      mqss::submitter::Counts{{"0", 10}}};
+  auto result = buildQuantumResult(task, histogram);
+  ASSERT_FALSE(result.has_value());
+  EXPECT_EQ(result.error().kind, Error::Kind::DeviceError);
+}
+
+TEST(BuildQuantumResultTest, LongerHistogramThanCircuitCountFails) {
+  mqss::QuantumTask task = makeTask();
+  ASSERT_EQ(task.circuit_files_size(), 1);
+
+  const std::vector<std::optional<mqss::submitter::Counts>> histogram{
+      mqss::submitter::Counts{{"0", 10}}, mqss::submitter::Counts{{"1", 5}}};
+  auto result = buildQuantumResult(task, histogram);
+  ASSERT_FALSE(result.has_value());
+  EXPECT_EQ(result.error().kind, Error::Kind::DeviceError);
+}
+
+TEST(BuildQuantumResultTest,
+     ExactCardinalityWithAllCountsProducesOneEntryPerCircuit) {
+  mqss::QuantumTask task = makeTask();
+  task.add_circuit_files("OPENQASM 3.0;");
+  task.set_task_id(9);
+
+  const std::vector<std::optional<mqss::submitter::Counts>> histogram{
+      mqss::submitter::Counts{{"0", 10}}, mqss::submitter::Counts{{"1", 5}}};
+  auto result = buildQuantumResult(task, histogram);
+  ASSERT_TRUE(result.has_value()) << result.error().detail;
+  ASSERT_EQ(result->results_size(), 2);
   EXPECT_EQ(result->results(0).counts().at("0"), 10);
+  EXPECT_EQ(result->results(1).counts().at("1"), 5);
+}
+
+TEST(BuildQuantumResultTest, CountAtInt32MaxSucceeds) {
+  mqss::QuantumTask task = makeTask();
+
+  const std::uint64_t maxInt32Count =
+      static_cast<std::uint64_t>(std::numeric_limits<std::int32_t>::max());
+  const std::vector<std::optional<mqss::submitter::Counts>> histogram{
+      mqss::submitter::Counts{{"0", maxInt32Count}}};
+  auto result = buildQuantumResult(task, histogram);
+  ASSERT_TRUE(result.has_value()) << result.error().detail;
+  EXPECT_EQ(result->results(0).counts().at("0"),
+            std::numeric_limits<std::int32_t>::max());
+}
+
+TEST(BuildQuantumResultTest,
+     CountAboveInt32MaxFailsWithTheBitstringAndValueInDetail) {
+  mqss::QuantumTask task = makeTask();
+
+  const std::uint64_t overflowingCount =
+      static_cast<std::uint64_t>(std::numeric_limits<std::int32_t>::max()) + 1;
+  const std::vector<std::optional<mqss::submitter::Counts>> histogram{
+      mqss::submitter::Counts{{"1010", overflowingCount}}};
+  auto result = buildQuantumResult(task, histogram);
+  ASSERT_FALSE(result.has_value());
+  EXPECT_EQ(result.error().kind, Error::Kind::DeviceError);
+  EXPECT_NE(result.error().detail.find("1010"), std::string::npos);
+  EXPECT_NE(result.error().detail.find(std::to_string(overflowingCount)),
+            std::string::npos);
 }
 
 // ===========================================================================
@@ -319,33 +463,33 @@ protected:
 
 TEST_F(CancelQuantumTaskTest, ValidReasonReturnsCancelledResult) {
   const std::string reason = "User requested cancellation";
-  auto result = mqss::qrmci::cancelQuantumTask(task, reason);
+  auto result = cancelQuantumTask(task, reason);
   EXPECT_EQ(result.execution_status(), false);
 }
 
 TEST_F(CancelQuantumTaskTest, ValidReasonResultContainsReason) {
   const std::string reason = "Timeout exceeded";
-  auto result = mqss::qrmci::cancelQuantumTask(task, reason);
+  auto result = cancelQuantumTask(task, reason);
   EXPECT_NE(result.additional_information().find(reason), std::string::npos);
 }
 
 TEST_F(CancelQuantumTaskTest, EmptyReasonStillReturnsCancelledStatus) {
-  auto result = mqss::qrmci::cancelQuantumTask(task, "");
+  auto result = cancelQuantumTask(task, "");
   EXPECT_EQ(result.execution_status(), false);
 }
 
 TEST_F(CancelQuantumTaskTest, PreservesTaskId) {
-  auto result = mqss::qrmci::cancelQuantumTask(task, "some reason");
+  auto result = cancelQuantumTask(task, "some reason");
   EXPECT_EQ(result.task_id(), task.task_id());
 }
 
 TEST_F(CancelQuantumTaskTest, PreservesDestination) {
-  auto result = mqss::qrmci::cancelQuantumTask(task, "some reason");
+  auto result = cancelQuantumTask(task, "some reason");
   EXPECT_EQ(result.destination(), task.result_destination());
 }
 
 TEST_F(CancelQuantumTaskTest, PreservesExecutedQpu) {
-  auto result = mqss::qrmci::cancelQuantumTask(task, "some reason");
+  auto result = cancelQuantumTask(task, "some reason");
   EXPECT_EQ(result.executed_qpu(), task.scheduled_qpu());
 }
 

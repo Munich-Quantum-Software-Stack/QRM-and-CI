@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Creates the QRM dev container from qrmci-dev-image, mounting the repo
+# Creates the QRM&CI dev container from qrmci-dev-image, mounting the repo
 # root (host) at /workspace (container).
 set -eo pipefail
 

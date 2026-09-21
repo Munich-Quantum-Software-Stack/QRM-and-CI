@@ -7,7 +7,6 @@
 
 #include "BackendWrapperTestBuilder.h"
 #include "RunnersTestHelpers.h"
-#include "Submitter.h"
 #include "mqss/Protocol.hpp"
 #include "qrmci/BackendWrapper.h"
 #include "qrmci/Error.h"
@@ -129,8 +128,7 @@ TEST_F(BackendWrapperFromProtoTest, SupportedCircuitFormatsMatch) {
 }
 
 TEST_F(BackendWrapperFromProtoTest, ConstructFromEmptyBackendMatches) {
-  mqss::Backend empty;
-  BackendWrapper bw(empty);
+  const auto bw = BackendBuilder().build();
   EXPECT_TRUE(bw.getName().empty());
   EXPECT_EQ(bw.getNumQubits(), 0U);
   EXPECT_EQ(bw.getStatus(), mqss::BackendStatus::BACKEND_STATUS_UNSPECIFIED);
@@ -162,7 +160,64 @@ TEST_F(BackendWrapperFromProtoTest, OutOfRangeWireFormatIsNotCompatible) {
                       .status(mqss::BackendStatus::BACKEND_STATUS_IDLE)
                       .rawSupportedCircuitFormat(9999)
                       .build();
-  EXPECT_FALSE(bw.canRun(makeTask()));
+  auto task = makeTask();
+  task.set_no_modify(true);
+  EXPECT_FALSE(bw.canRun(task));
+}
+
+// ===========================================================================
+// BackendWrapperFromPublishedStatusTest
+// ===========================================================================
+class BackendWrapperFromPublishedStatusTest : public ::testing::Test {};
+
+TEST_F(BackendWrapperFromPublishedStatusTest, EmptyNameIsRejected) {
+  const auto backend = BackendBuilder().queueName("queue").proto();
+  auto result = BackendWrapper::fromPublishedStatus(backend);
+  ASSERT_FALSE(result.has_value());
+  EXPECT_EQ(result.error().kind, mqss::qrmci::Error::Kind::MessagingFailed);
+}
+
+TEST_F(BackendWrapperFromPublishedStatusTest, EmptyQueueNameIsRejected) {
+  const auto backend = BackendBuilder().name("alpha").proto();
+  auto result = BackendWrapper::fromPublishedStatus(backend);
+  ASSERT_FALSE(result.has_value());
+  EXPECT_EQ(result.error().kind, mqss::qrmci::Error::Kind::MessagingFailed);
+}
+
+TEST_F(BackendWrapperFromPublishedStatusTest, ValidStatusIsAccepted) {
+  const auto backend =
+      BackendBuilder().name("alpha").queueName("alpha-queue").proto();
+  auto result = BackendWrapper::fromPublishedStatus(backend);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(result->getName(), "alpha");
+  EXPECT_EQ(result->getQueueName(), "alpha-queue");
+}
+
+TEST_F(BackendWrapperFromPublishedStatusTest,
+       UnknownWireTypeNormalizesToUnspecified) {
+  const auto backend = BackendBuilder()
+                           .name("alpha")
+                           .queueName("alpha-queue")
+                           .rawType(9999)
+                           .proto();
+  auto result = BackendWrapper::fromPublishedStatus(backend);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(result->toBackend().type(),
+            mqss::BackendType::BACKEND_TYPE_UNSPECIFIED);
+}
+
+TEST_F(BackendWrapperFromPublishedStatusTest,
+       UnknownWireStatusNormalizesToUnspecifiedAndOffline) {
+  const auto backend = BackendBuilder()
+                           .name("alpha")
+                           .queueName("alpha-queue")
+                           .rawStatus(9999)
+                           .proto();
+  auto result = BackendWrapper::fromPublishedStatus(backend);
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(result->getStatus(),
+            mqss::BackendStatus::BACKEND_STATUS_UNSPECIFIED);
+  EXPECT_FALSE(result->isOnline());
 }
 
 // ===========================================================================
@@ -266,11 +321,17 @@ protected:
 };
 
 TEST_F(BackendWrapperCanRunTest, MatchingFormatAndQubitsCanRun) {
-  EXPECT_TRUE(backend.canRun(makeTask("OPENQASM 3.0;", 5, "qasm3")));
+  // Direct (no-modify) submission: "qasm3" maps straight to
+  // CIRCUIT_FORMAT_QASM3, which the fixture backend supports.
+  auto task = makeTask("OPENQASM 3.0;", 5, "qasm3");
+  task.set_no_modify(true);
+  EXPECT_TRUE(backend.canRun(task));
 }
 
 TEST_F(BackendWrapperCanRunTest, TooManyQubitsCannotRun) {
-  EXPECT_FALSE(backend.canRun(makeTask("OPENQASM 3.0;", 6, "qasm3")));
+  auto task = makeTask("OPENQASM 3.0;", 6, "qasm3");
+  task.set_no_modify(true);
+  EXPECT_FALSE(backend.canRun(task));
 }
 
 TEST_F(BackendWrapperCanRunTest, NegativeQubitCountCannotRun) {
@@ -282,65 +343,128 @@ TEST_F(BackendWrapperCanRunTest, NegativeQubitCountCannotRun) {
 }
 
 TEST_F(BackendWrapperCanRunTest, UnsupportedCircuitTypeCannotRun) {
-  EXPECT_FALSE(backend.canRun(makeTask("OPENQASM 2.0;", 2, "qasm2")));
+  // Direct submission of "qasm2" needs CIRCUIT_FORMAT_QASM2, which the
+  // fixture backend (QASM3 only) does not support.
+  auto task = makeTask("OPENQASM 2.0;", 2, "qasm2");
+  task.set_no_modify(true);
+  EXPECT_FALSE(backend.canRun(task));
 }
 
 TEST_F(BackendWrapperCanRunTest, UnknownCircuitTypeCannotRun) {
   EXPECT_FALSE(backend.canRun(makeTask("something", 2, "not-a-format")));
 }
 
-TEST_F(BackendWrapperCanRunTest, AnyMatchingFormatIsEnough) {
-  // "qir" maps to five circuit formats; a backend supporting just one of
-  // them can still run the task.
-  const auto qirBackend =
+TEST_F(BackendWrapperCanRunTest, NoModifyFalseWithNonCompilerInputCannotRun) {
+  // "qasm3" has no compiler input mapping, so with no_modify left at its
+  // default (false) admission must fail here rather than succeeding and
+  // failing later at compilation -- even though the backend does support
+  // CIRCUIT_FORMAT_QASM3 directly.
+  EXPECT_FALSE(backend.canRun(makeTask("OPENQASM 3.0;", 5, "qasm3")));
+}
+
+TEST_F(BackendWrapperCanRunTest, CompilableInputWithCompilerTargetCanRun) {
+  // "quake" is a compiler input; a backend offering CIRCUIT_FORMAT_QASM2
+  // gives the compiler a target to compile it for.
+  const auto compilableBackend =
+      makeBackend("compilable", 5, mqss::BackendStatus::BACKEND_STATUS_IDLE,
+                  {mqss::CircuitFormat::CIRCUIT_FORMAT_QASM2});
+  EXPECT_TRUE(compilableBackend.canRun(makeTask("circuit", 2, "quake")));
+}
+
+TEST_F(BackendWrapperCanRunTest,
+       CompilableInputWithoutCompilerTargetCannotRun) {
+  // The backend only offers formats the compiler cannot emit, so there is no
+  // compiler target to compile "quake" for.
+  const auto uncompilableBackend =
+      makeBackend("uncompilable", 5, mqss::BackendStatus::BACKEND_STATUS_IDLE,
+                  {mqss::CircuitFormat::CIRCUIT_FORMAT_QASM3});
+  EXPECT_FALSE(uncompilableBackend.canRun(makeTask("circuit", 2, "quake")));
+}
+
+TEST_F(BackendWrapperCanRunTest, ExactDirectFormatIsRequired) {
+  // Previously a task with circuit type "qir" could run on a backend
+  // supporting any one of five distinct circuit formats. The policy is now
+  // deterministic: "qir" resolves to exactly CIRCUIT_FORMAT_QIRBASESTRING,
+  // so a backend supporting only a different QIR variant is not a match.
+  const auto qirAdaptiveModuleOnly =
       makeBackend("qir-backend", 5, mqss::BackendStatus::BACKEND_STATUS_IDLE,
                   {mqss::CircuitFormat::CIRCUIT_FORMAT_QASM3,
                    mqss::CircuitFormat::CIRCUIT_FORMAT_QIRADAPTIVEMODULE});
-  EXPECT_TRUE(qirBackend.canRun(makeTask("circuit", 2, "qir")));
+  auto task = makeTask("circuit", 2, "qir");
+  task.set_no_modify(true);
+  EXPECT_FALSE(qirAdaptiveModuleOnly.canRun(task));
+
+  const auto qirBaseString =
+      makeBackend("qir-backend-2", 5, mqss::BackendStatus::BACKEND_STATUS_IDLE,
+                  {mqss::CircuitFormat::CIRCUIT_FORMAT_QIRBASESTRING});
+  EXPECT_TRUE(qirBaseString.canRun(task));
+}
+
+TEST_F(BackendWrapperCanRunTest, EmptyRestrictionListIsUnrestricted) {
+  auto task = makeTask("OPENQASM 3.0;", 5, "qasm3");
+  task.set_no_modify(true);
+  ASSERT_TRUE(task.restricted_resource_names().empty());
+  EXPECT_TRUE(backend.canRun(task));
+}
+
+TEST_F(BackendWrapperCanRunTest, NameInRestrictionListCanRun) {
+  auto task = makeTask("OPENQASM 3.0;", 5, "qasm3");
+  task.set_no_modify(true);
+  task.add_restricted_resource_names("alpha");
+  task.add_restricted_resource_names("beta");
+  EXPECT_TRUE(backend.canRun(task));
+}
+
+TEST_F(BackendWrapperCanRunTest, NameOutsideRestrictionListCannotRun) {
+  auto task = makeTask("OPENQASM 3.0;", 5, "qasm3");
+  task.set_no_modify(true);
+  task.add_restricted_resource_names("beta");
+  task.add_restricted_resource_names("gamma");
+  EXPECT_FALSE(backend.canRun(task));
 }
 
 // ===========================================================================
-// BackendWrapperCompilerResultFormatTest
+// BackendWrapperCompilerTargetTest
 // ===========================================================================
-class BackendWrapperCompilerResultFormatTest : public ::testing::Test {};
+class BackendWrapperCompilerTargetTest : public ::testing::Test {};
 
-TEST_F(BackendWrapperCompilerResultFormatTest, MappedFormatIsReturned) {
+TEST_F(BackendWrapperCompilerTargetTest, MappedFormatIsReturned) {
   const auto backend =
       makeBackend("alpha", 5, mqss::BackendStatus::BACKEND_STATUS_IDLE,
                   {mqss::CircuitFormat::CIRCUIT_FORMAT_QIRBASESTRING});
-  const auto resultFormat = backend.compilerResultFormat();
-  ASSERT_TRUE(resultFormat.has_value());
-  EXPECT_EQ(*resultFormat, mqss::mqssci::ResultFormat::QIRBASE);
+  const auto target = backend.compilerTarget();
+  ASSERT_TRUE(target.has_value());
+  EXPECT_EQ(target->compilerFormat, mqss::mqssci::ResultFormat::QIRBASE);
+  EXPECT_EQ(target->circuitFormat,
+            mqss::CircuitFormat::CIRCUIT_FORMAT_QIRBASESTRING);
+  EXPECT_EQ(target->taskCircuitType, "qirbase");
 }
 
-TEST_F(BackendWrapperCompilerResultFormatTest, FirstMappedFormatWins) {
-  // QASM3 has no result-format mapping, so the scan must skip it and take
-  // the next format the compiler can actually emit.
+TEST_F(BackendWrapperCompilerTargetTest, PriorityOrderWinsOverFormatOrder) {
+  // QASM3 has no compiler target, so the fixed priority order must skip it
+  // and pick QASM2 -- the backend's own format list order is irrelevant.
   const auto backend =
       makeBackend("alpha", 5, mqss::BackendStatus::BACKEND_STATUS_IDLE,
                   {mqss::CircuitFormat::CIRCUIT_FORMAT_QASM3,
                    mqss::CircuitFormat::CIRCUIT_FORMAT_QASM2});
-  const auto resultFormat = backend.compilerResultFormat();
-  ASSERT_TRUE(resultFormat.has_value());
-  EXPECT_EQ(*resultFormat, mqss::mqssci::ResultFormat::OPENQASM2);
+  const auto target = backend.compilerTarget();
+  ASSERT_TRUE(target.has_value());
+  EXPECT_EQ(target->compilerFormat, mqss::mqssci::ResultFormat::OPENQASM2);
 }
 
-TEST_F(BackendWrapperCompilerResultFormatTest, NoMappedFormatFails) {
+TEST_F(BackendWrapperCompilerTargetTest, NoMappedFormatFails) {
   const auto backend =
       makeBackend("alpha", 5, mqss::BackendStatus::BACKEND_STATUS_IDLE,
                   {mqss::CircuitFormat::CIRCUIT_FORMAT_QASM3});
-  const auto resultFormat = backend.compilerResultFormat();
-  ASSERT_FALSE(resultFormat.has_value());
-  // No format this backend supports can ever be emitted by the compiler, so
-  // the failure is permanent rather than something to retry.
-  EXPECT_EQ(resultFormat.error().kind,
-            mqss::qrmci::Error::Kind::UnsupportedFormat);
-  EXPECT_FALSE(resultFormat.error().isRetryable());
-  EXPECT_FALSE(resultFormat.error().detail.empty());
+  const auto target = backend.compilerTarget();
+  ASSERT_FALSE(target.has_value());
+  // No format this backend supports can ever be emitted by the compiler.
+  EXPECT_EQ(target.error().kind, mqss::qrmci::Error::Kind::UnsupportedFormat);
+  EXPECT_FALSE(target.error().detail.empty());
 }
 
-TEST_F(BackendWrapperCompilerResultFormatTest, NoFormatsAtAllFails) {
-  EXPECT_FALSE(BackendWrapper().compilerResultFormat().has_value());
+TEST_F(BackendWrapperCompilerTargetTest, NoFormatsAtAllFails) {
+  EXPECT_FALSE(BackendWrapper().compilerTarget().has_value());
 }
 
 // ===========================================================================
@@ -397,87 +521,6 @@ TEST_F(BackendWrapperCopyMoveTest, MoveAssignmentNamePreserved) {
   BackendWrapper moved;
   moved = std::move(src);
   EXPECT_EQ(moved.getName(), expectedName);
-}
-
-// ===========================================================================
-// BackendWrapperFromSubmitterTest
-// Exercises the Submitter-based constructor end-to-end against the real
-// example QDMI driver. The QDMI_Device_Status -> BackendStatus and
-// QDMI_Program_Format -> CircuitFormat mapping themselves (mapBackendStatus /
-// mapCircuitFormat) are unit-tested directly, without a live driver, in
-// TestConstantsMapping.cpp; this fixture instead confirms the constructor
-// wires a real device's values through correctly. Mirrors the fixture used by
-// TestRunnersTaskExecution, which requires the same QDMI_CONF /
-// LD_LIBRARY_PATH environment set up in CMakeLists.txt.
-// ===========================================================================
-class BackendWrapperFromSubmitterTest : public ::testing::Test {
-protected:
-  mqss::submitter::Submitter submitter = mqss::submitter::Submitter(
-      "qdmi_example_driver", "C++ Device with 5 qubits",
-      "C++ Device with 5 qubits", "example_token");
-};
-
-TEST_F(BackendWrapperFromSubmitterTest, NameMatchesDeviceID) {
-  BackendWrapper bw(submitter);
-  EXPECT_EQ(bw.getName(), "C++ Device with 5 qubits");
-}
-
-TEST_F(BackendWrapperFromSubmitterTest, NumQubitsMatchesDevice) {
-  BackendWrapper bw(submitter);
-  EXPECT_EQ(bw.getNumQubits(), 5U);
-}
-
-TEST_F(BackendWrapperFromSubmitterTest, StatusIsMappedToIdle) {
-  // The example device is online and ready to accept jobs, so
-  // mapBackendStatus() must translate its QDMI status into
-  // BACKEND_STATUS_IDLE rather than falling through to the UNSPECIFIED
-  // default case.
-  BackendWrapper bw(submitter);
-  EXPECT_EQ(bw.getStatus(), mqss::BackendStatus::BACKEND_STATUS_IDLE);
-  EXPECT_TRUE(bw.isOnline());
-}
-
-TEST_F(BackendWrapperFromSubmitterTest, InstructionsAreNotEmpty) {
-  BackendWrapper bw(submitter);
-  EXPECT_FALSE(bw.getInstructions().empty());
-}
-
-TEST_F(BackendWrapperFromSubmitterTest, SupportedCircuitFormatsAreMapped) {
-  // mapCircuitFormat() must translate every QDMI_Program_Format the device
-  // reports into a known, non-default mqss::CircuitFormat.
-  BackendWrapper bw(submitter);
-  ASSERT_FALSE(bw.getSupportedCircuitFormats().empty());
-  for (const auto &format : bw.getSupportedCircuitFormats()) {
-    EXPECT_NE(format, mqss::CircuitFormat::CIRCUIT_FORMAT_UNSPECIFIED);
-  }
-}
-
-TEST_F(BackendWrapperFromSubmitterTest, RoundTripsThroughToBackend) {
-  // A worker publishes its live device this way, and the selector rebuilds
-  // it from the message; the two views must agree.
-  BackendWrapper bw(submitter);
-  const BackendWrapper republished(bw.toBackend());
-  EXPECT_EQ(republished.getName(), bw.getName());
-  EXPECT_EQ(republished.getNumQubits(), bw.getNumQubits());
-  EXPECT_EQ(republished.getStatus(), bw.getStatus());
-  EXPECT_EQ(republished.getInstructions(), bw.getInstructions());
-  EXPECT_EQ(republished.getQubitConnectivity(), bw.getQubitConnectivity());
-  EXPECT_EQ(republished.getSupportedCircuitFormats(),
-            bw.getSupportedCircuitFormats());
-}
-
-TEST_F(BackendWrapperFromSubmitterTest, ConnectivityMatchesDevice) {
-  // RoundTripsThroughToBackend only compares a wrapper's connectivity to its
-  // own round-trip, so it can't catch a constructor that drops connectivity
-  // entirely; this compares directly against what the device itself reports.
-  BackendWrapper bw(submitter);
-  const auto devicePairs = submitter.getDeviceConnectivity();
-  std::vector<std::pair<std::uint32_t, std::uint32_t>> expected;
-  expected.reserve(devicePairs.size());
-  for (const auto &pair : devicePairs) {
-    expected.emplace_back(pair.first, pair.second);
-  }
-  EXPECT_EQ(bw.getQubitConnectivity(), expected);
 }
 
 } // namespace mqss::qrmci::test

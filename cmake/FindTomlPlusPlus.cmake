@@ -8,5 +8,6 @@ include(FetchContent)
 FetchContent_Declare(
   tomlplusplus
   GIT_REPOSITORY https://github.com/marzer/tomlplusplus.git
-  GIT_TAG ${QRMCI_TOMLPLUSPLUS_GIT_TAG})
+  GIT_TAG ${QRMCI_TOMLPLUSPLUS_GIT_TAG}
+  SYSTEM)
 FetchContent_MakeAvailable(tomlplusplus)

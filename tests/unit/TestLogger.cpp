@@ -62,4 +62,31 @@ TEST(MakeLoggerTest, LogFileIsCreatedOnDisk) {
   std::filesystem::remove(path);
 }
 
+TEST(MakeLoggerTest, UnwritableLogFileFallsBackToConsoleOnly) {
+  auto logger = makeLogger("test-logger", "/dev/null/logs/daemon.log");
+  ASSERT_NE(logger, nullptr);
+  EXPECT_EQ(logger->sinks().size(), 1U);
+}
+
+TEST(MakeLoggerTest, ExistingLogContentSurvivesANewLogger) {
+  const auto path =
+      std::filesystem::temp_directory_path() / "qrmci-append-test.log";
+  std::filesystem::remove(path);
+  {
+    std::ofstream seed(path);
+    seed << "PRIOR RUN\n";
+  }
+  auto logger = makeLogger("test-logger", path.string());
+  logger->info("current run");
+  logger->flush();
+
+  std::ifstream f(path);
+  const std::string contents((std::istreambuf_iterator<char>(f)),
+                             std::istreambuf_iterator<char>());
+  EXPECT_NE(contents.find("PRIOR RUN"), std::string::npos);
+  EXPECT_NE(contents.find("current run"), std::string::npos);
+
+  std::filesystem::remove(path);
+}
+
 } // namespace mqss::qrmci::test

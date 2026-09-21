@@ -21,36 +21,43 @@ namespace mqss::qrmci {
 /// @brief A failure reported by a QRM&CI operation: a kind the caller can
 ///        act on, plus a human-readable detail for logs and result messages.
 ///
-/// Failures used to travel as a bare std::string, which put every
-/// categorically different failure -- a backend that is merely not up yet, a
-/// circuit format that will never be accepted, a violated invariant -- into
-/// the same shape, and left a caller wanting to requeue rather than reject
-/// with nothing to match on but the wording. The kind states that outright;
-/// the detail stays for the log line and the cancellation message.
+/// Categorically different failures -- a backend that is merely not up yet, a
+/// circuit format that will never be accepted, a violated invariant -- need
+/// different responses, and the wording of a message is no basis for telling
+/// them apart. The kind states the category outright; the detail carries the
+/// specifics for the log line and the cancellation message.
 struct Error {
   /// @brief What kind of failure occurred. This, not the wording of
   ///        @ref detail, is what callers dispatch on.
   enum class Kind : std::uint8_t {
-    /// No registered backend can run the task. Transient: a backend may come
-    /// online, or an existing one may free up.
+    /// No registered backend can run the task.
     NoBackendAvailable,
-    /// The circuit format is not one the compiler or the backend accepts.
-    /// Permanent, and the submitter's input is at fault.
+    /// The circuit format is not one the compiler or the backend accepts --
+    /// the submitter's input is at fault.
     UnsupportedFormat,
-    /// The compiler rejected the task's circuit. Permanent, user input.
+    /// The compiler rejected the task's circuit -- the submitter's input is
+    /// at fault.
     CompilationFailed,
-    /// The device refused the job at submission time. Transient.
+    /// The device refused the job at submission time.
     SubmissionFailed,
-    /// The device took the job but produced no usable result. Transient.
+    /// The device took the job but produced no usable result.
     DeviceError,
-    /// A messaging operation against the broker failed. Transient.
+    /// A messaging operation against the broker failed.
     MessagingFailed,
-    /// An invariant this process relies on was violated. Not retryable:
-    /// retrying re-runs the same broken path, so this is for a human to see.
+    /// An invariant this process relies on was violated, for a human to see.
     Internal,
     /// The configuration file exists but could not be parsed or failed
-    /// validation. Not retryable: a human has to fix the file.
+    /// validation. A human has to fix the file.
     ConfigError,
+    /// The QDMI driver could not be used: the driver library was not found or
+    /// would not load, the configured device does not exist, or the driver
+    /// speaks a QDMI version this build cannot -- every one of these is a
+    /// deployment fault.
+    DriverUnavailable,
+    /// Daemon shutdown was requested while an interruptible operation was in
+    /// progress. Not a fault of the task or the device -- the caller should
+    /// not send a result for it and should let its work loop exit instead.
+    ShutdownRequested,
   };
 
   /// @brief The kind of failure, for a caller deciding what to do next.
@@ -58,12 +65,6 @@ struct Error {
   /// @brief A human-readable description, for log lines and for the
   ///        cancellation message sent back to the task's submitter.
   std::string detail;
-
-  /// @brief Whether retrying the failed operation unchanged could succeed.
-  /// @return True for the transient kinds (NoBackendAvailable,
-  ///         SubmissionFailed, DeviceError and MessagingFailed), false for
-  ///         the permanent ones and for Internal.
-  [[nodiscard]] bool isRetryable() const noexcept;
 };
 
 /// @brief Name an error kind for a log line.

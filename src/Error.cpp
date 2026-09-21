@@ -9,25 +9,9 @@
 
 #include <string_view>
 
-bool mqss::qrmci::Error::isRetryable() const noexcept {
-  switch (kind) {
-  case Kind::NoBackendAvailable:
-  case Kind::SubmissionFailed:
-  case Kind::DeviceError:
-  case Kind::MessagingFailed:
-    return true;
-  case Kind::UnsupportedFormat:
-  case Kind::CompilationFailed:
-  case Kind::Internal:
-  case Kind::ConfigError:
-    return false;
-  }
-  // Only reachable through a value outside the enumeration; treating it as
-  // permanent keeps a corrupted kind from being requeued forever.
-  return false;
-}
+namespace mqss::qrmci {
 
-std::string_view mqss::qrmci::toString(Error::Kind kind) noexcept {
+std::string_view toString(Error::Kind kind) noexcept {
   switch (kind) {
   case Error::Kind::NoBackendAvailable:
     return "NoBackendAvailable";
@@ -45,6 +29,12 @@ std::string_view mqss::qrmci::toString(Error::Kind kind) noexcept {
     return "Internal";
   case Error::Kind::ConfigError:
     return "ConfigError";
+  case Error::Kind::DriverUnavailable:
+    return "DriverUnavailable";
+  case Error::Kind::ShutdownRequested:
+    return "ShutdownRequested";
   }
   return "Unknown";
 }
+
+} // namespace mqss::qrmci

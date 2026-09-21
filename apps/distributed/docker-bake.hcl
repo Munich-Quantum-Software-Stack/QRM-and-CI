@@ -19,7 +19,11 @@ variable "IMAGE_TAG_DISTRIBUTED" {
   default = "latest"
 }
 
-variable "SSH_KEY_PATH" {
+# Optional: a GitHub token (e.g. a fine-grained PAT with read access to the
+# Munich-Quantum-Software-Stack repositories) used to authenticate the builder
+# stage's FetchContent git clones over HTTPS. Only mounted as a secret when
+# set; without it the clones stay unauthenticated.
+variable "GITHUB_TOKEN" {
   default = ""
 }
 
@@ -30,7 +34,7 @@ group "default" {
 target "_common" {
   context    = "."
   dockerfile = "${DOCKERFILE_DISTRIBUTED}"
-  ssh        = ["default=${SSH_KEY_PATH}"]
+  secret     = GITHUB_TOKEN != "" ? ["id=github_token,env=GITHUB_TOKEN"] : []
 }
 
 target "selector" {

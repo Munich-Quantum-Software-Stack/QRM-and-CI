@@ -9,9 +9,35 @@ find_package(GTest REQUIRED)
 
 option(QRMCI_BUILD_UNIT_TESTS "Build unit tests" ON)
 option(QRMCI_BUILD_INTEGRATION_TESTS "Build integration tests" ON)
+option(
+  QRMCI_RUN_INTEGRATION_TESTS
+  "Register integration tests for ctest (requires a live QRM&CI deployment)"
+  OFF)
+
+# qdmi.conf gets its own target rather than a POST_BUILD step on one test,
+# because tests in both subdirectories need it: the QDMI-driven unit tests, and
+# the daemons the integration binaries spawn. Declared here, ahead of both
+# add_subdirectory() calls, so either one can depend on it whichever runs first.
+set(QRMCI_TEST_QDMI_CONF "${CMAKE_CURRENT_BINARY_DIR}/qdmi.conf")
+add_custom_command(
+  OUTPUT "${QRMCI_TEST_QDMI_CONF}"
+  COMMAND ${CMAKE_COMMAND} -E echo "$<TARGET_FILE:cxx-qdmi-device> CXX" >
+          "${QRMCI_TEST_QDMI_CONF}"
+  DEPENDS cxx-qdmi-device
+  VERBATIM
+  COMMENT "Generating qdmi.conf for Testing")
+add_custom_target(qrmci_test_qdmi_conf DEPENDS "${QRMCI_TEST_QDMI_CONF}")
 
 if(QRMCI_BUILD_INTEGRATION_TESTS)
-  add_subdirectory(integration)
+  if(QRMCI_BUILD_APPS)
+    add_subdirectory(integration)
+  else()
+    message(
+      WARNING
+        "QRMCI_BUILD_INTEGRATION_TESTS is ON but QRMCI_BUILD_APPS is OFF -- "
+        "skipping tests/integration, since its tests spawn the daemon "
+        "binaries QRMCI_BUILD_APPS builds.")
+  endif()
 endif()
 if(QRMCI_BUILD_UNIT_TESTS)
   add_subdirectory(unit)

@@ -6,13 +6,14 @@
  */
 
 /// @file BackendWrapper.h
-/// @brief A wrapper class for the MQSS Backend object, providing a simplified
-///        interface for accessing backend properties and methods.
+/// @brief One backend's capabilities as the QRM&CI pipeline sees them, read
+///        either from a live device or from a published backend-status
+///        message.
 
 #pragma once
 
 #include "mqss/Protocol.hpp"
-#include "qdmi/constants.h"
+#include "qrmci/CircuitFormatPolicy.h"
 #include "qrmci/ConstantsMapping.h"
 #include "qrmci/Error.h"
 
@@ -23,22 +24,30 @@
 #include <expected>
 #include <iterator>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 namespace mqss::submitter {
-class Submitter;
+class Device;
 } // namespace mqss::submitter
+
+namespace mqss::qrmci::test {
+class BackendBuilder;
+} // namespace mqss::qrmci::test
 
 namespace mqss::qrmci {
 
-/// @brief BackendWrapper is a wrapper class for the MQSS Backend object. It
-///        holds a backend's capabilities -- name, qubit count, status,
-///        supported instructions, qubit connectivity and circuit formats --
-///        as read from a live QDMI device or from a backend-status message,
-///        and answers the questions the pipeline asks of a backend: whether
-///        it is online, whether it can run a given task, and which compiler
-///        result format to target for it.
+/// @brief A snapshot of one backend's capabilities: name, qubit count,
+///        status, supported instructions, qubit connectivity and circuit
+///        formats.
+///
+/// The snapshot is read either from a live device through
+/// mqss::submitter::Device or from an mqss::Backend status message, and it
+/// answers the three questions the pipeline asks of a backend: whether it is
+/// online, whether it can run a given task, and which compiler result format
+/// to target for it. It is a value with no setters -- refreshing a backend
+/// means building a new snapshot.
 class BackendWrapper {
 
 public:
@@ -53,28 +62,46 @@ public:
   /// @brief Move-assign a BackendWrapper.
   BackendWrapper &operator=(BackendWrapper &&) = default;
 
-  /// @brief Construct a BackendWrapper from a submitter object. This
-  /// constructor initializes the wrapper with the backend information retrieved
-  /// from the submitter.
-  /// @param submitter The submitter object from which to retrieve backend
-  ///        information.
-  explicit BackendWrapper(mqss::submitter::Submitter &submitter);
+  /// @brief Read a backend's capabilities from a live device.
+  ///
+  /// A factory rather than a constructor because any of the five device
+  /// property queries can fail, and a constructor has nowhere to report that
+  /// -- it could only leave behind a half-populated wrapper that still looks
+  /// usable. The device ID is read too, but it is a plain accessor on Device
+  /// rather than a fallible query.
+  /// @param device The device to read.
+  /// @param dispatchQueue The queue tasks assigned to this backend should be
+  ///        sent to, carried through to getQueueName()/toBackend() for a
+  ///        caller that publishes this snapshot. Left empty for a caller
+  ///        that never publishes -- fromPublishedStatus() still rejects an
+  ///        empty queue on the receiving end, so this default is only safe
+  ///        for a process that never sends its own status out.
+  /// @return The populated wrapper, or the first query failure, wrapped as
+  ///         Error::Kind::DeviceError.
+  [[nodiscard]] static std::expected<BackendWrapper, Error>
+  fromSubmitter(const mqss::submitter::Device &device,
+                std::string_view dispatchQueue = "");
 
-  /// @brief Construct a BackendWrapper from a MQSS Backend object. This
-  /// constructor initializes the wrapper with the backend information retrieved
-  /// from the MQSS Backend object. Circuit formats arrive over the wire and
-  /// are translated through mapProtoCircuitFormat(), so an enumerator this
-  /// build does not know becomes CIRCUIT_FORMAT_UNSPECIFIED rather than an
-  /// out-of-range value.
-  /// @param backend The MQSS Backend object from which to retrieve backend
-  ///        information.
-  explicit BackendWrapper(const mqss::Backend &backend);
+  /// @brief Build a validated snapshot from a published backend-status
+  ///        message.
+  ///
+  /// The one way a published status becomes a BackendWrapper outside test
+  /// code, so production can never schedule onto a backend whose status was
+  /// malformed. Required routing strings (name, dispatch queue) must be
+  /// non-empty; the three wire enum families (type, status, circuit formats)
+  /// each normalize an enumerator this build does not know to their
+  /// `*_UNSPECIFIED` value rather than propagating an out-of-range value, the
+  /// same way mapProtoCircuitFormat() already did for circuit formats alone.
+  /// @param backend The received backend status.
+  /// @return The validated wrapper, or a MessagingFailed error naming the
+  ///         invalid field.
+  [[nodiscard]] static std::expected<BackendWrapper, Error>
+  fromPublishedStatus(const mqss::Backend &backend);
 
-  /// @brief Create a MQSS Backend object from the information stored in the
-  ///        BackendWrapper, for publication to other QRM&CI processes. This
-  ///        is the inverse of BackendWrapper(const mqss::Backend &).
-  /// @return A MQSS Backend object constructed from the information stored in
-  ///         the BackendWrapper.
+  /// @brief Build a backend-status message from this snapshot, for
+  ///        publication to other QRM&CI processes. The inverse of
+  ///        BackendWrapper(const mqss::Backend &).
+  /// @return The backend status to publish.
   [[nodiscard]] mqss::Backend toBackend() const;
 
   /// @brief Check whether this backend is currently able to accept tasks.
@@ -87,13 +114,12 @@ public:
   ///         format compatible with the task's circuit file type.
   [[nodiscard]] bool canRun(const mqss::QuantumTask &task) const;
 
-  /// @brief Find a compiler result format supported by both this backend and
-  ///        the mqss-ci compiler.
-  /// @return The first backend-supported circuit format that has a known
-  ///         result-format mapping, or an UnsupportedFormat error if none is
-  ///         found.
-  [[nodiscard]] std::expected<mqss::mqssci::ResultFormat, Error>
-  compilerResultFormat() const;
+  /// @brief Find the one compiler target this backend's supported circuit
+  ///        formats make available, in CircuitFormatPolicy's fixed priority
+  ///        order.
+  /// @return The compiler target to compile for, or an UnsupportedFormat
+  ///         error if none of this backend's formats is a compiler output.
+  [[nodiscard]] std::expected<CompilerTarget, Error> compilerTarget() const;
 
   /// @brief Get the backend name.
   /// @return The backend name.
@@ -127,8 +153,26 @@ public:
   getSupportedCircuitFormats() const noexcept {
     return supportedCircuitFormats;
   }
+  /// @brief Get the backend's dispatch queue name.
+  /// @return The name of the queue tasks assigned to this backend are sent
+  ///         to.
+  [[nodiscard]] const std::string &getQueueName() const noexcept {
+    return queueName;
+  }
 
 private:
+  /// @brief Build an unvalidated snapshot directly from a backend-status
+  ///        message, keeping whatever it carries, valid or not, aside from
+  ///        wire-enum normalization.
+  ///
+  /// Private so production code cannot bypass fromPublishedStatus()'s
+  /// validation; test code that needs to construct backends validation would
+  /// reject uses this through the befriended test::BackendBuilder instead.
+  /// @param backend The received backend status.
+  explicit BackendWrapper(const mqss::Backend &backend);
+
+  friend class mqss::qrmci::test::BackendBuilder;
+
   std::string name;
   std::uint32_t numQubits{};
   mqss::BackendType type{};

@@ -15,12 +15,20 @@
 #
 # The standalone daemon runs the whole pipeline (selection, compilation,
 # scheduling, submission) in one process without going through a selector or
-# compiler queue, so it only reads the sections below -- [selector] and
-# [compiler] are for the distributed apps only.
+# compiler queue, so it only reads the sections below -- [compiler] is for
+# the distributed apps only, and of [selector] it reads only
+# selectionPolicy (the other [selector] fields configure the distributed
+# selector's own inbound registry, which the standalone daemon has no use
+# for).
 
 [common]
 # Log directory; per-stage log file names are joined onto it automatically.
 logDir = "/var/log/qrmci"
+# Logger name used for the process-wide default spdlog logger (the only
+# logger name this build currently uses -- schedulerLogger below and
+# [submitter]'s `logger` field are accepted but not yet wired to a separate
+# log sink; everything logs through this one daemon logger).
+daemonLogger = "mqss::Daemon"
 # Input queue the daemon receives incoming tasks from.
 qrmciQueue = "qrmci.tasks.queue"
 # Queue that carries execution results (informational; result delivery
@@ -29,24 +37,44 @@ resultsQueue = "test.results.queue"
 # Queue used by the scheduler (scheduling never runs as its own distributed
 # process, so it lives here rather than under its own section).
 schedulerQueue = "scheduler.tasks.queue"
+# Logger name reserved for the scheduler stage; currently unused (see
+# daemonLogger above -- all logging goes through the daemon logger today).
+schedulerLogger = "mqss::Scheduler"
 # Sleep between turns of the daemon's poll loop, in milliseconds.
 stagePollInterval = 100
 
 [common.connection]
-host = "host.docker.internal"
+host = "localhost"
 port = 5672
 user = "guest"
 # Prefer QRMCI_AMQP_PASSWORD at deploy time over a password in this file.
 password = "guest"
 vhost = "/"
 
+[selector]
+# The rule for picking among several backends that are all compatible with a
+# task: "lowest-name" or "smallest-sufficient". Any other string is a
+# startup error. See apps/qrmci.full-reference.example.toml for details.
+selectionPolicy = "lowest-name"
+
 [submitter]
 # Queue used by the submitter stage.
 queue = "submitter.tasks.queue"
-qdmiDriverName = "qdmi_example_driver"
+# Logger name reserved for the submitter stage; currently unused (see
+# [common] daemonLogger above).
+logger = "mqss::Submitter"
+# Filesystem path to the QDMI driver library. The daemon checks that the file
+# exists before loading it and does not search the library path, so a bare
+# library stem will not be found. The driver's QDMI version is detected from
+# the driver itself and needs no declaration here.
+qdmiDriver = "/usr/local/lib/qrmci/libqdmi_example_driver.so"
 qdmiDeviceName = "C++ Device with 5 qubits"
+qdmiDeviceId = "cxxdevice5q"
 # Prefer QRMCI_SUBMITTER_QDMI_CLIENT_TOKEN at deploy time over a token here.
 qdmiClientToken = "token"
+# How long (seconds) to wait for each submitted job to reach a final state.
+# Zero waits indefinitely.
+jobWaitTimeout = 0
 # Minimum spacing (milliseconds) between two of this daemon's own
 # backend-status refreshes.
 backendStatusPublishInterval = 5000

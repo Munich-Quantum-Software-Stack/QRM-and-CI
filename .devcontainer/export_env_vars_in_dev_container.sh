@@ -3,8 +3,9 @@ export QDMI_CONF=/workspace/build/apps/standalone/qdmi.conf
 
 echo "/workspace/build/_deps/qdmi-build/examples/device/src/libcxx-qdmi-device.so CXX" > "${QDMI_CONF}"
 
-# include/qrmci/ConfigDefaults.h.in defaults QRMCI_AMQP_HOST (AMPQHost) to
-# host.docker.internal (a RabbitMQ running on the Docker host), but our dev
-# workflow runs RabbitMQ inside this same container
-# (`sudo service rabbitmq-server start`), so point at it locally instead.
+# The compiled-in AMQPHost default (include/qrmci/ConfigDefaults.h.in) is
+# 127.0.0.1, which a container resolves to itself. That happens to be right
+# here -- the dev workflow runs RabbitMQ inside this same container
+# (`sudo service rabbitmq-server start`) -- but set it explicitly so the
+# intent survives a change to that default.
 export QRMCI_AMQP_HOST=localhost

@@ -15,21 +15,30 @@
 #
 # The distributed worker never selects a backend -- it only compiles,
 # schedules and submits tasks the selector has already routed to it -- so it
-# only reads the sections below; [selector] is for the distributed selector
-# (or the standalone daemon, which needs neither [selector] nor [compiler]).
-# Its [common] connection must match the selector's, since they share the
-# same broker.
+# only reads the sections below; [compiler] is for the distributed selector
+# and this worker only ([selector].selectionPolicy is also read by the
+# standalone daemon, but [selector]'s other fields, including this file's
+# backendStatusQueue/logger below, are not). Its [common] connection must
+# match the selector's, since they share the same broker.
 
 [common]
 logDir = "/var/log/qrmci"
+# Logger name used for the process-wide default spdlog logger (the only
+# logger name this build currently uses -- schedulerLogger below and
+# [submitter]'s `logger` field are accepted but not yet wired to a separate
+# log sink; everything logs through this one daemon logger).
+daemonLogger = "mqss::Daemon"
 qrmciQueue = "qrmci.tasks.queue"
 resultsQueue = "test.results.queue"
 schedulerQueue = "scheduler.tasks.queue"
+# Logger name reserved for the scheduler stage; currently unused (see
+# daemonLogger above -- all logging goes through the daemon logger today).
+schedulerLogger = "mqss::Scheduler"
 # Sleep between turns of the daemon's poll loop, in milliseconds.
 stagePollInterval = 100
 
 [common.connection]
-host = "host.docker.internal"
+host = "localhost"
 port = 5672
 user = "guest"
 # Prefer QRMCI_AMQP_PASSWORD at deploy time over a password in this file.
@@ -40,20 +49,47 @@ vhost = "/"
 # Queue this worker publishes its own backend status to, for the distributed
 # selector to read; must match the selector's [selector] queue name.
 backendStatusQueue = "backend.status.queue"
+# Logger name reserved for the selector stage; currently unused (see
+# [common] daemonLogger above).
+logger = "mqss::Selector"
 
 [compiler]
-# Queue this worker receives already-selected tasks from; must match the
-# selector's [compiler] queue name.
+# Queue this worker receives already-selected tasks from. This worker also
+# publishes it as its own backend status's queue_name, so the selector routes
+# every task it assigns to this worker back to this exact queue -- in a
+# multi-worker deployment, each worker must set a distinct value here (and a
+# distinct [submitter].qdmiDeviceId below), or the selector will reject the
+# second worker's status as an identity collision. A single-worker deployment
+# can keep the shared default below.
 queue = "compiler.tasks.queue"
+# Logger name reserved for the compiler stage; currently unused (see
+# [common] daemonLogger above).
+logger = "mqss::Compiler"
 # Timeout (milliseconds) for this worker's receive() from that queue.
 taskReceiveTimeout = 500
 
 [submitter]
 queue = "submitter.tasks.queue"
-qdmiDriverName = "qdmi_example_driver"
+# Logger name reserved for the submitter stage; currently unused (see
+# [common] daemonLogger above).
+logger = "mqss::Submitter"
+# Filesystem path to the QDMI driver library. The worker checks that the file
+# exists before loading it and does not search the library path, so a bare
+# library stem will not be found. The driver's QDMI version is detected from
+# the driver itself and needs no declaration here.
+qdmiDriver = "/usr/local/lib/qrmci/libqdmi_example_driver.so"
 qdmiDeviceName = "C++ Device with 5 qubits"
+# The client-facing backend ID: the registry key this worker's status is
+# published under, and what QuantumTask's preferred_qpu/restricted_resource_names
+# and QuantumResult's executed_qpu actually match against -- not
+# qdmiDeviceName above, which is only the QDMI device's own display name.
+# Must be unique across workers sharing one selector; see [compiler].queue.
+qdmiDeviceId = "cxxdevice5q"
 # Prefer QRMCI_SUBMITTER_QDMI_CLIENT_TOKEN at deploy time over a token here.
 qdmiClientToken = "token"
+# How long (seconds) to wait for each submitted job to reach a final state.
+# Zero waits indefinitely.
+jobWaitTimeout = 0
 # Minimum spacing (milliseconds) between two of this worker's own
 # backend-status publications.
 backendStatusPublishInterval = 5000

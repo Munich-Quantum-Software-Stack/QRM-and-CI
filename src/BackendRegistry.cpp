@@ -16,17 +16,24 @@
 
 namespace mqss::qrmci {
 
-BackendRegistry::BackendRegistry(Clock::duration timeToLive,
-                                 Clock::duration publishIntervalArg)
-    : entryTimeToLive(timeToLive), publishInterval(publishIntervalArg) {}
+BackendRegistry::BackendRegistry(Clock::duration timeToLive)
+    : entryTimeToLive(timeToLive) {}
 
-void BackendRegistry::insertOrRefresh(BackendWrapper backend,
+bool BackendRegistry::insertOrRefresh(BackendWrapper backend,
                                       Clock::time_point now) {
-  // Key the entry before moving out of `backend`; getName() reads a member
-  // the move would leave empty.
-  Entry &entry = entries[backend.getName()];
-  entry.backend = std::move(backend);
-  entry.lastRefreshed = now;
+  // Read before moving out of `backend`; getName()/getQueueName() read
+  // members the move would leave empty.
+  const std::string name = backend.getName();
+  if (const auto it = entries.find(name);
+      it != entries.end() && !it->second.backend.getQueueName().empty() &&
+      !backend.getQueueName().empty() &&
+      it->second.backend.getQueueName() != backend.getQueueName()) {
+    return false;
+  }
+
+  entries.insert_or_assign(
+      name, Entry{.backend = std::move(backend), .lastRefreshed = now});
+  return true;
 }
 
 std::size_t BackendRegistry::expire(Clock::time_point now) {
@@ -43,14 +50,6 @@ BackendRegistry::find(std::string_view backendName) const {
 
 bool BackendRegistry::contains(std::string_view backendName) const {
   return entries.contains(backendName);
-}
-
-bool BackendRegistry::claimPublishSlot(Clock::time_point now) {
-  if (lastPublished.has_value() && now - *lastPublished < publishInterval) {
-    return false;
-  }
-  lastPublished = now;
-  return true;
 }
 
 } // namespace mqss::qrmci

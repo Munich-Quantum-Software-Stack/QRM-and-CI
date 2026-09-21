@@ -18,6 +18,8 @@ submission, with RabbitMQ queues between stages and QDMI at the device boundary.
 
 QRM&CI treats task handling as a staged pipeline:
 
+- **Backend registry** keeps each known backend's latest snapshot, refreshed from QDMI and expired
+  after a time-to-live, so selection and compilation only ever see backends that were recently alive.
 - **Selector** chooses a backend that is online and compatible with the task.
 - **Compiler** rewrites the task for the selected backend.
 - **Scheduler** orders ready work by policy before submission.
@@ -26,10 +28,21 @@ QRM&CI treats task handling as a staged pipeline:
 Each stage receives work, processes it, and forwards it. In standalone mode all stages run in one
 process. In distributed mode the selector and worker processes hand work to each other over RabbitMQ.
 
-![The QRM&CI pipeline: selector, compiler, scheduler, and submitter, connected by RabbitMQ queues, with QDMI at the device boundary](QRM-detail-mqss-style.png){html: width=60%}
+![The QRM&CI standalone architecture](QRM-detail-mqss-style.png){html: width=85%}
 
-_QOffload appears in the diagram to show where work enters the pipeline. It is an MQSS frontend
-interface, not part of this repository — see "What is not QRM&CI" below._
+One turn of the standalone daemon's loop runs in a fixed order: it refreshes its own registry entry
+from QDMI and expires stale ones, then drains the task queue — selecting a backend, compiling and
+scheduling each task it finds — and finally submits and collects every job the scheduler has ready.
+The refresh comes first deliberately, so a quiet queue cannot starve it; the drain is a non-blocking
+poll, so a burst is handled in one turn rather than one task per poll interval. When a turn finds
+nothing to do, the daemon sleeps for the configured poll interval.
+
+Nothing queues between the stages in this mode: the only queues involved are the intake queue the
+daemon consumes from (`common.qrmciQueue`, `qrmci.tasks.queue` by default) and, per result, the
+destination the task itself names in `result_destination`. A task that can be given no backend,
+fails to compile, or is refused by the device gets a cancellation result on that same destination.
+Whatever puts tasks on the intake queue — QOffload and the other MQSS frontend surfaces — is not
+part of this repository; see "What is not QRM&CI" below.
 
 ## What is not QRM&CI
 

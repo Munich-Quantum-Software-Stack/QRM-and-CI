@@ -1,0 +1,167 @@
+# Copyright (c) 2026 MQSS Maintainers
+# All rights reserved.
+#
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Full reference of every field mqss::qrmci::Config (include/qrmci/Config.h)
+# accepts, grouped exactly like the struct: [common] (shared by every
+# stage), [selector], [compiler], [submitter]. This file is a *reference*,
+# not a deployable template -- no single binary reads every section here:
+#   - qrmcid-standalone reads [common], [selector].selectionPolicy (nothing
+#     else in [selector]) and [submitter]
+#   - qrmcid-distributed-selector reads [common] and [selector]
+#   - qrmcid-distributed-worker reads [common], [selector] (to publish its
+#     own status), [compiler] and [submitter]
+# For a config file scoped to the binary you're actually deploying, start
+# from one of:
+#   apps/standalone/config/qrmci-standalone.example.toml
+#   apps/distributed/config/qrmci-distributed-selector.example.toml
+#   apps/distributed/config/qrmci-distributed-worker.example.toml
+#
+# Precedence is defaults < this file < environment variables -- every field
+# annotated "Env: QRMCI_*" below is overridden by that variable if set,
+# regardless of what this file says. See docs/getting-started.md's "Runtime
+# configuration" section for the full env var list. Do not commit a copy of
+# this file containing real credentials.
+
+[common]
+# Directory where log files are written. Per-stage log file names
+# (daemon.log, scheduler.log, selector.log, compiler.log, submitter.log)
+# are joined onto it automatically -- there is no separate TOML-settable
+# field to rename them (Config.h does declare daemonLog/schedulerLog/
+# logFile fields, they're just never read from TOML -- always computed via
+# logPath()). Env: QRMCI_LOG_DIR. Default: "/var/log/qrmci".
+logDir = "/var/log/qrmci"
+
+# Logger name for the process-wide default spdlog logger. This is the only
+# logger name currently wired up -- schedulerLogger below and the `logger`
+# fields in [selector]/[compiler]/[submitter] are accepted into Config but
+# not yet consumed anywhere; every stage logs through this one sink today.
+# File-only (no env var). Default: "mqss::Daemon".
+daemonLogger = "mqss::Daemon"
+
+# Input queue the daemon/selector receives incoming tasks from.
+# Env: QRMCI_QRMCI_QUEUE. Default: "qrmci.tasks.queue".
+qrmciQueue = "qrmci.tasks.queue"
+
+# Queue that carries execution results (informational; result delivery
+# actually uses each task's own result_destination, not this queue).
+# Env: QRMCI_RESULTS_QUEUE. Default: "test.results.queue".
+resultsQueue = "test.results.queue"
+
+# Queue used by the scheduler stage (scheduling never runs as its own
+# distributed process, so it lives under [common] rather than its own
+# section). Currently unused: no stage source reads this field today
+# (see daemonLogger above for the same caveat pattern).
+# Env: QRMCI_SCHEDULER_QUEUE. Default: "scheduler.tasks.queue".
+schedulerQueue = "scheduler.tasks.queue"
+
+# Logger name reserved for the scheduler stage; currently unused (see
+# daemonLogger above). File-only (no env var). Default: "mqss::Scheduler".
+schedulerLogger = "mqss::Scheduler"
+
+# Sleep between turns of a daemon's main poll loop, in milliseconds. The one
+# setting with no single natural stage home, since the standalone daemon's
+# loop touches every group in one turn.
+# File-only (no env var). Default: 100.
+stagePollInterval = 100
+
+[common.connection]
+# RabbitMQ host name. Env: QRMCI_AMQP_HOST. Default: "127.0.0.1", which
+# always means the current container's own loopback, not a shared broker.
+# The Docker images' own compiled-in ENV default is "localhost" (same
+# loopback meaning);
+host = "127.0.0.1"
+# RabbitMQ TCP port. Env: QRMCI_AMQP_PORT. Default: 5672.
+port = 5672
+# RabbitMQ user name. Env: QRMCI_AMQP_USER. Default: "guest".
+user = "guest"
+# RabbitMQ password. Prefer QRMCI_AMQP_PASSWORD at deploy time over a
+# password in this file. Env: QRMCI_AMQP_PASSWORD. Default: "guest".
+password = "guest"
+# RabbitMQ virtual host. Env: QRMCI_AMQP_VHOST. Default: "/".
+vhost = "/"
+
+[selector]
+# Queue backend status is published on: the distributed worker(s) publish
+# here, and the distributed selector reads from it to build its backend
+# registry.
+# Env: QRMCI_BACKEND_STATUS_QUEUE. Default: "backend.status.queue".
+backendStatusQueue = "backend.status.queue"
+
+# Logger name reserved for the selector stage; currently unused (see
+# [common] daemonLogger above). File-only (no env var).
+# Default: "mqss::Selector".
+logger = "mqss::Selector"
+
+# The rule for picking among several backends that are all compatible with a
+# task: "lowest-name" (the compatible backend whose name sorts first) or
+# "smallest-sufficient" (the compatible backend with the fewest qubits, ties
+# broken by lowest-name). Any other string is a startup error. Drives both
+# qrmcid-standalone's and qrmcid-distributed-selector's own selection.
+# File-only (no env var). Default: "lowest-name".
+selectionPolicy = "lowest-name"
+
+[selector.backendRegistry]
+# How long (seconds) a backend entry stays usable in the selector's
+# registry after its last refresh. File-only (no env var). Default: 30.
+entryTimeToLive = 30
+
+[compiler]
+# Queue a selected task is forwarded to by the selector, and received from
+# by the worker; must match between them since they share one broker.
+# Env: QRMCI_COMPILER_QUEUE. Default: "compiler.tasks.queue".
+queue = "compiler.tasks.queue"
+
+# Logger name reserved for the compiler stage; currently unused (see
+# [common] daemonLogger above). File-only (no env var).
+# Default: "mqss::Compiler".
+logger = "mqss::Compiler"
+
+# Timeout (milliseconds) for the worker's receive() from the compiler
+# queue. File-only (no env var). Default: 500.
+taskReceiveTimeout = 500
+
+[submitter]
+# Queue used by the submitter stage. Currently unused: no stage source
+# reads this field today (see daemonLogger above for the same caveat
+# pattern).
+# Env: QRMCI_SUBMITTER_QUEUE. Default: "submitter.tasks.queue".
+queue = "submitter.tasks.queue"
+
+# Logger name reserved for the submitter stage; currently unused (see
+# [common] daemonLogger above). File-only (no env var).
+# Default: "mqss::Submitter".
+logger = "mqss::Submitter"
+
+# Filesystem path to the QDMI driver library. The daemon checks that the
+# file exists before loading it and does not search the library path, so a
+# bare library stem will not be found. The driver's QDMI version is
+# detected from the driver itself and needs no declaration here.
+# Env: QRMCI_SUBMITTER_QDMI_DRIVER.
+# Default: "/usr/local/lib/qrmci/libqdmi_example_driver.so".
+qdmiDriver = "/usr/local/lib/qrmci/libqdmi_example_driver.so"
+# QDMI device name. Env: QRMCI_SUBMITTER_QDMI_DEVICE_NAME.
+# Default: "C++ Device with 5 qubits".
+qdmiDeviceName = "C++ Device with 5 qubits"
+# QDMI device id. Env: QRMCI_SUBMITTER_QDMI_DEVICE_ID.
+# Default: "cxxdevice5q"
+qdmiDeviceId = "cxxdevice5q"
+# QDMI client token. Prefer QRMCI_SUBMITTER_QDMI_CLIENT_TOKEN at deploy
+# time over a token in this file. Env: QRMCI_SUBMITTER_QDMI_CLIENT_TOKEN.
+# Default: "token".
+qdmiClientToken = "token"
+
+# How long (seconds) to wait for each submitted job to reach a final state.
+# Zero waits indefinitely, matching QDMI's own zero-means-infinite
+# convention. File-only (no env var). Default: 0.
+jobWaitTimeout = 0
+
+# Minimum spacing (milliseconds) between two of this stage's own
+# backend-status publications. File-only (no env var). Default: 5000.
+backendStatusPublishInterval = 5000
+
+[submitter.backendRegistry]
+# How long (seconds) a backend entry stays usable in the submitter's own
+# registry after its last refresh. File-only (no env var). Default: 30.
+entryTimeToLive = 30

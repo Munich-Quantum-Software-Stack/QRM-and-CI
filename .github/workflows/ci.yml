@@ -20,6 +20,7 @@ jobs:
   pre-commit:
     name: Pre-commit (Formatting & Linting)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -37,47 +38,52 @@ jobs:
   static-analysis:
     name: Static Analysis (clang-tidy)
     runs-on: ubuntu-latest
-    container:
-      image: "ghcr.io/akshay9594/mqss-passes-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0-amd64"
+    timeout-minutes: 60
     needs: pre-commit
     steps:
+      # Before the image build, so a missing secret fails in seconds.
+      - name: Check for the MQSS read token
+        env:
+          MQSS_READ_TOKEN: ${{ secrets.MQSS_READ_TOKEN }}
+        run: |
+          if [ -z "$MQSS_READ_TOKEN" ]; then
+            echo "::error::secrets.MQSS_READ_TOKEN is empty. Configure clones the private MQSS-Submitter repository; see docs/development-guide.md."
+            exit 1
+          fi
       - uses: actions/checkout@v4
-      - name: Install clang-tidy
-        run: |
-          apt-get update && apt-get install -y clang-tidy && rm -rf /var/lib/apt/lists/*
       - name: Configure with compile commands
-        run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        uses: ./.github/actions/dev
+        with:
+          extra-packages: clang-tidy
+          github-token: ${{ secrets.MQSS_READ_TOKEN }}
+          run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - name: Generate the protocol headers clang-tidy needs to parse sources
+        uses: ./.github/actions/dev
+        with:
+          run: cmake --build build --target mqss_protocol --parallel
       - name: Run clang-tidy on all sources
-        run: |
-          run-clang-tidy -p build "^$(pwd)/(include|src|apps|tests)/.*"
+        uses: ./.github/actions/dev
+        with:
+          run: run-clang-tidy -p build "^/workspace/(include|src|apps|tests)/.*"
 
   build:
     name: Build & Test (${{ matrix.compiler }} ${{ matrix.version }})
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
     needs: pre-commit
     strategy:
       fail-fast: false
+      # Clang is not currently supported: `clang++-17 -std=c++23` fails to compile `#include <expected>`.
       matrix:
         include:
           - compiler: gcc
-            version: "13"
-            cc: gcc-13
-            cxx: g++-13
+            version: "14"
+            cc: gcc-14
+            cxx: g++-14
           - compiler: gcc
             version: "15"
             cc: gcc-15
             cxx: g++-15
-          - compiler: clang
-            version: "17"
-            cc: clang-17
-            cxx: clang++-17
-          - compiler: clang
-            version: "22"
-            cc: clang-22
-            cxx: clang++-22
-    container:
-      image: "ghcr.io/akshay9594/mqss-passes-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0-amd64"
     services:
       rabbitmq:
         image: rabbitmq:3-management-alpine
@@ -91,21 +97,41 @@ jobs:
     env:
       CC: ${{ matrix.cc }}
       CXX: ${{ matrix.cxx }}
-      QRMCI_TEST_AMQP_HOST: rabbitmq
+      # The tests run in a container on the runner's network namespace, so
+      # they reach the broker through its published port, not by alias.
+      QRMCI_AMQP_HOST: localhost
     steps:
-      - uses: actions/checkout@v4
-      - name: Install compiler (${{ matrix.compiler }} ${{ matrix.version }})
+      - name: Check for the MQSS read token
+        env:
+          MQSS_READ_TOKEN: ${{ secrets.MQSS_READ_TOKEN }}
         run: |
-          apt-get update
-          if [ "${{ matrix.compiler }}" = "gcc" ]; then
-            apt-get install -y gcc-${{ matrix.version }} g++-${{ matrix.version }}
-          else
-            apt-get install -y clang-${{ matrix.version }}
+          if [ -z "$MQSS_READ_TOKEN" ]; then
+            echo "::error::secrets.MQSS_READ_TOKEN is empty. Configure clones the private MQSS-Submitter repository; see docs/development-guide.md."
+            exit 1
           fi
-          rm -rf /var/lib/apt/lists/*
+      - uses: actions/checkout@v4
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        uses: ./.github/actions/dev
+        with:
+          extra-packages: ${{ matrix.cc }} ${{ matrix.cxx }}
+          github-token: ${{ secrets.MQSS_READ_TOKEN }}
+          run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DQRMCI_WARNINGS_AS_ERRORS=ON -DQRMCI_RUN_INTEGRATION_TESTS=ON
       - name: Build
-        run: cmake --build build --parallel
-      - name: Run tests
-        run: ctest --test-dir build/tests --output-on-failure
+        uses: ./.github/actions/dev
+        with:
+          run: cmake --build build --parallel
+      - name: Run unit tests
+        uses: ./.github/actions/dev
+        with:
+          run: ctest --test-dir build/tests -LE integration --output-on-failure
+      - name: Run integration tests
+        uses: ./.github/actions/dev
+        with:
+          run: ctest --test-dir build/tests -L integration --output-on-failure
+      - name: Upload daemon logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daemon-logs-${{ matrix.compiler }}-${{ matrix.version }}
+          path: build/tests/integration/daemon-logs/
+          if-no-files-found: ignore

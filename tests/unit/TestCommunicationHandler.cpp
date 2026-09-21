@@ -13,10 +13,12 @@
 
 #include <atomic>
 #include <chrono>
+#include <concepts>
 #include <cstdlib>
 #include <gtest/gtest.h>
 #include <string>
 #include <thread>
+#include <type_traits>
 
 namespace mqss::qrmci::test {
 
@@ -47,6 +49,36 @@ static RabbitMqConnectionConfig makeLocalhostConfig(int port = 5673) {
 static bool contains(const std::string &haystack, const std::string &needle) {
   return haystack.find(needle) != std::string::npos;
 }
+
+// ===========================================================================
+// Compile-time contracts: no generic messageLabel fallback, no copy/move.
+// These are regression assertions with no runtime body -- a change that
+// breaks either contract fails to compile this file at all.
+// ===========================================================================
+namespace {
+
+/// @brief Whether messageLabel(T) resolves to something other than the
+///        deleted generic fallback.
+template <class T>
+concept HasMessageLabel = requires(const T &value) {
+  { messageLabel(value) } -> std::same_as<std::string>;
+};
+
+/// @brief A type with no messageLabel overload of its own, to prove the
+///        generic fallback is actually gone rather than merely unused.
+struct UnsupportedMessageType {};
+
+static_assert(HasMessageLabel<mqss::QuantumTask>);
+static_assert(HasMessageLabel<mqss::QuantumResult>);
+static_assert(HasMessageLabel<mqss::Backend>);
+static_assert(!HasMessageLabel<UnsupportedMessageType>);
+
+static_assert(!std::is_copy_constructible_v<CommunicationHandler>);
+static_assert(!std::is_copy_assignable_v<CommunicationHandler>);
+static_assert(!std::is_move_constructible_v<CommunicationHandler>);
+static_assert(!std::is_move_assignable_v<CommunicationHandler>);
+
+} // namespace
 
 // ===========================================================================
 // RabbitMqConnectionConfigTest  –  tests the plain config struct (no I/O)
@@ -94,15 +126,36 @@ TEST_F(RabbitMqConnectionConfigTest, FieldAssignment) {
 }
 
 // ===========================================================================
+// MakeTransportOptionsTest
+// Exercises the free function that translates a RabbitMqConnectionConfig
+// into TransportOptions<RabbitMqSimple> -- the translation step that used
+// to silently drop vhost.
+// ===========================================================================
+TEST(MakeTransportOptionsTest, EveryConfiguredFieldReachesTheTransport) {
+  const RabbitMqConnectionConfig cfg{
+      .host = "broker",
+      .port = 5673,
+      .user = "u",
+      .password = "p",
+      .vhost = "/production",
+  };
+  const auto options = makeTransportOptions(cfg);
+  EXPECT_EQ(options.host, "broker");
+  EXPECT_EQ(options.port, 5673);
+  EXPECT_EQ(options.username, "u");
+  EXPECT_EQ(options.password, "p");
+  EXPECT_EQ(options.vhost, "/production");
+}
+
+// ===========================================================================
 // CommunicationHandlerUnreachableBrokerTest
 // Points the handler at 127.0.0.1:5673, a port nothing listens on in this
 // environment. RabbitMqSimpleTransport::send()/receive() open their channel
 // lazily and catch every SimpleAmqpClient exception, converting connection
 // failure into Status::unavailable(...). That lets us deterministically drive
-// CommunicationHandler's error reporting against the real transport: these
-// operations used to throw std::runtime_error straight out of a daemon's
-// main(); they now return a std::expected the caller can log and carry on
-// from.
+// CommunicationHandler's error reporting against the real transport, and to
+// confirm that a broker failure comes back as a std::expected the caller can
+// log and carry on from rather than as an exception.
 // ===========================================================================
 using Handler = mqss::qrmci::CommunicationHandler;
 
@@ -118,10 +171,6 @@ TEST_F(CommunicationHandlerUnreachableBrokerTest,
   auto sent = handler.send(task, "some-queue");
   ASSERT_FALSE(sent.has_value());
   EXPECT_EQ(sent.error().kind, mqss::qrmci::Error::Kind::MessagingFailed);
-  // A broker that is down now may be up on the next turn of the loop, so a
-  // transport failure is retryable -- which is what lets a daemon keep its
-  // in-flight work instead of rejecting it.
-  EXPECT_TRUE(sent.error().isRetryable());
   EXPECT_TRUE(contains(sent.error().detail, "Failed to send quantum task 7"))
       << sent.error().detail;
 }
@@ -159,7 +208,6 @@ TEST_F(CommunicationHandlerUnreachableBrokerTest,
       "some-queue", std::chrono::milliseconds(200));
   ASSERT_FALSE(received.has_value());
   EXPECT_EQ(received.error().kind, mqss::qrmci::Error::Kind::MessagingFailed);
-  EXPECT_TRUE(received.error().isRetryable());
   EXPECT_TRUE(contains(received.error().detail, "Receive error"))
       << received.error().detail;
 }
@@ -170,7 +218,6 @@ TEST_F(CommunicationHandlerUnreachableBrokerTest,
       "some-queue", std::chrono::milliseconds(200));
   ASSERT_FALSE(received.has_value());
   EXPECT_EQ(received.error().kind, mqss::qrmci::Error::Kind::MessagingFailed);
-  EXPECT_TRUE(received.error().isRetryable());
   EXPECT_TRUE(contains(received.error().detail, "Receive error"))
       << received.error().detail;
 }
@@ -181,7 +228,6 @@ TEST_F(CommunicationHandlerUnreachableBrokerTest,
       "some-queue", std::chrono::milliseconds(200));
   ASSERT_FALSE(received.has_value());
   EXPECT_EQ(received.error().kind, mqss::qrmci::Error::Kind::MessagingFailed);
-  EXPECT_TRUE(received.error().isRetryable());
   EXPECT_TRUE(contains(received.error().detail, "Receive error"))
       << received.error().detail;
 }
@@ -199,8 +245,9 @@ TEST_F(CommunicationHandlerUnreachableBrokerTest,
 
 TEST_F(CommunicationHandlerUnreachableBrokerTest,
        PreSetTerminationFlagReturnsBeforeTouchingTheBrokerAtNonZeroTimeout) {
-  // The regression: with a non-zero timeout the flag used to be inert, so
-  // this reached the broker and came back as an error instead.
+  // A set flag must short-circuit at every timeout, not just at 0ms: if it
+  // only applied to the non-blocking poll, this would reach the broker and
+  // come back as an error instead.
   const std::atomic<bool> terminationFlag{true};
   auto received = handler.receive<mqss::QuantumTask>(
       "some-queue", std::chrono::milliseconds(500), terminationFlag);
@@ -268,11 +315,28 @@ TEST_F(CommunicationHandlerLiveBrokerTest,
     terminationFlag.store(true, std::memory_order_release);
   });
   auto received = handler.receive<mqss::QuantumTask>(
-      queue, std::chrono::milliseconds(0), terminationFlag);
+      queue, mqss::qrmci::WaitForever, terminationFlag);
   setter.join();
 
   ASSERT_TRUE(received.has_value()) << received.error().detail;
   EXPECT_FALSE(received->has_value());
+}
+
+TEST_F(CommunicationHandlerLiveBrokerTest,
+       ZeroTimeoutPollsOnceAndReturnsImmediatelyWhenEmpty) {
+  const std::string queue = "test.communicationhandler.pollonce";
+  std::atomic<bool> terminationFlag{false};
+
+  const auto start = std::chrono::steady_clock::now();
+  auto received = handler.receive<mqss::QuantumTask>(
+      queue, std::chrono::milliseconds(0), terminationFlag);
+  const auto elapsed = std::chrono::steady_clock::now() - start;
+
+  ASSERT_TRUE(received.has_value()) << received.error().detail;
+  EXPECT_FALSE(received->has_value());
+  // A single non-blocking poll, not DefaultReceiveTimeout's 500ms slice --
+  // generous margin for scheduling jitter and the broker round trip.
+  EXPECT_LT(elapsed, std::chrono::milliseconds(300));
 }
 
 } // namespace mqss::qrmci::test

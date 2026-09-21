@@ -9,27 +9,23 @@
 
 #include "mqss/Protocol.hpp"
 #include "mqss/Transport.hpp"
+#include "qrmci/Config.h"
 
 namespace mqss::qrmci {
 
-namespace {
-
-/// @brief Translate the daemon's RabbitMqConnectionConfig into the RabbitMQ
-///        transport's own options.
 mqss::TransportOptions<mqss::RabbitMqSimple>
-makeTransportOptions(const mqss::qrmci::RabbitMqConnectionConfig &config) {
+makeTransportOptions(const RabbitMqConnectionConfig &config) {
   mqss::TransportOptions<mqss::RabbitMqSimple> options{};
-  options.host = std::string(config.host);
+  options.host = config.host;
   options.port = config.port;
-  options.username = std::string(config.user);
-  options.password = std::string(config.password);
+  options.username = config.user;
+  options.password = config.password;
+  options.vhost = config.vhost;
   return options;
 }
 
-} // namespace
-
 CommunicationHandler::CommunicationHandler(
-    const mqss::qrmci::RabbitMqConnectionConfig &config)
+    const RabbitMqConnectionConfig &config)
     : messenger(makeTransportOptions(config)) {}
 
 } // namespace mqss::qrmci
