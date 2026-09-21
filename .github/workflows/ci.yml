@@ -57,6 +57,10 @@ jobs:
           extra-packages: clang-tidy
           github-token: ${{ secrets.MQSS_READ_TOKEN }}
           run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - name: Generate the protocol headers clang-tidy needs to parse sources
+        uses: ./.github/actions/dev
+        with:
+          run: cmake --build build --target mqss_protocol --parallel
       - name: Run clang-tidy on all sources
         uses: ./.github/actions/dev
         with:
