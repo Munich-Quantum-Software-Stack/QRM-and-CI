@@ -30,8 +30,12 @@ namespace mqss::qrmci {
 ///        that output is submitted as, and the canonical task circuit-file
 ///        type label a successfully compiled task should carry afterward.
 struct CompilerTarget {
+  /// @brief The result format the MQSS Compiler is asked to emit.
   mqss::mqssci::ResultFormat compilerFormat;
+  /// @brief The protocol format that output is submitted as, and the one
+  ///        chooseCompilerTarget() matches against a backend's own list.
   mqss::CircuitFormat circuitFormat;
+  /// @brief The circuit_file_type a task carries once compiled to this target.
   std::string_view taskCircuitType;
 };
 
