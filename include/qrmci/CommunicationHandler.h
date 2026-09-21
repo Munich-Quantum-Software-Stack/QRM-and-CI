@@ -5,13 +5,17 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
+/// @file CommunicationHandler.h
+/// @brief The RabbitMQ send/receive helpers that carry tasks, results and
+///        backend status between QRM&CI stages.
+
 #pragma once
 
-#include "Config.h"
-#include "Error.h"
 #include "mqss/Messenger.hpp"
 #include "mqss/Protocol.hpp"
 #include "mqss/Transport.hpp"
+#include "qrmci/Config.h"
+#include "qrmci/Error.h"
 
 #include <atomic>
 #include <chrono>
@@ -23,12 +27,25 @@
 
 namespace mqss::qrmci {
 
-/// @file CommunicationHandler.h
-/// @brief Messaging helpers for QRMCI.
-
 /// @brief How long a single receive attempt waits when the caller does not
 ///        say, and the interval an indefinite receive polls at.
 inline constexpr std::chrono::milliseconds DefaultReceiveTimeout{500};
+
+/// @brief Timeout value meaning "poll until a message arrives or the
+///        termination flag is set" rather than returning after a bounded
+///        wait.
+///
+/// A negative sentinel rather than 0ms, because 0ms already means "poll once
+/// and return immediately if nothing is available" -- the same convention the
+/// underlying transport uses for ReceiveArgs::timeout.
+inline constexpr std::chrono::milliseconds WaitForever{-1};
+
+/// @brief Translate a RabbitMqConnectionConfig into the transport's own
+///        options. Exposed (rather than kept file-local) so a test can
+///        assert that every configured field actually reaches the
+///        transport, instead of only asserting the struct it was given.
+[[nodiscard]] mqss::TransportOptions<mqss::RabbitMqSimple>
+makeTransportOptions(const RabbitMqConnectionConfig &config);
 
 /// @brief Describe a quantum task for an error or log line.
 /// @param task The task to describe.
@@ -51,12 +68,12 @@ inline std::string messageLabel(const mqss::Backend &backend) {
   return "backend status for backend " + backend.name();
 }
 
-/// @brief Fallback label for a message type with no more specific overload.
+/// @brief No generic fallback: a message type with no more specific overload
+///        above must fail to compile here rather than silently receive the
+///        generic label `message` in every log line and error it appears in.
 /// @tparam Message The message type being described.
-/// @return The generic label `message`.
-template <class Message> std::string messageLabel(const Message & /*unused*/) {
-  return "message";
-}
+template <class Message>
+std::string messageLabel(const Message & /*unused*/) = delete;
 
 /// @brief CommunicationHandler abstracts the messaging operations that move
 ///        pipeline messages between QRM&CI stages.
@@ -71,8 +88,17 @@ class CommunicationHandler {
 public:
   /// @brief Construct a CommunicationHandler with the given configuration.
   /// @param config The RabbitMQ configuration to use for the connection.
-  explicit CommunicationHandler(
-      const mqss::qrmci::RabbitMqConnectionConfig &config);
+  explicit CommunicationHandler(const RabbitMqConnectionConfig &config);
+
+  /// @brief Explicitly non-copyable and non-movable: a moved-from handler
+  ///        would leave its messenger's transport connection in an unusable
+  ///        state with no way to tell from the type alone, so that state is
+  ///        refused at compile time rather than left implicit. Construct one
+  ///        in place instead.
+  CommunicationHandler(const CommunicationHandler &) = delete;
+  CommunicationHandler &operator=(const CommunicationHandler &) = delete;
+  CommunicationHandler(CommunicationHandler &&) = delete;
+  CommunicationHandler &operator=(CommunicationHandler &&) = delete;
 
   /// @brief Send a message to the specified queue.
   /// @tparam Message The message type to send (e.g. mqss::QuantumTask,
@@ -85,7 +111,7 @@ public:
   template <class Message>
   [[nodiscard]] std::expected<void, Error> send(const Message &message,
                                                 const std::string &queueName) {
-    auto sendStatus = messenger.template send<Message>({queueName}, message);
+    auto sendStatus = messenger.send<Message>({queueName}, message);
 
     if (!sendStatus.ok()) {
       return std::unexpected(Error{Error::Kind::MessagingFailed,
@@ -100,8 +126,10 @@ public:
   /// @tparam Message The message type to receive (e.g. mqss::QuantumTask,
   ///         mqss::QuantumResult, mqss::Backend).
   /// @param queueName The name of the queue to consume from.
-  /// @param timeout The maximum time to wait for a message. 0 means poll
-  ///        until a message arrives or @p terminationFlag is set.
+  /// @param timeout The maximum time to wait for a message. 0ms polls once
+  ///        and returns immediately if nothing is available; pass
+  ///        WaitForever to poll until a message arrives or @p
+  ///        terminationFlag is set.
   /// @param terminationFlag Consulted before every receive attempt: once set,
   ///        this returns an empty optional without touching the transport,
   ///        whatever the timeout.
@@ -114,7 +142,7 @@ public:
   [[nodiscard]] std::expected<std::optional<Message>, Error>
   receive(const std::string &queueName, std::chrono::milliseconds timeout,
           const std::atomic<bool> &terminationFlag) {
-    const bool waitIndefinitely = timeout <= std::chrono::milliseconds(0);
+    const bool waitIndefinitely = (timeout == WaitForever);
     const auto pollInterval =
         waitIndefinitely ? DefaultReceiveTimeout : timeout;
 
@@ -124,24 +152,24 @@ public:
       // Manual ack keeps the broker-side no_ack flag false, so RabbitMQ's
       // per-consumer prefetch actually throttles delivery instead of pushing
       // every queued message onto this call's short-lived connection at once.
-      // The message is acked right after a successful decode, matching the
-      // previous auto-ack-on-receipt behavior.
-      auto res = messenger.template receiveExtended<Message>(
+      // The message is acked right after a successful decode.
+      auto received = messenger.receiveExtended<Message>(
           {queueName}, mqss::ReceiveArgs{
                            .timeout = pollInterval,
                            .ack_mode = mqss::AckMode::Manual,
                        });
-      if (res.has_value()) {
-        auto &[message, delivery] = *res;
+      if (received.has_value()) {
+        auto &[message, delivery] = *received;
         if (auto ackStatus = delivery.ack(); !ackStatus.ok()) {
           spdlog::warn("Failed to ack {}: {}", messageLabel(message),
                        ackStatus.reason());
         }
         return std::optional<Message>(std::move(message));
       }
-      if (res.error().code() != mqss::StatusCode::Timeout) {
-        return std::unexpected(Error{Error::Kind::MessagingFailed,
-                                     "Receive error: " + res.error().reason()});
+      if (received.error().code() != mqss::StatusCode::Timeout) {
+        return std::unexpected(
+            Error{Error::Kind::MessagingFailed,
+                  "Receive error: " + received.error().reason()});
       }
       if (!waitIndefinitely) {
         break;
@@ -153,14 +181,16 @@ public:
   /// @brief Retrieve the next message of the given type, with no termination
   ///        flag to interrupt the wait.
   ///
-  /// Replaces a default argument that bound a const reference to a temporary
-  /// `std::atomic<bool>`. A caller with no flag to offer now omits the
-  /// parameter instead of silently receiving one that can never be set.
+  /// A separate overload rather than a defaulted parameter, so that a caller
+  /// with no flag to offer has to say so rather than silently binding one
+  /// that can never be set. Tests and short-lived tools are the intended
+  /// users; a daemon should pass its own flag.
   /// @tparam Message The message type to receive.
   /// @param queueName The name of the queue to consume from.
-  /// @param timeout The maximum time to wait for a message. 0 means poll
-  ///        until a message arrives -- uninterruptible without a flag, so
-  ///        pass one from any process that has to shut down.
+  /// @param timeout The maximum time to wait for a message. 0ms polls once
+  ///        and returns immediately if nothing is available; WaitForever is
+  ///        uninterruptible on this overload since there is no flag to
+  ///        consult, so pass one from any process that has to shut down.
   /// @return The next message, an empty optional if the timeout elapsed, or a
   ///         MessagingFailed error describing the failure.
   template <class Message>

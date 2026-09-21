@@ -22,15 +22,23 @@
 
 [common]
 logDir = "/var/log/qrmci"
+# Logger name used for the process-wide default spdlog logger (the only
+# logger name this build currently uses -- schedulerLogger below and
+# [submitter]'s `logger` field are accepted but not yet wired to a separate
+# log sink; everything logs through this one daemon logger).
+daemonLogger = "mqss::Daemon"
 # Input queue this selector receives incoming tasks from.
 qrmciQueue = "qrmci.tasks.queue"
 resultsQueue = "test.results.queue"
 schedulerQueue = "scheduler.tasks.queue"
+# Logger name reserved for the scheduler stage; currently unused (see
+# daemonLogger above -- all logging goes through the daemon logger today).
+schedulerLogger = "mqss::Scheduler"
 # Sleep between turns of the daemon's poll loop, in milliseconds.
 stagePollInterval = 100
 
 [common.connection]
-host = "host.docker.internal"
+host = "localhost"
 port = 5672
 user = "guest"
 # Prefer QRMCI_AMQP_PASSWORD at deploy time over a password in this file.
@@ -41,9 +49,13 @@ vhost = "/"
 # Queue backend status is published on by the workers this selector reads
 # from, and forwards to the compiler queue below once a task is selected.
 backendStatusQueue = "backend.status.queue"
-# Timeouts (milliseconds) for this selector's two receive() calls.
-backendStatusReceiveTimeout = 500
-taskReceiveTimeout = 500
+# Logger name reserved for the selector stage; currently unused (see
+# [common] daemonLogger above).
+logger = "mqss::Selector"
+# The rule for picking among several backends that are all compatible with a
+# task: "lowest-name" or "smallest-sufficient". Any other string is a
+# startup error. See apps/qrmci.full-reference.example.toml for details.
+selectionPolicy = "lowest-name"
 
 [selector.backendRegistry]
 # How long (seconds) a backend entry stays usable after its last refresh.
@@ -53,3 +65,6 @@ entryTimeToLive = 30
 # Queue a selected task is forwarded to; must match the worker's [compiler]
 # queue name.
 queue = "compiler.tasks.queue"
+# Logger name reserved for the compiler stage; currently unused (see
+# [common] daemonLogger above).
+logger = "mqss::Compiler"

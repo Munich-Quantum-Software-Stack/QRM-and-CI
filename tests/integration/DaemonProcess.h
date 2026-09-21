@@ -36,6 +36,14 @@ struct EnvOverride {
 /// `qrmci` (spdlog, the AMQP client), and `fork()` in a process with
 /// background threads/locks risks the child deadlocking before `exec()`
 /// runs. `posix_spawn` avoids duplicating that threaded state.
+///
+/// Ownership of the spawned PID ends the instant the child is known to have
+/// exited, not merely when the caller happens to stop tracking it: every
+/// path that can observe the exit (isRunning(), stop()'s own polling and
+/// final blocking wait) clears the stored PID immediately, so an operation
+/// issued afterward -- another stop(), another isRunning() -- has nothing
+/// left to act on rather than risking a signal or wait aimed at whatever
+/// unrelated process the OS may since have reused that PID for.
 class DaemonProcess {
 public:
   /// @param label Human-readable name used in diagnostics (e.g.
@@ -68,9 +76,16 @@ public:
   ///        process is no longer running.
   void stop(std::chrono::milliseconds gracePeriod = std::chrono::seconds(5));
 
-  /// @brief Non-blocking check: reaps the child if it has already exited.
+  /// @brief Non-blocking check: reaps the child if it has already exited,
+  ///        clearing ownership (as if never started) the moment reaping
+  ///        succeeds, rather than leaving the exited PID on record. Without
+  ///        this, a later stop() acting on a stale PID risks signalling
+  ///        whatever unrelated process the OS has since reused that number
+  ///        for -- no claim is made about how likely that reuse is, only
+  ///        that the object must not keep pointing at a PID it no longer
+  ///        owns.
   /// @return True if the daemon is still running.
-  [[nodiscard]] bool isRunning() const;
+  [[nodiscard]] bool isRunning();
 
   /// @return The label passed at construction.
   [[nodiscard]] const std::string &getLabel() const { return label; }
@@ -81,6 +96,16 @@ public:
   }
 
 private:
+  /// @brief Reap the child via a non-blocking waitpid() if it has exited.
+  ///        Clears `pid` to -1 the moment waitpid reports the child gone --
+  ///        either by returning its PID (reaped just now) or ECHILD (already
+  ///        reaped elsewhere) -- so ownership never outlives the process it
+  ///        names. Any other waitpid error is logged and ownership is left
+  ///        in place, since it is not known whether the child is still
+  ///        alive.
+  /// @return True if the child is still running (ownership retained).
+  bool reapIfExited();
+
   std::string label;
   std::filesystem::path executablePath;
   std::filesystem::path logDir;

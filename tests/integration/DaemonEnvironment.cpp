@@ -65,7 +65,7 @@ void DaemonEnvironment::SetUp() {
 
   const auto deadline = std::chrono::steady_clock::now() + ReadinessTimeout;
   while (std::chrono::steady_clock::now() < deadline) {
-    for (const auto &daemon : daemons) {
+    for (auto &daemon : daemons) {
       ASSERT_TRUE(daemon.isRunning())
           << daemon.getLabel() << " exited before becoming ready; see "
           << daemon.getStdioLogPath();

@@ -45,7 +45,11 @@ TEST_F(SubmitTaskDistributedTest, ReturnsResultForSubmittedTask) {
   qtask.set_circuit_file_type(std::string("quake"));
   qtask.set_n_shots(100);
   qtask.set_optimisation_level(1);
-  qtask.set_preferred_qpu(std::string("C++ Device with 5 qubits"));
+  // The client-facing backend ID (registry key, and what preferred_qpu/
+  // scheduled_qpu/executed_qpu actually match against), not the QDMI
+  // device's own display name -- see openConfiguredDevice()'s deviceId()
+  // documentation.
+  qtask.set_preferred_qpu(std::string("cxxdevice5q"));
   qtask.set_no_modify(false);
   qtask.set_result_destination(std::string("tester.tasks.queue.distributed"));
 

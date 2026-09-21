@@ -1,0 +1,97 @@
+# Copyright (c) 2026 MQSS Maintainers
+# All rights reserved.
+#
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Compose file for the distributed qrmcid-distributed-selector and
+# qrmcid-distributed-worker daemons. Builds both images from the shared
+# ./Dockerfile (different build targets) and runs them against an external
+# RabbitMQ broker; this file does not bundle a broker service, so set
+# QRMCI_AMQP_HOST in .env to a reachable one. Both services load the same
+# .env file since their [common] connection and queue names must match
+# (they share one broker).
+#
+# Usage:
+#   cd apps/distributed
+#   cp .env.example .env    # edit values for your deployment
+#   mkdir -p ./logs/selector ./logs/worker && sudo chown -R 1001:1001 ./logs
+#   docker compose up --build
+#
+# Both daemons run as the unprivileged 1001:1001 (qrmci) user baked into the
+# image; the mkdir/chown above must match that UID/GID, since a host bind
+# mount replaces the image's own directory ownership with the host's -- skip
+# it and Docker will auto-create these directories owned by another UID
+# before the containers start, and each daemon will fail to open its log
+# file with "Permission denied", falling back to console-only logging.
+#
+# See .env.example in this directory for every QRMCI_* variable these
+# services read, and apps/qrmci.full-reference.example.toml for the
+# file-only tuning fields (poll interval, receive timeout, registry TTL,
+# logger names) that have no environment variable equivalent -- mount a
+# TOML file per service and set QRMCI_CONFIG_FILE (see the commented-out
+# volumes/env entries below) to use those.
+
+services:
+  qrmcid-distributed-selector:
+    build:
+      context: ../..
+      dockerfile: apps/distributed/Dockerfile
+      target: runtime-selector
+      secrets:
+        - github_token
+    image: qrmcid-distributed-selector:${IMAGE_TAG:-local}
+    container_name: qrmcid-distributed-selector
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./logs/selector:/home/qrmci/logs
+      # - ./config/qrmci-distributed-selector.toml:/home/qrmci/config/qrmci.toml:ro
+
+  qrmcid-distributed-worker:
+    build:
+      context: ../..
+      dockerfile: apps/distributed/Dockerfile
+      target: runtime-worker
+      secrets:
+        - github_token
+    image: qrmcid-distributed-worker:${IMAGE_TAG:-local}
+    container_name: qrmcid-distributed-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./logs/worker:/home/qrmci/logs
+      # - ./config/qrmci-distributed-worker.toml:/home/qrmci/config/qrmci.toml:ro
+
+  # To scale out to a second worker, duplicate the service above under a new
+  # name and override its device ID and dispatch queue so they don't collide
+  # with the first worker's -- both must be unique per worker, since the
+  # selector rejects a second worker publishing under the same ID with a
+  # different queue. For example:
+  #
+  # qrmcid-distributed-worker-b:
+  #   build:
+  #     context: ../..
+  #     dockerfile: apps/distributed/Dockerfile
+  #     target: runtime-worker
+  #     secrets:
+  #       - github_token
+  #   image: qrmcid-distributed-worker:${IMAGE_TAG:-local}
+  #   container_name: qrmcid-distributed-worker-b
+  #   restart: unless-stopped
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     QRMCI_SUBMITTER_QDMI_DEVICE_ID: worker-b
+  #     QRMCI_COMPILER_QUEUE: compiler.worker-b
+  #   volumes:
+  #     - ./logs/worker-b:/home/qrmci/logs
+
+secrets:
+  # Optional BuildKit secret consumed by the Dockerfile's builder stage to
+  # authenticate FetchContent git clones over HTTPS (e.g. MQSS-Submitter).
+  # An unset GITHUB_TOKEN falls back to unauthenticated HTTPS, matching
+  # `make docker-build-distributed` without GITHUB_TOKEN=... set.
+  github_token:
+    environment: GITHUB_TOKEN

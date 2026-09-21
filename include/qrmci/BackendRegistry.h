@@ -7,10 +7,9 @@
 
 /// @file BackendRegistry.h
 /// @brief The set of backends a QRM&CI process may schedule onto, and the
-///        two clocks that keep it honest: a time-to-live after which an
-///        entry nobody refreshed is dropped, and a publish interval that
-///        paces status refresh/publication independently of how fast the
-///        work loop spins.
+///        time-to-live after which an entry nobody refreshed is dropped. See
+///        PublicationThrottle.h for the unrelated concern of pacing status
+///        refresh/publication.
 
 #pragma once
 
@@ -21,7 +20,6 @@
 #include <cstdint>
 #include <functional>
 #include <map>
-#include <optional>
 #include <string>
 #include <string_view>
 
@@ -53,31 +51,36 @@ enum class BackendSelectionPolicy : std::uint8_t {
 /// chooseBackend() reproducible.
 class BackendRegistry {
 public:
-  /// @brief Monotonic clock used for entry freshness and publish-slot timing.
+  /// @brief Monotonic clock used for entry freshness.
   using Clock = std::chrono::steady_clock;
 
   /// @brief How long an entry stays usable after it was last refreshed.
   static constexpr Clock::duration DefaultTimeToLive = std::chrono::seconds(30);
-  /// @brief Minimum spacing between two publish slots.
-  static constexpr Clock::duration DefaultPublishInterval =
-      std::chrono::seconds(5);
 
-  /// @brief Construct a registry with the default time-to-live and publish
-  ///        interval.
+  /// @brief Construct a registry with the default time-to-live.
   BackendRegistry() = default;
 
-  /// @brief Construct a registry with explicit timings.
+  /// @brief Construct a registry with an explicit time-to-live.
   /// @param timeToLive How long an entry stays usable after its last
-  ///        refresh. Must be longer than @p publishInterval for a
-  ///        self-refreshing process to keep its own entry alive.
-  /// @param publishInterval Minimum spacing between two publish slots.
-  BackendRegistry(Clock::duration timeToLive, Clock::duration publishInterval);
+  ///        refresh. For a self-refreshing process, must be longer than the
+  ///        PublicationThrottle interval it refreshes on, or it can expire
+  ///        its own entry between refreshes.
+  explicit BackendRegistry(Clock::duration timeToLive);
 
   /// @brief Insert a backend, or refresh the entry already registered under
   ///        the same name, and stamp it as last heard from at @p now.
+  ///
+  /// Rejected rather than applied if an entry is already registered under
+  /// the same name with a different, non-empty dispatch queue -- the same ID
+  /// publishing under two different queues is a routing conflict a task
+  /// could silently be sent to the wrong worker over, not something a later
+  /// status update should be allowed to overwrite. The existing entry, and
+  /// its time-to-live, are left untouched either way.
   /// @param backend The backend to register.
   /// @param now The time to stamp the entry with.
-  void insertOrRefresh(BackendWrapper backend,
+  /// @return True if @p backend was inserted or refreshed the existing
+  ///         entry; false if it was rejected as a dispatch-queue conflict.
+  bool insertOrRefresh(BackendWrapper backend,
                        Clock::time_point now = Clock::now());
 
   /// @brief Drop every entry last refreshed longer ago than the registry's
@@ -108,27 +111,10 @@ public:
   /// @return True if there are no entries.
   [[nodiscard]] bool empty() const noexcept { return entries.empty(); }
 
-  /// @brief Claim the next status-publication slot, if one is due.
-  ///
-  /// Returns true at most once per publish interval and stamps the slot as
-  /// taken, so a caller can guard both its device interrogation and its
-  /// status publication with it and stop doing either once per turn of a
-  /// work loop that spins far faster than the status can meaningfully
-  /// change. The first call always succeeds.
-  /// @param now The current time.
-  /// @return True if the caller should refresh and publish its status now.
-  [[nodiscard]] bool claimPublishSlot(Clock::time_point now = Clock::now());
-
   /// @brief Get the registry's entry time-to-live.
   /// @return The configured time-to-live.
   [[nodiscard]] Clock::duration getTimeToLive() const noexcept {
     return entryTimeToLive;
-  }
-
-  /// @brief Get the registry's publish interval.
-  /// @return The configured publish interval.
-  [[nodiscard]] Clock::duration getPublishInterval() const noexcept {
-    return publishInterval;
   }
 
   /// @brief Apply a function to every registered backend, in ascending
@@ -153,8 +139,6 @@ private:
   // materialising a std::string per query.
   std::map<std::string, Entry, std::less<>> entries;
   Clock::duration entryTimeToLive{DefaultTimeToLive};
-  Clock::duration publishInterval{DefaultPublishInterval};
-  std::optional<Clock::time_point> lastPublished;
 };
 
 } // namespace mqss::qrmci

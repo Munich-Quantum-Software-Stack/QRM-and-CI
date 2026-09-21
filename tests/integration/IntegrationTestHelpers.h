@@ -26,8 +26,8 @@ namespace mqss::qrmci::test {
 inline constexpr std::chrono::seconds kResultTimeout{30};
 
 /// @brief Per-receive budget for a client that polls the same queue
-///        multiple times in one run (submit_task_concurrent,
-///        schedule_task): sized so the worst case, every poll timing out,
+///        multiple times in one run (TestSubmitTaskConcurrent,
+///        TestScheduleTask): sized so the worst case, every poll timing out,
 ///        still finishes inside the 120s ctest TIMEOUT.
 inline constexpr std::chrono::seconds kPolledResultTimeout{10};
 
@@ -44,7 +44,7 @@ inline std::int32_t uniqueTaskId() {
 }
 
 /// @brief A compilable/executable 2-qubit Quake circuit, identical to the one
-///        used by submit_task.cpp. Shared by the integration test client
+///        used by TestSubmitTask.cpp. Shared by the integration test client
 ///        programs that need a circuit the "quake" input format and the
 ///        example QDMI device both accept.
 /// @return The Quake circuit source.

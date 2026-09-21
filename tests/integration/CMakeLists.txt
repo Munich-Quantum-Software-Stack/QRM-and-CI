@@ -10,13 +10,18 @@ find_package(GTest REQUIRED)
 # Client-only integration tests: each spawns and tears down its own daemon(s)
 # (apps/standalone or apps/distributed) via DaemonEnvironment, then sends
 # task(s) to it over a real RabbitMQ/QDMI setup and asserts on the result(s)
-# that come back. `ctest` still must not schedule them by default -- they need a
-# reachable RabbitMQ broker and the real example QDMI driver/device -- but no
-# daemon needs to be started manually first; each binary owns its own daemon's
-# lifecycle.
+# that come back. No daemon has to be started by hand -- each binary owns its
+# own daemon's lifecycle -- but `ctest` still must not schedule them by default,
+# since they need a reachable RabbitMQ broker and the real example QDMI
+# driver/device.
 set(INTEGRATION_TEST_TARGETS
-    TestSubmitTask TestSubmitTaskDistributed TestSubmitTaskUnsupportedBackend
-    TestSubmitTaskCompileFailure TestSubmitTaskConcurrent TestScheduleTask)
+    TestSubmitTask
+    TestSubmitTaskDistributed
+    TestSubmitTaskUnsupportedBackend
+    TestSubmitTaskCompileFailure
+    TestSubmitTaskConcurrent
+    TestScheduleTask
+    TestSubmitTaskMultiWorker)
 
 # Shared by every target above: DaemonProcess/DaemonEnvironment own the spawned
 # daemon subprocess(es) and the broker-readiness probe. Kept out of the qrmci
@@ -37,9 +42,8 @@ foreach(target IN LISTS INTEGRATION_TEST_TARGETS)
 
   set(_daemon_log_root "${CMAKE_CURRENT_BINARY_DIR}/daemon-logs/${target}")
 
-  # Locate the daemon binaries this target spawns via a generator expression
-  # (matches the existing FMT_HEADER_ONLY pattern on these same targets); an
-  # explicit add_dependencies() below is still required since a genex in
+  # Locate the daemon binaries this target spawns with a generator expression.
+  # The explicit add_dependencies() below is still required: a genex in
   # target_compile_definitions is string substitution only and creates no
   # build-order edge.
   if(${target} STREQUAL "TestSubmitTaskDistributed")
@@ -50,6 +54,17 @@ foreach(target IN LISTS INTEGRATION_TEST_TARGETS)
         "QRMCI_DISTRIBUTED_WORKER_PATH=\"$<TARGET_FILE:qrmcid-distributed-worker>\""
         "QRMCI_DISTRIBUTED_SELECTOR_LOG_DIR=\"${_daemon_log_root}/selector\""
         "QRMCI_DISTRIBUTED_WORKER_LOG_DIR=\"${_daemon_log_root}/worker\"")
+    add_dependencies(${target} qrmcid-distributed-selector
+                     qrmcid-distributed-worker)
+  elseif(${target} STREQUAL "TestSubmitTaskMultiWorker")
+    target_compile_definitions(
+      ${target}
+      PRIVATE
+        "QRMCI_DISTRIBUTED_SELECTOR_PATH=\"$<TARGET_FILE:qrmcid-distributed-selector>\""
+        "QRMCI_DISTRIBUTED_WORKER_PATH=\"$<TARGET_FILE:qrmcid-distributed-worker>\""
+        "QRMCI_DISTRIBUTED_SELECTOR_LOG_DIR=\"${_daemon_log_root}/selector\""
+        "QRMCI_DISTRIBUTED_WORKER_A_LOG_DIR=\"${_daemon_log_root}/worker-a\""
+        "QRMCI_DISTRIBUTED_WORKER_B_LOG_DIR=\"${_daemon_log_root}/worker-b\"")
     add_dependencies(${target} qrmcid-distributed-selector
                      qrmcid-distributed-worker)
   else()
@@ -87,7 +102,7 @@ foreach(target IN LISTS INTEGRATION_TEST_TARGETS)
       WORKING_DIRECTORY
       "${CMAKE_CURRENT_BINARY_DIR}/.."
       ENVIRONMENT
-      "QDMI_CONF=${QRMCI_TEST_QDMI_CONF};LD_LIBRARY_PATH=$<TARGET_FILE_DIR:qdmi_example_driver>:${LD_LIBRARY_PATH}"
+      "QDMI_CONF=${QRMCI_TEST_QDMI_CONF};LD_LIBRARY_PATH=$<TARGET_FILE_DIR:qdmi_example_driver>:${LD_LIBRARY_PATH};QRMCI_SUBMITTER_QDMI_DRIVER=$<TARGET_FILE:qdmi_example_driver>"
   )
   add_dependencies(${target} qrmci_test_qdmi_conf)
 endforeach()
@@ -96,7 +111,7 @@ endforeach()
 # the same already-running RabbitMQ vhost (none of these targets overrides
 # QRMCI_AMQP_*/QRMCI_*_QUEUE), so two of these tests running at once would
 # compete as unintended consumers on the same input queues and the same
-# simulated QDMI device. This serializes just these six regardless of what else
-# `ctest -j` runs alongside them.
+# simulated QDMI device. This serializes just these seven regardless of what
+# else `ctest -j` runs alongside them.
 set_tests_properties(${INTEGRATION_TEST_TARGETS}
                      PROPERTIES RESOURCE_LOCK qrmci_daemon_rabbitmq)

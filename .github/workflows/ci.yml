@@ -87,7 +87,7 @@ jobs:
     env:
       CC: ${{ matrix.cc }}
       CXX: ${{ matrix.cxx }}
-      QRMCI_TEST_AMQP_HOST: rabbitmq
+      QRMCI_AMQP_HOST: rabbitmq
     steps:
       - uses: actions/checkout@v4
       - name: Install compiler (${{ matrix.compiler }} ${{ matrix.version }})
@@ -103,8 +103,11 @@ jobs:
         run: |
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=Release \
-            -DQRMCI_WARNINGS_AS_ERRORS=ON
+            -DQRMCI_WARNINGS_AS_ERRORS=ON \
+            -DQRMCI_RUN_INTEGRATION_TESTS=ON
       - name: Build
         run: cmake --build build --parallel
-      - name: Run tests
-        run: ctest --test-dir build/tests --output-on-failure
+      - name: Run unit tests
+        run: ctest --test-dir build/tests -LE integration --output-on-failure
+      - name: Run integration tests
+        run: ctest --test-dir build/tests -L integration --output-on-failure

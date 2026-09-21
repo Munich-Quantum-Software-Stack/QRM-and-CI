@@ -12,11 +12,11 @@
 namespace mqss::qrmci::defaults {
 
 // Static defaults.
-inline constexpr std::string_view AMPQHost = "host.docker.internal";
-inline constexpr int AMPQPort = 5672;
-inline constexpr std::string_view AMPQUser = "guest";
-inline constexpr std::string_view AMPQPassword = "guest";
-inline constexpr std::string_view AMPQVHost = "/";
+inline constexpr std::string_view AMQPHost = "127.0.0.1";
+inline constexpr int AMQPPort = 5672;
+inline constexpr std::string_view AMQPUser = "guest";
+inline constexpr std::string_view AMQPPassword = "guest";
+inline constexpr std::string_view AMQPVHost = "/";
 
 inline constexpr std::string_view QRMCIQueue = "qrmci.tasks.queue";
 inline constexpr std::string_view SchedulerQueue = "scheduler.tasks.queue";
@@ -32,10 +32,16 @@ inline constexpr std::string_view DaemonLog = "daemon.log";
 inline constexpr std::string_view SubmitterLog = "submitter.log";
 inline constexpr std::string_view SelectorLog = "selector.log";
 
-inline constexpr std::string_view SubmitterQdmiDriverName =
-    "qdmi_example_driver";
+// Matches where the runtime container images install the driver (see
+// apps/standalone/Dockerfile, apps/distributed/Dockerfile).
+// openConfiguredDevice() passes this to a filesystem-existence-checked API, so
+// it must resolve relative to the process's working directory; bare-name
+// deployments must set QRMCI_SUBMITTER_QDMI_DRIVER explicitly.
+inline constexpr std::string_view SubmitterqdmiDriver =
+    "/usr/local/lib/qrmci/libqdmi_example_driver.so";
 inline constexpr std::string_view SubmitterQdmiDeviceName =
     "C++ Device with 5 qubits";
+inline constexpr std::string_view SubmitterQdmiDeviceId = "cxxdevice5q";
 inline constexpr std::string_view SubmitterQdmiClientToken = "token";
 
 } // namespace mqss::qrmci::defaults

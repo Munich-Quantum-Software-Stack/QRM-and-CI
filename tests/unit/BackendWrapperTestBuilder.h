@@ -44,6 +44,20 @@ public:
     backend.set_status(value);
     return *this;
   }
+  /// @brief Set a raw backend-type value, including one that is not a known
+  ///        enumerator, the way a peer on a newer protocol version would put
+  ///        it on the wire.
+  BackendBuilder &rawType(int value) {
+    backend.set_type(static_cast<mqss::BackendType>(value));
+    return *this;
+  }
+  /// @brief Set a raw backend-status value, including one that is not a
+  ///        known enumerator, the way a peer on a newer protocol version
+  ///        would put it on the wire.
+  BackendBuilder &rawStatus(int value) {
+    backend.set_status(static_cast<mqss::BackendStatus>(value));
+    return *this;
+  }
   BackendBuilder &queueLength(std::uint32_t value) {
     backend.set_queue_length(value);
     return *this;

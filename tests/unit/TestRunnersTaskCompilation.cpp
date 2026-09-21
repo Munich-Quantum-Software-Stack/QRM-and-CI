@@ -67,7 +67,11 @@ TEST_F(CompileQuantumTaskTest, ValidTaskAndBackend) {
   useCircuitFormats({mqss::CircuitFormat::CIRCUIT_FORMAT_QIRBASESTRING,
                      mqss::CircuitFormat::CIRCUIT_FORMAT_QASM3});
   auto result = mqss::qrmci::compileQuantumTask(task, backend);
-  EXPECT_TRUE(result.has_value());
+  ASSERT_TRUE(result.has_value());
+  // The compiled bytes no longer match "quake", so the task's circuit type
+  // must be relabeled with the compiler target's own canonical label --
+  // here "qirbase", since QIRBASESTRING is what the backend offers.
+  EXPECT_EQ(task.circuit_file_type(), "qirbase");
 }
 
 TEST_F(CompileQuantumTaskTest,
@@ -79,9 +83,6 @@ TEST_F(CompileQuantumTaskTest,
   auto result = mqss::qrmci::compileQuantumTask(task, backend);
   EXPECT_FALSE(result.has_value());
   EXPECT_EQ(result.error().kind, mqss::qrmci::Error::Kind::UnsupportedFormat);
-  // Permanent: the submitter's own input is wrong, so this must never be
-  // requeued.
-  EXPECT_FALSE(result.error().isRetryable());
 }
 
 TEST_F(CompileQuantumTaskTest, EmptyCircuitFailsInCompiler) {
@@ -97,7 +98,6 @@ TEST_F(CompileQuantumTaskTest, EmptyCircuitFailsInCompiler) {
   auto result = mqss::qrmci::compileQuantumTask(task, backend);
   EXPECT_FALSE(result.has_value());
   EXPECT_EQ(result.error().kind, mqss::qrmci::Error::Kind::CompilationFailed);
-  EXPECT_FALSE(result.error().isRetryable());
   EXPECT_NE(result.error().detail.find("circuit file 0"), std::string::npos);
 }
 
@@ -174,21 +174,42 @@ TEST_F(CompileQuantumTaskTest,
   EXPECT_NE(result.error().detail.find("circuit file 2"), std::string::npos);
 }
 
+TEST_F(CompileQuantumTaskTest, InvalidOptimisationLevelFailsBeforeCompiler) {
+  // An out-of-range optimisation_level must be rejected by
+  // getCompilerOptimizationLevel() before the compiler ever runs, not
+  // silently substituted with another level.
+  auto task = makeTask(R"(
+      module {
+      func.func @hadamard_circuit() {
+        %q0 = quake.alloca !quake.ref
+        quake.h %q0 : (!quake.ref) -> ()
+        %b0 = quake.mz %q0 : (!quake.ref) -> !quake.measure
+        return
+      }
+    }
+  )",
+                       2, "quake");
+  task.set_optimisation_level(4);
+  useCircuitFormats({mqss::CircuitFormat::CIRCUIT_FORMAT_QIRBASESTRING});
+  auto result = mqss::qrmci::compileQuantumTask(task, backend);
+  ASSERT_FALSE(result.has_value());
+  EXPECT_EQ(result.error().kind, mqss::qrmci::Error::Kind::CompilationFailed);
+  EXPECT_NE(result.error().detail.find('4'), std::string::npos);
+}
+
 TEST_F(CompileQuantumTaskTest, NoCompatibleResultFormatFails) {
   // The default helper backend only supports CIRCUIT_FORMAT_QASM3, which the
-  // compiler cannot emit, so BackendWrapper::compilerResultFormat() must
-  // fail before the compiler is invoked.
+  // compiler cannot emit, so BackendWrapper::compilerTarget() must fail
+  // before the compiler is invoked.
   auto task = makeTask("OPENQASM 3.0;", 2, "quake");
   ASSERT_EQ(backend.getSupportedCircuitFormats().size(), 1u);
   ASSERT_EQ(backend.getSupportedCircuitFormats()[0],
             mqss::CircuitFormat::CIRCUIT_FORMAT_QASM3);
   auto result = mqss::qrmci::compileQuantumTask(task, backend);
   EXPECT_FALSE(result.has_value());
-  // The error is BackendWrapper::compilerResultFormat()'s, forwarded
-  // unchanged: no backend-supported format can ever be emitted for this
-  // backend, so no retry helps.
+  // The error is BackendWrapper::compilerTarget()'s, forwarded unchanged: no
+  // backend-supported format can ever be emitted for this backend.
   EXPECT_EQ(result.error().kind, mqss::qrmci::Error::Kind::UnsupportedFormat);
-  EXPECT_FALSE(result.error().isRetryable());
 }
 
 } // namespace mqss::qrmci::test

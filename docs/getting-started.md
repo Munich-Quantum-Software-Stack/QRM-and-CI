@@ -18,6 +18,14 @@ see [Development Guide](development-guide.md).
 In distributed mode, one selector is paired with one or more workers. Each worker publishes its own
 backend status, and the selector chooses among the backends it has heard from.
 
+To run more than one worker against the same selector, give each worker a distinct
+`qdmiDeviceId`/`QRMCI_SUBMITTER_QDMI_DEVICE_ID` and a distinct `compiler.queue`/`QRMCI_COMPILER_QUEUE`
+(see `apps/distributed/docker-compose.yaml`'s commented-out second-worker example). A worker publishes
+its own dispatch queue alongside its status, and the selector forwards each task to that queue, so two
+workers sharing one queue would race to consume each other's tasks; two workers sharing one device ID
+with different queues is instead rejected outright as an identity collision, and the first worker's
+entry is kept.
+
 ## Prerequisites
 
 ### Runtime prerequisites
@@ -90,6 +98,21 @@ image that already exists locally. None of them mounts a config file or passes e
 so the container starts on the compiled-in defaults (see "Selected defaults" below) —
 which is almost never what you want. For a real deployment, run `docker run` yourself with
 `-e QRMCI_CONFIG_FILE=...` and a mounted config file, or with the individual `QRMCI_*` overrides.
+
+For a self-contained local deployment, use the `docker-compose.yaml` files
+instead: `apps/standalone/docker-compose.yaml` builds and runs
+`qrmcid-standalone`, and `apps/distributed/docker-compose.yaml` builds and
+runs the selector and worker together. Both load every `QRMCI_*` variable
+from a companion `.env` file (copy `.env.example` next to it and edit it):
+
+```bash
+cd apps/standalone   # or apps/distributed
+cp .env.example .env
+docker compose up --build
+```
+
+Neither compose file bundles a RabbitMQ broker — set `QRMCI_AMQP_HOST` in
+`.env` to a reachable one, same as the `-e` overrides above.
 
 ## Path B: build from source
 
@@ -170,16 +193,41 @@ QRM&CI assembles configuration in three layers, from lowest to highest precedenc
    is a startup error.
 3. environment variables
 
+Once assembled, the configuration is validated as a whole; a present-but-invalid value is always a
+startup error naming the exact dotted key, regardless of which layer supplied it:
+
+- an unknown top-level table or an unknown key inside `[common]`, `[common.connection]`,
+  `[selector]`, `[selector.backendRegistry]`, `[compiler]`, `[submitter]`, or
+  `[submitter.backendRegistry]`
+- a value of the wrong type for a documented field (e.g. a string where an integer is expected)
+- a malformed or partially-numeric `QRMCI_AMQP_PORT`, or a port outside `1..65535`
+- an empty `host`, `qrmciQueue`, `backendStatusQueue`, `compiler.queue`, `qdmiDriver`,
+  `qdmiDeviceName`, or `qdmiDeviceId`
+- `stagePollInterval`, `selector.backendRegistry.entryTimeToLive`,
+  `submitter.backendRegistry.entryTimeToLive`, or `backendStatusPublishInterval` that is not greater
+  than zero
+- a negative `taskReceiveTimeout` or `jobWaitTimeout`
+- `submitter.backendRegistry.entryTimeToLive` not greater than
+  `submitter.backendStatusPublishInterval` (a registry entry must outlive the interval between the
+  publications that refresh it)
+- a `selector.selectionPolicy` other than exactly `"lowest-name"` or `"smallest-sufficient"`
+
 ### TOML files
 
 Copy the matching example file, edit it for your environment, and point `QRMCI_CONFIG_FILE` at the
 copy you want to use.
 
-| Binary                        | Example file                                                      | What the process reads                                                                                                                                                 |
-| ----------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `qrmcid-standalone`           | `apps/standalone/config/qrmci-standalone.example.toml`            | `[common]` for RabbitMQ, logs, task/result/scheduler queues, and poll interval; `[submitter]` for QDMI settings and backend registry timing                            |
-| `qrmcid-distributed-selector` | `apps/distributed/config/qrmci-distributed-selector.example.toml` | `[common]`; `[selector]` for backend status queue, selector logging, registry timing, and receive timeouts; `[compiler].queue` as the forwarding target                |
-| `qrmcid-distributed-worker`   | `apps/distributed/config/qrmci-distributed-worker.example.toml`   | `[common]`; `[selector].backendStatusQueue` as the publish target; `[compiler]` as the inbound task queue; `[submitter]` for QDMI settings and backend registry timing |
+| Binary                        | Example file                                                      | What the process reads                                                                                                                                                                                                                                            |
+| ----------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `qrmcid-standalone`           | `apps/standalone/config/qrmci-standalone.example.toml`            | `[common]` for RabbitMQ, logs, task/result/scheduler queues, and poll interval; `[selector].selectionPolicy` for its own backend selection; `[submitter]` for QDMI settings, job wait timeout, and backend registry timing                                        |
+| `qrmcid-distributed-selector` | `apps/distributed/config/qrmci-distributed-selector.example.toml` | `[common]`; `[selector]` for backend status queue, selector logging, selection policy, and registry timing. The forwarding queue for a selected task comes from the dispatch queue each worker published in its own status, not from a local `[compiler]` setting |
+| `qrmcid-distributed-worker`   | `apps/distributed/config/qrmci-distributed-worker.example.toml`   | `[common]`; `[selector].backendStatusQueue` as the publish target; `[compiler]` as the inbound task queue; `[submitter]` for QDMI settings, job wait timeout, and backend registry timing                                                                         |
+
+For a single file documenting every `Config` field (including the
+poll-interval/timeout/registry-TTL/logger-name fields above that have no
+`QRMCI_*` override), see `apps/qrmci.full-reference.example.toml` — it is a
+reference, not a deployable template, since no one binary reads every
+section in it.
 
 Keep credentials out of the TOML file when you can. Supply deployment-specific secrets through
 environment variables at runtime instead.
@@ -201,18 +249,23 @@ The documented runtime overrides in `src/Config.cpp` are:
 - `QRMCI_SUBMITTER_QUEUE`
 - `QRMCI_BACKEND_STATUS_QUEUE`
 - `QRMCI_LOG_DIR`
-- `QRMCI_SUBMITTER_QDMI_DRIVER_NAME`
+- `QRMCI_SUBMITTER_QDMI_DRIVER`
 - `QRMCI_SUBMITTER_QDMI_DEVICE_NAME`
+- `QRMCI_SUBMITTER_QDMI_DEVICE_ID`
 - `QRMCI_SUBMITTER_QDMI_CLIENT_TOKEN`
 
-Receive timeouts, `common.stagePollInterval`, and backend-registry timing are file-only settings in
-the current codebase.
+Receive timeouts, `common.stagePollInterval`, `submitter.jobWaitTimeout`, and backend-registry
+timing are file-only; they have no environment override. Nothing declares a QDMI version: the
+driver's version is detected from the driver itself.
 
 ### Selected defaults
 
 The compiled-in defaults are development values, not deployment values. If you do not override them:
 
-- RabbitMQ host `host.docker.internal`, port `5672`, vhost `/`
+- RabbitMQ host `127.0.0.1`, port `5672`, vhost `/` (the three production Dockerfiles set
+  `QRMCI_AMQP_HOST=localhost` explicitly as their compiled-in image default; `localhost` always
+  means the current container's own loopback address, on every Docker installation, not just
+  Docker Desktop — it only works if a broker runs inside that same container.
 - RabbitMQ credentials `guest` / `guest`
 - log directory `/var/log/qrmci`
 - task queue `qrmci.tasks.queue`
@@ -221,7 +274,10 @@ The compiled-in defaults are development values, not deployment values. If you d
 - submitter queue `submitter.tasks.queue`
 - backend status queue `backend.status.queue`
 - results queue `test.results.queue`
-- QDMI driver `qdmi_example_driver`, device `C++ Device with 5 qubits`, client token `token`
+- QDMI driver `/usr/local/lib/qrmci/libqdmi_example_driver.so` (a filesystem path, not a library
+  stem, matching where the runtime container images install it — see
+  [the device boundary section](using-the-library.md)), device `C++ Device with 5 qubits`, client
+  token `token`
 
 Two of those defaults matter most. The credentials are RabbitMQ's stock `guest`/`guest`, and the QDMI
 target is the _example_ driver — so an unconfigured daemon starts happily against an example device
@@ -236,16 +292,27 @@ Each daemon logs to the console and, when the log directory is writable, to `dae
 
 1. no configuration error — a malformed TOML file makes the process log
    `Failed to load configuration: ...` and exit with status 1
-2. the backends the process knows about. The standalone daemon and the worker log
+2. the device opening cleanly — a driver that cannot be loaded, a device name the driver does not
+   report, or a QDMI version this build cannot speak all make the standalone daemon and the worker
+   log `Could not open the QDMI device: ...` and exit non-zero. A device that opens but cannot be
+   read logs `Could not read the QDMI device: [<kind>] ...` and also exits non-zero: a daemon with
+   no backend to offer does not start.
+3. the backends the process knows about. The standalone daemon and the worker log
    `Available backends:` followed by one `Backend: <name>, Qubits: <n>, Status: <n>` line per entry,
    taken from their live QDMI connection. The selector starts with an empty registry and fills it
    from the worker status messages that arrive on `[selector].backendStatusQueue`.
-3. the start banner — `Starting MQSS QRM&CI Daemon.`,
+4. the start banner — `Starting MQSS QRM&CI Daemon.`,
    `Starting MQSS QRM&CI Distributed Backend Selector.`, or
    `Starting MQSS QRM&CI Distributed Worker.`
-4. a quiet poll loop. With no work on the intake queue, a healthy daemon logs nothing further; it
+5. a quiet poll loop. With no work on the intake queue, a healthy daemon logs nothing further; it
    wakes every `common.stagePollInterval`, refreshes its backend registry entry, and polls the queue
    again.
+
+A device that fails _later_, once the daemon is running, does not stop it: the refresh logs
+`Could not refresh the backend status: [<kind>] ...` and skips that turn, so the registry entry's own
+time-to-live governs how long the last good snapshot stands and a device that recovers is picked up
+on the next slot. The worker additionally publishes nothing in that turn, rather than telling the
+selector it is healthy.
 
 If the broker is unreachable, the daemon does not exit. Each turn logs a warning of the form
 `Could not read from queue '<queue>': ...` and the loop retries, so the daemon connects on its own
@@ -254,18 +321,22 @@ queue names are wrong — not that the daemon has died.
 
 ## Verify it works
 
-When you built the integration targets and have a live deployment running, the client-only
-integration checks under `tests/integration/` can submit work to it. For the baseline submission
-path, run:
+The `tests/integration/` checks are self-contained: each one spawns and tears down its own
+`qrmcid-standalone` (or, for `TestSubmitTaskDistributed`, both distributed daemons) rather than
+talking to a deployment you started yourself, so they verify this build's own pipeline end to end
+rather than a daemon you have already deployed elsewhere. For the baseline submission path, build
+the integration targets (`-DQRMCI_RUN_INTEGRATION_TESTS=ON`, see
+[Development Guide](development-guide.md)) and run:
 
 ```bash
-ctest --test-dir build/tests --output-on-failure -R '^submit_task$'
+ctest --test-dir build/tests --output-on-failure -R '^TestSubmitTask$'
 ```
 
-The test itself only needs to reach the same RabbitMQ broker and queues your daemon is configured
-with — it is a client, not a device user. The QDMI driver and device are required by the running
-daemon. A successful run means the client submitted a task, the daemon selected a backend, compiled
-it, and executed it, and a result rather than a cancellation came back on the result queue.
+A successful run means the spawned daemon selected a backend, compiled the submitted task, and
+executed it, and a result rather than a cancellation came back on the result queue. To check an
+already-deployed daemon instead of this build's own, send a `mqss.QuantumTask` to its configured
+input queue with any RabbitMQ client and read the result back from the queue you set as
+`result_destination` — `tests/integration/TestSubmitTask.cpp` shows the message shape.
 
 ## Where to go next
 

@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
+#include "BackendWrapperTestBuilder.h"
 #include "RunnersTestHelpers.h"
 #include "mqss/Protocol.hpp"
 #include "qrmci/BackendRegistry.h"
@@ -83,6 +84,49 @@ TEST_F(BackendRegistryInsertTest, DistinctNamesCoexist) {
   EXPECT_EQ(registry.size(), 2U);
 }
 
+TEST_F(BackendRegistryInsertTest, InsertReturnsTrueOnSuccess) {
+  EXPECT_TRUE(registry.insertOrRefresh(makeBackend("alpha"), Epoch));
+}
+
+TEST_F(BackendRegistryInsertTest, SameQueueRefreshSucceeds) {
+  EXPECT_TRUE(registry.insertOrRefresh(
+      BackendBuilder().name("alpha").queueName("q1").build(), Epoch));
+  EXPECT_TRUE(registry.insertOrRefresh(
+      BackendBuilder().name("alpha").numQubits(9).queueName("q1").build(),
+      Epoch));
+  ASSERT_NE(registry.find("alpha"), nullptr);
+  EXPECT_EQ(registry.find("alpha")->getNumQubits(), 9U);
+}
+
+TEST_F(BackendRegistryInsertTest,
+       ConflictingQueueIsRejectedAndLeavesTheExistingEntry) {
+  // The same backend ID publishing under two different dispatch queues is a
+  // routing conflict a task could silently be sent to the wrong worker
+  // over, so the conflicting status must be rejected rather than applied.
+  ASSERT_TRUE(registry.insertOrRefresh(
+      BackendBuilder().name("alpha").numQubits(5).queueName("q1").build(),
+      Epoch));
+  EXPECT_FALSE(registry.insertOrRefresh(
+      BackendBuilder().name("alpha").numQubits(9).queueName("q2").build(),
+      Epoch));
+
+  ASSERT_NE(registry.find("alpha"), nullptr);
+  EXPECT_EQ(registry.find("alpha")->getNumQubits(), 5U);
+  EXPECT_EQ(registry.find("alpha")->getQueueName(), "q1");
+}
+
+TEST_F(BackendRegistryInsertTest, EmptyQueueNeverConflicts) {
+  // An entry with no dispatch queue of its own (a self-registering process
+  // that never publishes) has nothing to conflict over.
+  ASSERT_TRUE(registry.insertOrRefresh(
+      BackendBuilder().name("alpha").numQubits(5).build(), Epoch));
+  EXPECT_TRUE(registry.insertOrRefresh(
+      BackendBuilder().name("alpha").numQubits(9).queueName("q1").build(),
+      Epoch));
+  ASSERT_NE(registry.find("alpha"), nullptr);
+  EXPECT_EQ(registry.find("alpha")->getNumQubits(), 9U);
+}
+
 TEST_F(BackendRegistryInsertTest, ForEachVisitsBackendsInNameOrder) {
   registry.insertOrRefresh(makeBackend("gamma"), Epoch);
   registry.insertOrRefresh(makeBackend("alpha"), Epoch);
@@ -104,8 +148,7 @@ TEST_F(BackendRegistryInsertTest, ForEachVisitsBackendsInNameOrder) {
 class BackendRegistryExpiryTest : public ::testing::Test {
 protected:
   static constexpr auto TimeToLive = std::chrono::seconds(30);
-  static constexpr auto PublishInterval = std::chrono::seconds(5);
-  mqss::qrmci::BackendRegistry registry{TimeToLive, PublishInterval};
+  mqss::qrmci::BackendRegistry registry{TimeToLive};
 };
 
 TEST_F(BackendRegistryExpiryTest, FreshEntrySurvives) {
@@ -140,53 +183,6 @@ TEST_F(BackendRegistryExpiryTest, OnlyStaleEntriesAreDropped) {
 
 TEST_F(BackendRegistryExpiryTest, ExpireOnEmptyRegistryIsANoOp) {
   EXPECT_EQ(registry.expire(Epoch + std::chrono::hours(1)), 0U);
-}
-
-TEST_F(BackendRegistryExpiryTest, DefaultTimeToLiveOutlivesPublishInterval) {
-  // A process that refreshes its own entry on the publish interval must not
-  // be able to expire itself in between.
-  const mqss::qrmci::BackendRegistry defaults;
-  EXPECT_GT(defaults.getTimeToLive(), defaults.getPublishInterval());
-}
-
-// ===========================================================================
-// BackendRegistryPublishSlotTest
-// ===========================================================================
-class BackendRegistryPublishSlotTest : public ::testing::Test {
-protected:
-  static constexpr auto TimeToLive = std::chrono::seconds(30);
-  static constexpr auto PublishInterval = std::chrono::seconds(5);
-  mqss::qrmci::BackendRegistry registry{TimeToLive, PublishInterval};
-};
-
-TEST_F(BackendRegistryPublishSlotTest, FirstClaimSucceeds) {
-  EXPECT_TRUE(registry.claimPublishSlot(Epoch));
-}
-
-TEST_F(BackendRegistryPublishSlotTest, SecondClaimWithinIntervalFails) {
-  // This is what decouples publication from the work loop: a loop spinning
-  // ten times a second must not produce ten status publications a second.
-  EXPECT_TRUE(registry.claimPublishSlot(Epoch));
-  EXPECT_FALSE(
-      registry.claimPublishSlot(Epoch + std::chrono::milliseconds(100)));
-  EXPECT_FALSE(registry.claimPublishSlot(Epoch + PublishInterval -
-                                         std::chrono::milliseconds(1)));
-}
-
-TEST_F(BackendRegistryPublishSlotTest, ClaimSucceedsAgainAfterInterval) {
-  EXPECT_TRUE(registry.claimPublishSlot(Epoch));
-  EXPECT_TRUE(registry.claimPublishSlot(Epoch + PublishInterval));
-}
-
-TEST_F(BackendRegistryPublishSlotTest, ClaimingIsPacedFromTheLastClaim) {
-  // The clock restarts at each successful claim, not at fixed multiples of
-  // the interval from the first one.
-  EXPECT_TRUE(registry.claimPublishSlot(Epoch));
-  EXPECT_TRUE(registry.claimPublishSlot(Epoch + PublishInterval));
-  EXPECT_FALSE(registry.claimPublishSlot(Epoch + PublishInterval +
-                                         std::chrono::seconds(1)));
-  EXPECT_TRUE(
-      registry.claimPublishSlot(Epoch + PublishInterval + PublishInterval));
 }
 
 } // namespace mqss::qrmci::test

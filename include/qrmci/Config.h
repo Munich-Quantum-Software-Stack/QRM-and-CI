@@ -6,16 +6,24 @@
  */
 
 /// @file Config.h
-/// @brief Configuration model for the QRM workflow daemon.
+/// @brief The runtime configuration model shared by every QRM&CI daemon.
 ///
-/// This header defines the configuration structures used to assemble the
-/// process-wide runtime configuration from defaults, an optional TOML file
-/// and environment overrides. Fields are grouped by the pipeline stage that
-/// consumes them (selector, compiler, submitter), plus a common group for
-/// settings shared across every stage.
+/// A configuration is assembled from compiled-in defaults, an optional TOML
+/// file and environment overrides, in that order of increasing precedence.
+/// Fields are grouped by the pipeline responsibility that owns them
+/// (selector, compiler, submitter), plus a common group for settings shared
+/// across every stage. The grouping names which stage's concern a field is,
+/// not which process is allowed to read it: a distributed process reads
+/// every group whose responsibility its own work touches, not only the one
+/// named after it. For example the distributed worker reads `[submitter]`
+/// for its own device and registry timing but also `[selector]`'s
+/// `backendStatusQueue` to publish its status, and `[compiler]` for the
+/// queue it receives tasks on -- see Config below for the exact reads of
+/// each shipped entrypoint.
 
 #pragma once
 
+#include "qrmci/BackendRegistry.h"
 #include "qrmci/Error.h"
 
 #include <chrono>
@@ -55,7 +63,7 @@ struct CommonConfig {
   std::string daemonLogger; ///< Logger name for the daemon.
   std::string daemonLog;    ///< Log file for the daemon.
 
-  std::string qrmciQueue;   ///< Input queue for the QRM daemon.
+  std::string qrmciQueue;   ///< Queue incoming tasks arrive on.
   std::string resultsQueue; ///< Queue that carries execution results.
 
   std::string schedulerQueue;  ///< Queue used by the scheduler stage.
@@ -78,11 +86,12 @@ struct SelectorConfig {
 
   BackendRegistryConfig backendRegistry; ///< This selector's registry timing.
 
-  /// @brief Timeout for both of the selector's receive() calls (the
-  ///        backend-status queue and the task-intake queue).
-  std::chrono::milliseconds backendStatusReceiveTimeout{500};
-  /// @brief Timeout for receiving the next task from the QRM&CI intake queue.
-  std::chrono::milliseconds taskReceiveTimeout{500};
+  /// @brief The rule for picking among several compatible backends, driving
+  ///        both the standalone daemon's and the distributed selector's own
+  ///        selection. File-only (`[selector] selectionPolicy`, one of
+  ///        `"lowest-name"` or `"smallest-sufficient"`); an unrecognized
+  ///        string is a ConfigError, not a silent fallback.
+  BackendSelectionPolicy selectionPolicy{BackendSelectionPolicy::LowestName};
 };
 
 /// @brief Compiler-stage configuration: the queue a worker receives
@@ -107,9 +116,21 @@ struct SubmitterConfig {
   std::string logger;  ///< Logger name for the submitter.
   std::string logFile; ///< Log file for the submitter.
 
-  std::string qdmiDriverName;  ///< QDMI driver name.
+  /// @brief Filesystem path to the QDMI driver library to load. Resolved by
+  ///        Client::openDevice(), which requires the file to exist -- a bare
+  ///        library stem is not searched for on the library path.
+  std::string qdmiDriver;
   std::string qdmiDeviceName;  ///< QDMI device name.
+  std::string qdmiDeviceId;    ///< QDMI device id.
   std::string qdmiClientToken; ///< QDMI client token.
+
+  /// @brief How long collectQuantumResult() waits for each submitted job to
+  ///        reach a final state. Zero waits indefinitely, matching QDMI's own
+  ///        zero-means-infinite convention. File-only (`[submitter]
+  ///        jobWaitTimeout`, a plain integer count of seconds); there is no
+  ///        environment override, following the same convention as the other
+  ///        tuning fields.
+  std::chrono::seconds jobWaitTimeout{0};
 
   BackendRegistryConfig backendRegistry; ///< This submitter's registry timing.
 
@@ -118,8 +139,16 @@ struct SubmitterConfig {
   std::chrono::milliseconds backendStatusPublishInterval{5000};
 };
 
-/// @brief Aggregate configuration for the QRM daemon, grouped by the
-///        pipeline stage that consumes each field.
+/// @brief A daemon's complete configuration, grouped by the pipeline
+///        responsibility each field belongs to. A shipped entrypoint reads
+///        whichever groups its own work touches, not only the group named
+///        after it:
+///        - The distributed selector reads `[common]` and `[selector]`.
+///        - The distributed worker reads `[common]`,
+///          `[selector].backendStatusQueue`, `[compiler]`, and
+///          `[submitter]`.
+///        - The standalone daemon reads `[common]`,
+///          `[selector].selectionPolicy`, and `[submitter]`.
 struct Config {
   CommonConfig common;       ///< Settings shared by every stage.
   SelectorConfig selector;   ///< Backend-selector stage configuration.
@@ -134,10 +163,14 @@ struct Config {
 /// discovered from the `QRMCI_CONFIG_FILE` environment variable if set,
 /// otherwise from the relative default path `config/qrmci.toml`; a missing
 /// file is not an error and simply leaves the corresponding fields at their
-/// defaults/environment values. A file that exists but fails to parse is
-/// reported as `Error::Kind::ConfigError`.
+/// defaults/environment values. A file that exists but fails to parse, an
+/// unknown key, a present value of the wrong type, or a value that violates
+/// one of the range/cross-field constraints documented on the affected
+/// field is reported as `Error::Kind::ConfigError` naming the exact dotted
+/// key at fault.
 /// @return The assembled configuration, or a ConfigError describing why the
-///         discovered file could not be read.
+///         discovered file could not be read or the assembled configuration
+///         is invalid.
 std::expected<Config, Error> loadConfig();
 
 /// @brief Build a configuration from defaults, the TOML file at @p
@@ -145,7 +178,8 @@ std::expected<Config, Error> loadConfig();
 ///        `QRMCI_CONFIG_FILE`/default-path discovery.
 /// @param configFile The TOML file to load. A missing file is not an error.
 /// @return The assembled configuration, or a ConfigError describing why @p
-///         configFile could not be read.
+///         configFile could not be read or the assembled configuration is
+///         invalid.
 std::expected<Config, Error>
 loadConfig(const std::filesystem::path &configFile);
 

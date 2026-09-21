@@ -22,7 +22,7 @@
 namespace mqss::qrmci::test {
 
 namespace {
-constexpr std::array<const char *, 16> kEnvVars = {
+constexpr std::array<const char *, 18> kEnvVars = {
     "QRMCI_CONFIG_FILE",
     "QRMCI_LOG_DIR",
     "QRMCI_AMQP_HOST",
@@ -36,9 +36,11 @@ constexpr std::array<const char *, 16> kEnvVars = {
     "QRMCI_RESULTS_QUEUE",
     "QRMCI_SUBMITTER_QUEUE",
     "QRMCI_BACKEND_STATUS_QUEUE",
-    "QRMCI_SUBMITTER_QDMI_DRIVER_NAME",
+    "QRMCI_SUBMITTER_QDMI_DRIVER",
     "QRMCI_SUBMITTER_QDMI_DEVICE_NAME",
+    "QRMCI_SUBMITTER_QDMI_DEVICE_ID",
     "QRMCI_SUBMITTER_QDMI_CLIENT_TOKEN",
+    "QRMCI_SUBMITTER_QDMI_VERSION",
 };
 
 /// @brief A path that is guaranteed not to exist, for tests exercising the
@@ -81,12 +83,12 @@ TEST_F(LoadConfigTest, DefaultsWhenNoEnvOverridesPresent) {
   auto config = load();
   ASSERT_TRUE(config.has_value()) << config.error().detail;
 
-  EXPECT_EQ(config->common.connection.host, mqss::qrmci::defaults::AMPQHost);
-  EXPECT_EQ(config->common.connection.port, mqss::qrmci::defaults::AMPQPort);
-  EXPECT_EQ(config->common.connection.user, mqss::qrmci::defaults::AMPQUser);
+  EXPECT_EQ(config->common.connection.host, mqss::qrmci::defaults::AMQPHost);
+  EXPECT_EQ(config->common.connection.port, mqss::qrmci::defaults::AMQPPort);
+  EXPECT_EQ(config->common.connection.user, mqss::qrmci::defaults::AMQPUser);
   EXPECT_EQ(config->common.connection.password,
-            mqss::qrmci::defaults::AMPQPassword);
-  EXPECT_EQ(config->common.connection.vhost, mqss::qrmci::defaults::AMPQVHost);
+            mqss::qrmci::defaults::AMQPPassword);
+  EXPECT_EQ(config->common.connection.vhost, mqss::qrmci::defaults::AMQPVHost);
 
   EXPECT_EQ(config->common.qrmciQueue, mqss::qrmci::defaults::QRMCIQueue);
   EXPECT_EQ(config->common.schedulerQueue,
@@ -97,10 +99,12 @@ TEST_F(LoadConfigTest, DefaultsWhenNoEnvOverridesPresent) {
   EXPECT_EQ(config->selector.backendStatusQueue,
             mqss::qrmci::defaults::BackendStatusQueue);
 
-  EXPECT_EQ(config->submitter.qdmiDriverName,
-            mqss::qrmci::defaults::SubmitterQdmiDriverName);
+  EXPECT_EQ(config->submitter.qdmiDriver,
+            mqss::qrmci::defaults::SubmitterqdmiDriver);
   EXPECT_EQ(config->submitter.qdmiDeviceName,
             mqss::qrmci::defaults::SubmitterQdmiDeviceName);
+  EXPECT_EQ(config->submitter.qdmiDeviceId,
+            mqss::qrmci::defaults::SubmitterQdmiDeviceId);
   EXPECT_EQ(config->submitter.qdmiClientToken,
             mqss::qrmci::defaults::SubmitterQdmiClientToken);
 
@@ -108,16 +112,14 @@ TEST_F(LoadConfigTest, DefaultsWhenNoEnvOverridesPresent) {
   EXPECT_EQ(config->common.stagePollInterval, CommonConfig{}.stagePollInterval);
   EXPECT_EQ(config->selector.backendRegistry.entryTimeToLive,
             BackendRegistryConfig{}.entryTimeToLive);
-  EXPECT_EQ(config->selector.backendStatusReceiveTimeout,
-            SelectorConfig{}.backendStatusReceiveTimeout);
-  EXPECT_EQ(config->selector.taskReceiveTimeout,
-            SelectorConfig{}.taskReceiveTimeout);
   EXPECT_EQ(config->compiler.taskReceiveTimeout,
             CompilerConfig{}.taskReceiveTimeout);
   EXPECT_EQ(config->submitter.backendRegistry.entryTimeToLive,
             BackendRegistryConfig{}.entryTimeToLive);
   EXPECT_EQ(config->submitter.backendStatusPublishInterval,
             SubmitterConfig{}.backendStatusPublishInterval);
+  EXPECT_EQ(config->selector.selectionPolicy,
+            mqss::qrmci::BackendSelectionPolicy::LowestName);
 }
 
 TEST_F(LoadConfigTest, LogDirDefaultsWhenEnvVarUnset) {
@@ -166,20 +168,21 @@ TEST_F(LoadConfigTest, IntEnvVarOverridesDefault) {
   EXPECT_EQ(config->common.connection.port, 12345);
 }
 
-TEST_F(LoadConfigTest, MalformedIntEnvVarFallsBackToDefault) {
+TEST_F(LoadConfigTest, MalformedIntEnvVarIsAConfigError) {
+  // A typo'd override must not silently masquerade as an accepted default.
   setenv("QRMCI_AMQP_PORT", "not-a-port", 1);
   auto config = load();
-  ASSERT_TRUE(config.has_value()) << config.error().detail;
-  EXPECT_EQ(config->common.connection.port, mqss::qrmci::defaults::AMPQPort);
+  ASSERT_FALSE(config.has_value());
+  EXPECT_EQ(config.error().kind, mqss::qrmci::Error::Kind::ConfigError);
 }
 
-TEST_F(LoadConfigTest, PartiallyNumericIntEnvVarFallsBackToDefault) {
+TEST_F(LoadConfigTest, PartiallyNumericIntEnvVarIsAConfigError) {
   // from_chars must consume the entire value; a trailing non-digit suffix
   // (e.g. a stray unit or typo) must not be silently truncated to a prefix.
   setenv("QRMCI_AMQP_PORT", "5672extra", 1);
   auto config = load();
-  ASSERT_TRUE(config.has_value()) << config.error().detail;
-  EXPECT_EQ(config->common.connection.port, mqss::qrmci::defaults::AMPQPort);
+  ASSERT_FALSE(config.has_value());
+  EXPECT_EQ(config.error().kind, mqss::qrmci::Error::Kind::ConfigError);
 }
 
 TEST_F(LoadConfigTest, BackendStatusQueueEnvVarOverridesDefault) {
@@ -190,12 +193,13 @@ TEST_F(LoadConfigTest, BackendStatusQueueEnvVarOverridesDefault) {
 }
 
 TEST_F(LoadConfigTest, SubmitterEnvVarsOverrideDefaults) {
-  setenv("QRMCI_SUBMITTER_QDMI_DRIVER_NAME", "custom_driver", 1);
+  setenv("QRMCI_SUBMITTER_QDMI_DRIVER", "custom_driver", 1);
   setenv("QRMCI_SUBMITTER_QDMI_DEVICE_NAME", "custom_device", 1);
+  setenv("QRMCI_SUBMITTER_QDMI_DEVICE_ID", "custom_device_id", 1);
   setenv("QRMCI_SUBMITTER_QDMI_CLIENT_TOKEN", "custom_token", 1);
   auto config = load();
   ASSERT_TRUE(config.has_value()) << config.error().detail;
-  EXPECT_EQ(config->submitter.qdmiDriverName, "custom_driver");
+  EXPECT_EQ(config->submitter.qdmiDriver, "custom_driver");
   EXPECT_EQ(config->submitter.qdmiDeviceName, "custom_device");
   EXPECT_EQ(config->submitter.qdmiClientToken, "custom_token");
 }
@@ -280,7 +284,7 @@ protected:
 TEST_F(LoadConfigFileTest, MissingFileIsNotAnError) {
   auto config = mqss::qrmci::loadConfig(noSuchFile());
   ASSERT_TRUE(config.has_value()) << config.error().detail;
-  EXPECT_EQ(config->common.connection.host, mqss::qrmci::defaults::AMPQHost);
+  EXPECT_EQ(config->common.connection.host, mqss::qrmci::defaults::AMQPHost);
 }
 
 TEST_F(LoadConfigFileTest, MalformedFileReturnsConfigError) {
@@ -302,7 +306,7 @@ host = "file-host"
 backendStatusQueue = "file.backend.status.queue"
 
 [submitter]
-qdmiDriverName = "file_driver"
+qdmiDriver = "file_driver"
 )");
 
   auto config = mqss::qrmci::loadConfig(path);
@@ -310,9 +314,9 @@ qdmiDriverName = "file_driver"
   EXPECT_EQ(config->common.connection.host, "file-host");
   EXPECT_EQ(config->common.qrmciQueue, "file.qrmci.queue");
   EXPECT_EQ(config->selector.backendStatusQueue, "file.backend.status.queue");
-  EXPECT_EQ(config->submitter.qdmiDriverName, "file_driver");
+  EXPECT_EQ(config->submitter.qdmiDriver, "file_driver");
   // Fields the file left unset still fall back to defaults.
-  EXPECT_EQ(config->common.connection.port, mqss::qrmci::defaults::AMPQPort);
+  EXPECT_EQ(config->common.connection.port, mqss::qrmci::defaults::AMQPPort);
 }
 
 TEST_F(LoadConfigFileTest, EnvVarOverridesFileValue) {
@@ -332,10 +336,6 @@ TEST_F(LoadConfigFileTest, NewTimingFieldsAreReadFromFile) {
 [common]
 stagePollInterval = 250
 
-[selector]
-backendStatusReceiveTimeout = 111
-taskReceiveTimeout = 222
-
 [selector.backendRegistry]
 entryTimeToLive = 60
 
@@ -344,6 +344,7 @@ taskReceiveTimeout = 333
 
 [submitter]
 backendStatusPublishInterval = 4444
+jobWaitTimeout = 120
 
 [submitter.backendRegistry]
 entryTimeToLive = 45
@@ -352,18 +353,192 @@ entryTimeToLive = 45
   auto config = mqss::qrmci::loadConfig(path);
   ASSERT_TRUE(config.has_value()) << config.error().detail;
   EXPECT_EQ(config->common.stagePollInterval, std::chrono::milliseconds(250));
-  EXPECT_EQ(config->selector.backendStatusReceiveTimeout,
-            std::chrono::milliseconds(111));
-  EXPECT_EQ(config->selector.taskReceiveTimeout,
-            std::chrono::milliseconds(222));
   EXPECT_EQ(config->selector.backendRegistry.entryTimeToLive,
             std::chrono::seconds(60));
   EXPECT_EQ(config->compiler.taskReceiveTimeout,
             std::chrono::milliseconds(333));
   EXPECT_EQ(config->submitter.backendStatusPublishInterval,
             std::chrono::milliseconds(4444));
+  EXPECT_EQ(config->submitter.jobWaitTimeout, std::chrono::seconds(120));
   EXPECT_EQ(config->submitter.backendRegistry.entryTimeToLive,
             std::chrono::seconds(45));
+}
+
+TEST_F(LoadConfigFileTest, JobWaitTimeoutDefaultsToWaitingIndefinitely) {
+  // Zero follows QDMI's own zero-means-infinite convention, so an
+  // unconfigured deployment blocks until each job finishes rather than
+  // timing work out from under itself.
+  const auto path = writeToml(R"(
+[submitter]
+qdmiDeviceName = "some-device"
+)");
+
+  auto config = mqss::qrmci::loadConfig(path);
+  ASSERT_TRUE(config.has_value()) << config.error().detail;
+  EXPECT_EQ(config->submitter.jobWaitTimeout, std::chrono::seconds(0));
+}
+
+TEST_F(LoadConfigFileTest, SelectionPolicyDefaultsToLowestName) {
+  const auto path = writeToml("");
+  auto config = mqss::qrmci::loadConfig(path);
+  ASSERT_TRUE(config.has_value()) << config.error().detail;
+  EXPECT_EQ(config->selector.selectionPolicy,
+            mqss::qrmci::BackendSelectionPolicy::LowestName);
+}
+
+TEST_F(LoadConfigFileTest, SelectionPolicyIsReadFromFile) {
+  {
+    const auto path = writeToml(R"(
+[selector]
+selectionPolicy = "lowest-name"
+)");
+    auto config = mqss::qrmci::loadConfig(path);
+    ASSERT_TRUE(config.has_value()) << config.error().detail;
+    EXPECT_EQ(config->selector.selectionPolicy,
+              mqss::qrmci::BackendSelectionPolicy::LowestName);
+  }
+  {
+    const auto path = writeToml(R"(
+[selector]
+selectionPolicy = "smallest-sufficient"
+)");
+    auto config = mqss::qrmci::loadConfig(path);
+    ASSERT_TRUE(config.has_value()) << config.error().detail;
+    EXPECT_EQ(config->selector.selectionPolicy,
+              mqss::qrmci::BackendSelectionPolicy::SmallestSufficient);
+  }
+}
+
+// ===========================================================================
+// LoadConfigValidationTest
+// Exercises schema and value validation for unknown keys, wrong scalar
+// types, out-of-range values, empty required strings, and the submitter's
+// cross-field registry-TTL/publish-interval constraint. Every case must fail
+// with Error::Kind::ConfigError.
+// ===========================================================================
+class LoadConfigValidationTest : public LoadConfigFileTest {
+protected:
+  struct Case {
+    const char *name;
+    std::string toml;
+  };
+
+  void expectAllRejected(const std::vector<Case> &cases) {
+    for (const auto &testCase : cases) {
+      const auto path = writeToml(testCase.toml);
+      auto config = mqss::qrmci::loadConfig(path);
+      ASSERT_FALSE(config.has_value()) << testCase.name;
+      EXPECT_EQ(config.error().kind, mqss::qrmci::Error::Kind::ConfigError)
+          << testCase.name;
+    }
+  }
+};
+
+TEST_F(LoadConfigValidationTest, UnknownKeysAreRejected) {
+  expectAllRejected({
+      {"unknown top-level table", "[bogus]\nfoo = 1\n"},
+      {"unknown nested key", "[common]\nbogus = 1\n"},
+  });
+}
+
+TEST_F(LoadConfigValidationTest, WrongScalarTypesAreRejected) {
+  expectAllRejected({
+      {"host", "[common.connection]\nhost = 123\n"},
+      {"port", "[common.connection]\nport = \"not-a-port\"\n"},
+      {"stagePollInterval", "[common]\nstagePollInterval = \"soon\"\n"},
+      {"taskReceiveTimeout", "[compiler]\ntaskReceiveTimeout = \"soon\"\n"},
+      {"jobWaitTimeout", "[submitter]\njobWaitTimeout = \"soon\"\n"},
+      {"selector.backendRegistry.entryTimeToLive",
+       "[selector.backendRegistry]\nentryTimeToLive = \"soon\"\n"},
+      {"submitter.backendRegistry.entryTimeToLive",
+       "[submitter.backendRegistry]\nentryTimeToLive = \"soon\"\n"},
+      {"backendStatusPublishInterval",
+       "[submitter]\nbackendStatusPublishInterval = \"soon\"\n"},
+      {"selectionPolicy", "[selector]\nselectionPolicy = 1\n"},
+  });
+}
+
+TEST_F(LoadConfigValidationTest, UnrecognizedSelectionPolicyIsRejected) {
+  expectAllRejected({
+      // Case must match exactly: PascalCase enumerator spellings and
+      // unrelated strings are both rejected, not silently normalized.
+      {"PascalCase spelling", "[selector]\nselectionPolicy = \"LowestName\"\n"},
+      {"unrelated string", "[selector]\nselectionPolicy = \"bogus\"\n"},
+      {"empty string", "[selector]\nselectionPolicy = \"\"\n"},
+  });
+}
+
+TEST_F(LoadConfigValidationTest, PortOutsideValidRangeIsRejected) {
+  expectAllRejected({
+      {"port zero", "[common.connection]\nport = 0\n"},
+      {"port negative", "[common.connection]\nport = -1\n"},
+      {"port too large", "[common.connection]\nport = 65536\n"},
+  });
+}
+
+TEST_F(LoadConfigValidationTest, EmptyRequiredStringsAreRejected) {
+  expectAllRejected({
+      {"host", "[common.connection]\nhost = \"\"\n"},
+      {"qrmciQueue", "[common]\nqrmciQueue = \"\"\n"},
+      {"backendStatusQueue", "[selector]\nbackendStatusQueue = \"\"\n"},
+      {"compiler.queue", "[compiler]\nqueue = \"\"\n"},
+      {"qdmiDriver", "[submitter]\nqdmiDriver = \"\"\n"},
+      {"qdmiDeviceName", "[submitter]\nqdmiDeviceName = \"\"\n"},
+      {"qdmiDeviceId", "[submitter]\nqdmiDeviceId = \"\"\n"},
+  });
+}
+
+TEST_F(LoadConfigValidationTest, NonPositiveDurationsAreRejected) {
+  expectAllRejected({
+      {"stagePollInterval zero", "[common]\nstagePollInterval = 0\n"},
+      {"stagePollInterval negative", "[common]\nstagePollInterval = -1\n"},
+      {"selector entryTimeToLive zero",
+       "[selector.backendRegistry]\nentryTimeToLive = 0\n"},
+      {"selector entryTimeToLive negative",
+       "[selector.backendRegistry]\nentryTimeToLive = -1\n"},
+      {"submitter entryTimeToLive zero",
+       "[submitter.backendRegistry]\nentryTimeToLive = 0\n"},
+      {"submitter entryTimeToLive negative",
+       "[submitter.backendRegistry]\nentryTimeToLive = -1\n"},
+      {"backendStatusPublishInterval zero",
+       "[submitter]\nbackendStatusPublishInterval = 0\n"},
+      {"backendStatusPublishInterval negative",
+       "[submitter]\nbackendStatusPublishInterval = -1\n"},
+  });
+}
+
+TEST_F(LoadConfigValidationTest, NegativeTimeoutsAreRejected) {
+  expectAllRejected({
+      {"taskReceiveTimeout negative", "[compiler]\ntaskReceiveTimeout = -1\n"},
+      {"jobWaitTimeout negative", "[submitter]\njobWaitTimeout = -1\n"},
+  });
+}
+
+TEST_F(LoadConfigValidationTest,
+       SubmitterEntryTimeToLiveMustOutlivePublishInterval) {
+  // entryTimeToLive is in seconds, backendStatusPublishInterval in
+  // milliseconds; a registry entry refreshed only as often as
+  // backendStatusPublishInterval must not expire before the next refresh.
+  expectAllRejected({
+      {"equal", "[submitter]\nbackendStatusPublishInterval = 5000\n"
+                "[submitter.backendRegistry]\nentryTimeToLive = 5\n"},
+      {"shorter", "[submitter]\nbackendStatusPublishInterval = 5000\n"
+                  "[submitter.backendRegistry]\nentryTimeToLive = 4\n"},
+  });
+}
+
+TEST_F(LoadConfigFileTest, qdmiDriverDefaultsToALoadableLibraryPath) {
+  // Client::openDevice() std::filesystem::exists()-checks its driverPath
+  // before dlopen'ing it, so the default has to be a path, not a bare stem.
+  // The path matches where the runtime container images install the driver
+  // (see apps/standalone/Dockerfile, apps/distributed/Dockerfile); bare-name
+  // deployments must set QRMCI_SUBMITTER_QDMI_DRIVER explicitly.
+  const auto path = writeToml("");
+
+  auto config = mqss::qrmci::loadConfig(path);
+  ASSERT_TRUE(config.has_value()) << config.error().detail;
+  EXPECT_EQ(config->submitter.qdmiDriver,
+            "/usr/local/lib/qrmci/libqdmi_example_driver.so");
 }
 
 // ===========================================================================
@@ -392,7 +567,34 @@ TEST_F(LoadConfigDiscoveryTest,
   // the default relative discovery.
   auto config = mqss::qrmci::loadConfig();
   ASSERT_TRUE(config.has_value()) << config.error().detail;
-  EXPECT_EQ(config->common.connection.host, mqss::qrmci::defaults::AMPQHost);
+  EXPECT_EQ(config->common.connection.host, mqss::qrmci::defaults::AMQPHost);
 }
+
+// ===========================================================================
+// LoadShippedExampleConfigTest
+// Every shipped example TOML file must pass the same schema and value
+// validation as production configuration. Paths come from
+// tests/unit/CMakeLists.txt so a rename fails the build instead of silently
+// testing a stale copy.
+// ===========================================================================
+class LoadShippedExampleConfigTest
+    : public ::testing::TestWithParam<const char *> {
+protected:
+  void SetUp() override { clearEnv(); }
+  void TearDown() override { clearEnv(); }
+};
+
+TEST_P(LoadShippedExampleConfigTest, LoadsSuccessfully) {
+  auto config = mqss::qrmci::loadConfig(GetParam());
+  ASSERT_TRUE(config.has_value())
+      << GetParam() << ": " << config.error().detail;
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ShippedExamples, LoadShippedExampleConfigTest,
+    ::testing::Values(QRMCI_EXAMPLE_CONFIG_FULL_REFERENCE,
+                      QRMCI_EXAMPLE_CONFIG_STANDALONE,
+                      QRMCI_EXAMPLE_CONFIG_DISTRIBUTED_WORKER,
+                      QRMCI_EXAMPLE_CONFIG_DISTRIBUTED_SELECTOR));
 
 } // namespace mqss::qrmci::test

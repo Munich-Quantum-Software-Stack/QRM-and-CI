@@ -1,0 +1,54 @@
+# Copyright (c) 2026 MQSS Maintainers
+# All rights reserved.
+#
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Compose file for qrmcid-standalone. Builds the image from ./Dockerfile and
+# runs the daemon against an external RabbitMQ broker; this file does not
+# bundle a broker service, so set QRMCI_AMQP_HOST in .env to a reachable one.
+#
+# Usage:
+#   cd apps/standalone
+#   cp .env.example .env    # edit values for your deployment
+#   mkdir -p ./logs && sudo chown 1001:1001 ./logs
+#   docker compose up --build
+#
+# The daemon runs as the unprivileged 1001:1001 (qrmci) user baked into the
+# image; the mkdir/chown above must match that UID/GID, since a host bind
+# mount replaces the image's own directory ownership with the host's -- skip
+# it and Docker will auto-create ./logs owned by another UID before the
+# container starts, and the daemon will fail to open its log file with
+# "Permission denied", falling back to console-only logging.
+#
+# See .env.example in this directory for every QRMCI_* variable this service
+# reads, and apps/qrmci.full-reference.example.toml for the file-only tuning
+# fields (poll interval, registry TTL, logger names) that have no
+# environment variable equivalent -- mount a TOML file and set
+# QRMCI_CONFIG_FILE (see the commented-out volumes/env entries below) to use
+# those.
+
+services:
+  qrmcid-standalone:
+    build:
+      context: ../..
+      dockerfile: apps/standalone/Dockerfile
+      secrets:
+        - github_token
+    image: qrmcid-standalone:${IMAGE_TAG:-local}
+    container_name: qrmcid-standalone
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/home/qrmci/logs
+      # Uncomment to load a TOML file for settings with no QRMCI_* env var;
+      # also uncomment/set QRMCI_CONFIG_FILE in .env to the same path.
+      # - ./config/qrmci.toml:/home/qrmci/config/qrmci.toml:ro
+
+secrets:
+  # Optional BuildKit secret consumed by the Dockerfile's builder stage to
+  # authenticate FetchContent git clones over HTTPS (e.g. MQSS-Submitter).
+  # An unset GITHUB_TOKEN falls back to unauthenticated HTTPS, matching
+  # `make docker-build-standalone` without GITHUB_TOKEN=... set.
+  github_token:
+    environment: GITHUB_TOKEN

@@ -5,17 +5,17 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
-// Submits several tasks with different priorities (before the daemon has a
-// chance to drain any of them), then checks that every task comes back with
-// a matching result. This exercises the daemon's
-// mqss::Scheduler<mqss::QuantumTask> (constructed with
-// SchedulingPolicy::PriorityBased in apps/standalone/main.cpp).
+// Submits several tasks with different priorities, before the daemon has a
+// chance to drain any of them, then checks that every task comes back with a
+// matching result. This exercises the standalone daemon's TaskScheduler,
+// constructed with SchedulingPolicy::PriorityBased in
+// apps/standalone/main.cpp.
 //
-// TODO: fix this test to check that the arrival order is actually
-// priority-based, not just that all tasks came back. The problem is that the
-// daemon may drain tasks faster than they arrive, so the scheduler never has
-// more than one task queued at once, and the arrival order will reflect
-// submission order instead of priority order.
+// It does not assert that results arrive in priority order, only that they
+// all arrive. The daemon can drain tasks faster than this test submits them,
+// leaving the scheduler with one task queued at a time, in which case the
+// arrival order reflects submission order rather than priority. Asserting on
+// order needs a way to hold the daemon back while the tasks pile up.
 
 #include "DaemonProcess.h"
 #include "IntegrationTestHelpers.h"

@@ -133,14 +133,28 @@ bool DaemonProcess::start() {
   return true;
 }
 
-bool DaemonProcess::isRunning() const {
+bool DaemonProcess::reapIfExited() {
   if (pid <= 0) {
     return false;
   }
   int status = 0;
   const pid_t result = waitpid(pid, &status, WNOHANG);
-  return result == 0;
+  if (result == 0) {
+    return true;
+  }
+  if (result == pid || (result == -1 && errno == ECHILD)) {
+    // Reaped just now, or already reaped by someone else: either way this
+    // object no longer owns a live child, and must stop naming its old PID.
+    pid = -1;
+    return false;
+  }
+  // Some other waitpid failure: unclear whether the child is still alive,
+  // so ownership is left in place for stop() to retry or report against.
+  std::cerr << label << ": waitpid failed: " << std::strerror(errno) << "\n";
+  return true;
 }
+
+bool DaemonProcess::isRunning() { return reapIfExited(); }
 
 void DaemonProcess::stop(std::chrono::milliseconds gracePeriod) {
   if (pid <= 0) {
@@ -152,17 +166,18 @@ void DaemonProcess::stop(std::chrono::milliseconds gracePeriod) {
   }
 
   const auto deadline = std::chrono::steady_clock::now() + gracePeriod;
-  while (isRunning() && std::chrono::steady_clock::now() < deadline) {
+  bool stillRunning = isRunning();
+  while (stillRunning && std::chrono::steady_clock::now() < deadline) {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    stillRunning = isRunning();
   }
 
-  if (isRunning()) {
+  if (stillRunning) {
     kill(pid, SIGKILL);
     int status = 0;
     waitpid(pid, &status, 0);
+    pid = -1;
   }
-
-  pid = -1;
 }
 
 } // namespace mqss::qrmci::test

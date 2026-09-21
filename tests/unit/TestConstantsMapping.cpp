@@ -6,119 +6,20 @@
  */
 
 #include "mqss/Protocol.hpp"
-#include "qdmi/constants.h"
 #include "qrmci/ConstantsMapping.h"
 #include "qrmci/Error.h"
 
 #include <MQSSCIInterfaces/MQSSCompiler.h>
-#include <array>
 #include <gtest/gtest.h>
-#include <span>
+#include <mqss/submitter/Error.h>
 #include <string>
-#include <string_view>
-#include <vector>
 
 namespace mqss::qrmci::test {
 
-// ===========================================================================
-// MapBackendStatusTest
-// ===========================================================================
-TEST(MapBackendStatusTest, Offline) {
-  EXPECT_EQ(mapBackendStatus(QDMI_DEVICE_STATUS_OFFLINE),
-            mqss::BackendStatus::BACKEND_STATUS_OFFLINE);
-}
-
-TEST(MapBackendStatusTest, Idle) {
-  EXPECT_EQ(mapBackendStatus(QDMI_DEVICE_STATUS_IDLE),
-            mqss::BackendStatus::BACKEND_STATUS_IDLE);
-}
-
-TEST(MapBackendStatusTest, Busy) {
-  EXPECT_EQ(mapBackendStatus(QDMI_DEVICE_STATUS_BUSY),
-            mqss::BackendStatus::BACKEND_STATUS_BUSY);
-}
-
-TEST(MapBackendStatusTest, Error) {
-  EXPECT_EQ(mapBackendStatus(QDMI_DEVICE_STATUS_ERROR),
-            mqss::BackendStatus::BACKEND_STATUS_ERROR);
-}
-
-TEST(MapBackendStatusTest, Maintenance) {
-  EXPECT_EQ(mapBackendStatus(QDMI_DEVICE_STATUS_MAINTENANCE),
-            mqss::BackendStatus::BACKEND_STATUS_MAINTENANCE);
-}
-
-TEST(MapBackendStatusTest, Calibration) {
-  EXPECT_EQ(mapBackendStatus(QDMI_DEVICE_STATUS_CALIBRATION),
-            mqss::BackendStatus::BACKEND_STATUS_CALIBRATION);
-}
-
-TEST(MapBackendStatusTest, UnknownFallsBackToUnspecified) {
-  // QDMI_DEVICE_STATUS_MAX is a real enum value with no mapping case; the
-  // function must fall through to the default rather than misclassify it.
-  EXPECT_EQ(mapBackendStatus(QDMI_DEVICE_STATUS_MAX),
-            mqss::BackendStatus::BACKEND_STATUS_UNSPECIFIED);
-}
-
-// ===========================================================================
-// MapCircuitFormatTest
-// ===========================================================================
-TEST(MapCircuitFormatTest, Qasm2) {
-  EXPECT_EQ(mapCircuitFormat(QDMI_PROGRAM_FORMAT_QASM2),
-            mqss::CircuitFormat::CIRCUIT_FORMAT_QASM2);
-}
-
-TEST(MapCircuitFormatTest, Qasm3) {
-  EXPECT_EQ(mapCircuitFormat(QDMI_PROGRAM_FORMAT_QASM3),
-            mqss::CircuitFormat::CIRCUIT_FORMAT_QASM3);
-}
-
-TEST(MapCircuitFormatTest, QirBaseString) {
-  EXPECT_EQ(mapCircuitFormat(QDMI_PROGRAM_FORMAT_QIRBASESTRING),
-            mqss::CircuitFormat::CIRCUIT_FORMAT_QIRBASESTRING);
-}
-
-TEST(MapCircuitFormatTest, QirBaseModule) {
-  EXPECT_EQ(mapCircuitFormat(QDMI_PROGRAM_FORMAT_QIRBASEMODULE),
-            mqss::CircuitFormat::CIRCUIT_FORMAT_QIRBASEMODULE);
-}
-
-TEST(MapCircuitFormatTest, QirAdaptiveString) {
-  EXPECT_EQ(mapCircuitFormat(QDMI_PROGRAM_FORMAT_QIRADAPTIVESTRING),
-            mqss::CircuitFormat::CIRCUIT_FORMAT_QIRADAPTIVESTRING);
-}
-
-TEST(MapCircuitFormatTest, QirAdaptiveModule) {
-  EXPECT_EQ(mapCircuitFormat(QDMI_PROGRAM_FORMAT_QIRADAPTIVEMODULE),
-            mqss::CircuitFormat::CIRCUIT_FORMAT_QIRADAPTIVEMODULE);
-}
-
-TEST(MapCircuitFormatTest, Calibration) {
-  EXPECT_EQ(mapCircuitFormat(QDMI_PROGRAM_FORMAT_CALIBRATION),
-            mqss::CircuitFormat::CIRCUIT_FORMAT_CALIBRATION);
-}
-
-TEST(MapCircuitFormatTest, Qpy) {
-  EXPECT_EQ(mapCircuitFormat(QDMI_PROGRAM_FORMAT_QPY),
-            mqss::CircuitFormat::CIRCUIT_FORMAT_QPY);
-}
-
-TEST(MapCircuitFormatTest, IqmJson) {
-  EXPECT_EQ(mapCircuitFormat(QDMI_PROGRAM_FORMAT_IQMJSON),
-            mqss::CircuitFormat::CIRCUIT_FORMAT_IQMJSON);
-}
-
-TEST(MapCircuitFormatTest, BatchJob) {
-  EXPECT_EQ(mapCircuitFormat(QDMI_PROGRAM_FORMAT_BATCHJOB),
-            mqss::CircuitFormat::CIRCUIT_FORMAT_BATCHJOB);
-}
-
-TEST(MapCircuitFormatTest, UnknownFallsBackToUnspecified) {
-  // QDMI_PROGRAM_FORMAT_MAX is a real enum value with no mapping case; the
-  // function must fall through to the default rather than misclassify it.
-  EXPECT_EQ(mapCircuitFormat(QDMI_PROGRAM_FORMAT_MAX),
-            mqss::CircuitFormat::CIRCUIT_FORMAT_UNSPECIFIED);
-}
+// QDMI translation is not covered here: it belongs to MQSS-Submitter, behind
+// its Client/Device/Job interface, and is tested enumerator-by-enumerator in
+// that repository. QRM&CI's live-driver tests would only ever reach the
+// handful of statuses and formats the example device happens to report.
 
 // ===========================================================================
 // MapProtoCircuitFormatTest
@@ -156,18 +57,96 @@ TEST(MapProtoCircuitFormatTest, NegativeValueFallsBackToUnspecified) {
 }
 
 // ===========================================================================
+// CircuitFormatLabelTest
+// ===========================================================================
+TEST(CircuitFormatLabelTest, EveryKnownEnumeratorHasANonEmptyLabel) {
+  for (int value = mqss::protocol::v1::CircuitFormat_MIN;
+       value <= mqss::protocol::v1::CircuitFormat_MAX; ++value) {
+    const auto label =
+        circuitFormatLabel(static_cast<mqss::CircuitFormat>(value));
+    EXPECT_FALSE(label.empty()) << "value: " << value;
+    // A stable protocol name, not a bare integer.
+    EXPECT_EQ(label.find_first_not_of("0123456789"), 0U) << "value: " << value;
+  }
+}
+
+TEST(CircuitFormatLabelTest, KnownEnumeratorNamesTheEnumerator) {
+  EXPECT_EQ(circuitFormatLabel(mqss::CircuitFormat::CIRCUIT_FORMAT_QASM2),
+            "CIRCUIT_FORMAT_QASM2");
+}
+
+TEST(CircuitFormatLabelTest, OutOfRangeValueFallsBackToUnknownWithTheNumber) {
+  const auto label = circuitFormatLabel(static_cast<mqss::CircuitFormat>(
+      mqss::protocol::v1::CircuitFormat_MAX + 1));
+  EXPECT_EQ(label,
+            "UNKNOWN(" +
+                std::to_string(mqss::protocol::v1::CircuitFormat_MAX + 1) +
+                ")");
+}
+
+// ===========================================================================
+// BackendStatusLabelTest
+// ===========================================================================
+TEST(BackendStatusLabelTest, EveryKnownEnumeratorHasANonEmptyLabel) {
+  for (int value = mqss::protocol::v1::BackendStatus_MIN;
+       value <= mqss::protocol::v1::BackendStatus_MAX; ++value) {
+    const auto label =
+        backendStatusLabel(static_cast<mqss::BackendStatus>(value));
+    EXPECT_FALSE(label.empty()) << "value: " << value;
+    EXPECT_EQ(label.find_first_not_of("0123456789"), 0U) << "value: " << value;
+  }
+}
+
+TEST(BackendStatusLabelTest, KnownEnumeratorNamesTheEnumerator) {
+  EXPECT_EQ(backendStatusLabel(mqss::BackendStatus::BACKEND_STATUS_IDLE),
+            "BACKEND_STATUS_IDLE");
+}
+
+TEST(BackendStatusLabelTest, OutOfRangeValueFallsBackToUnknownWithTheNumber) {
+  const auto label = backendStatusLabel(static_cast<mqss::BackendStatus>(
+      mqss::protocol::v1::BackendStatus_MAX + 1));
+  EXPECT_EQ(label,
+            "UNKNOWN(" +
+                std::to_string(mqss::protocol::v1::BackendStatus_MAX + 1) +
+                ")");
+}
+
+// ===========================================================================
 // GetCompilerOptimizationLevelTest
 // ===========================================================================
 TEST(GetCompilerOptimizationLevelTest, MappedLevels) {
-  EXPECT_EQ(getCompilerOptimizationLevel(1), mqss::mqssci::OptLevel::O1);
-  EXPECT_EQ(getCompilerOptimizationLevel(2), mqss::mqssci::OptLevel::O2);
-  EXPECT_EQ(getCompilerOptimizationLevel(3), mqss::mqssci::OptLevel::O3);
+  // 0 and proto3's implicit-absent both mean 0 on the wire, and must select
+  // O1, not the most aggressive level: an omitted optimisation_level is not
+  // a request to maximize optimisation.
+  auto zero = getCompilerOptimizationLevel(0);
+  ASSERT_TRUE(zero.has_value()) << zero.error().detail;
+  EXPECT_EQ(*zero, mqss::mqssci::OptLevel::O1);
+
+  auto one = getCompilerOptimizationLevel(1);
+  ASSERT_TRUE(one.has_value()) << one.error().detail;
+  EXPECT_EQ(*one, mqss::mqssci::OptLevel::O1);
+
+  auto two = getCompilerOptimizationLevel(2);
+  ASSERT_TRUE(two.has_value()) << two.error().detail;
+  EXPECT_EQ(*two, mqss::mqssci::OptLevel::O2);
+
+  auto three = getCompilerOptimizationLevel(3);
+  ASSERT_TRUE(three.has_value()) << three.error().detail;
+  EXPECT_EQ(*three, mqss::mqssci::OptLevel::O3);
 }
 
-TEST(GetCompilerOptimizationLevelTest, UnmappedLevelDefaultsToO3) {
-  EXPECT_EQ(getCompilerOptimizationLevel(0), mqss::mqssci::OptLevel::O3);
-  EXPECT_EQ(getCompilerOptimizationLevel(-1), mqss::mqssci::OptLevel::O3);
-  EXPECT_EQ(getCompilerOptimizationLevel(42), mqss::mqssci::OptLevel::O3);
+TEST(GetCompilerOptimizationLevelTest, OutOfRangeLevelIsACompilationError) {
+  for (const int level : {-1, 4}) {
+    auto result = getCompilerOptimizationLevel(level);
+    ASSERT_FALSE(result.has_value()) << "level: " << level;
+    EXPECT_EQ(result.error().kind, mqss::qrmci::Error::Kind::CompilationFailed)
+        << "level: " << level;
+    // The diagnostic must name the offending integer so an operator can tell
+    // which task's requested level was rejected.
+    EXPECT_NE(result.error().detail.find(std::to_string(level)),
+              std::string::npos)
+        << "level: " << level << ", detail: " << result.error().detail;
+  }
 }
 
 // ===========================================================================
@@ -192,111 +171,58 @@ TEST(IsOnlineBackendStatusTest, EveryOtherStatusIsOffline) {
 }
 
 // ===========================================================================
-// MapCircuitFormatToResultFormatTest
+// toQrmciError
+// submitter::ErrorCode is generic -- it cannot tell a refused submission from
+// a device fault -- so the Kind is the caller's to name and this function only
+// formats the detail.
 // ===========================================================================
-TEST(MapCircuitFormatToResultFormatTest, MappedFormats) {
-  EXPECT_EQ(
-      mapCircuitFormatToResultFormat(mqss::CircuitFormat::CIRCUIT_FORMAT_QASM2),
-      mqss::mqssci::ResultFormat::OPENQASM2);
-  EXPECT_EQ(
-      mapCircuitFormatToResultFormat(mqss::CircuitFormat::CIRCUIT_FORMAT_QIR),
-      mqss::mqssci::ResultFormat::QIR);
-  EXPECT_EQ(mapCircuitFormatToResultFormat(
-                mqss::CircuitFormat::CIRCUIT_FORMAT_QIRBASESTRING),
-            mqss::mqssci::ResultFormat::QIRBASE);
-  EXPECT_EQ(mapCircuitFormatToResultFormat(
-                mqss::CircuitFormat::CIRCUIT_FORMAT_QIRBASEMODULE),
-            mqss::mqssci::ResultFormat::QIRBASE);
-  EXPECT_EQ(mapCircuitFormatToResultFormat(
-                mqss::CircuitFormat::CIRCUIT_FORMAT_QIRADAPTIVESTRING),
-            mqss::mqssci::ResultFormat::QIRADAPTIVE);
-  EXPECT_EQ(mapCircuitFormatToResultFormat(
-                mqss::CircuitFormat::CIRCUIT_FORMAT_QIRADAPTIVEMODULE),
-            mqss::mqssci::ResultFormat::QIRADAPTIVE);
+TEST(ToQrmciErrorTest, PassesTheCallersKindThrough) {
+  using mqss::submitter::ErrorCode;
+  const auto kinds = {Error::Kind::DriverUnavailable, Error::Kind::DeviceError,
+                      Error::Kind::SubmissionFailed, Error::Kind::Internal};
+  for (const auto kind : kinds) {
+    const auto mapped =
+        toQrmciError(kind, mqss::submitter::Error{ErrorCode::Fatal, "boom"});
+    EXPECT_EQ(mapped.kind, kind);
+  }
 }
 
-TEST(MapCircuitFormatToResultFormatTest, UnmappedFormatsHaveNoResultFormat) {
-  // The compiler cannot emit these, so a backend offering only them has no
-  // usable result format.
-  EXPECT_FALSE(
-      mapCircuitFormatToResultFormat(mqss::CircuitFormat::CIRCUIT_FORMAT_QASM3)
-          .has_value());
-  EXPECT_FALSE(mapCircuitFormatToResultFormat(
-                   mqss::CircuitFormat::CIRCUIT_FORMAT_UNSPECIFIED)
-                   .has_value());
-  EXPECT_FALSE(
-      mapCircuitFormatToResultFormat(mqss::CircuitFormat::CIRCUIT_FORMAT_QPY)
-          .has_value());
+TEST(ToQrmciErrorTest, PreservesTheMessage) {
+  // The message is what reaches the log line and the cancellation message
+  // sent back to the task's submitter, so it must survive translation.
+  const auto mapped =
+      toQrmciError(Error::Kind::DeviceError,
+                   mqss::submitter::Error{mqss::submitter::ErrorCode::BadState,
+                                          "device caught fire"});
+  EXPECT_NE(mapped.detail.find("device caught fire"), std::string::npos);
 }
 
-// ===========================================================================
-// IsCircuitTypeCompatibleWithFormatsTest
-// ===========================================================================
-TEST(IsCircuitTypeCompatibleWithFormatsTest, DirectMatch) {
-  const std::array formats = {mqss::CircuitFormat::CIRCUIT_FORMAT_QASM3};
-  EXPECT_TRUE(isCircuitTypeCompatibleWithFormats("qasm3", formats));
+TEST(ToQrmciErrorTest, NamesTheErrorCodeInTheDetail) {
+  // An ErrorCode does not describe itself, so its name is spelled out in the
+  // detail for whoever reads the log.
+  const auto mapped =
+      toQrmciError(Error::Kind::SubmissionFailed,
+                   mqss::submitter::Error{
+                       mqss::submitter::ErrorCode::InvalidArgument, "nope"});
+  EXPECT_NE(mapped.detail.find("InvalidArgument"), std::string::npos);
 }
 
-TEST(IsCircuitTypeCompatibleWithFormatsTest, AnyOfSeveralMappedFormatsMatches) {
-  // "qir" maps to five circuit formats; supporting any one of them is enough.
-  const std::array formats = {
-      mqss::CircuitFormat::CIRCUIT_FORMAT_QIRADAPTIVEMODULE};
-  EXPECT_TRUE(isCircuitTypeCompatibleWithFormats("qir", formats));
-}
-
-TEST(IsCircuitTypeCompatibleWithFormatsTest, NonMatchingFormatIsRejected) {
-  const std::array formats = {mqss::CircuitFormat::CIRCUIT_FORMAT_QASM2};
-  EXPECT_FALSE(isCircuitTypeCompatibleWithFormats("qasm3", formats));
-}
-
-TEST(IsCircuitTypeCompatibleWithFormatsTest, UnknownCircuitTypeIsRejected) {
-  const std::array formats = {mqss::CircuitFormat::CIRCUIT_FORMAT_QASM3};
-  EXPECT_FALSE(isCircuitTypeCompatibleWithFormats("not-a-type", formats));
-  EXPECT_FALSE(isCircuitTypeCompatibleWithFormats("", formats));
-}
-
-TEST(IsCircuitTypeCompatibleWithFormatsTest, EmptyFormatListIsRejected) {
-  EXPECT_FALSE(isCircuitTypeCompatibleWithFormats("qasm3", {}));
-}
-
-// ===========================================================================
-// ValidateInputFormatIsSupportedCircuitFormatTest
-// ===========================================================================
-TEST(ValidateInputFormatIsSupportedCircuitFormatTest, CompilerFormatsAccepted) {
-  const std::vector<std::string_view> supported =
-      mqss::mqssci::MQSSCompiler::getSupportedInputFormats();
-  EXPECT_TRUE(validateInputFormatIsSupportedCircuitFormat("quake", supported)
-                  .has_value());
-  EXPECT_TRUE(validateInputFormatIsSupportedCircuitFormat("catalyst", supported)
-                  .has_value());
-}
-
-TEST(ValidateInputFormatIsSupportedCircuitFormatTest, UnknownTypeIsRejected) {
-  const std::vector<std::string_view> supported =
-      mqss::mqssci::MQSSCompiler::getSupportedInputFormats();
-  auto result = validateInputFormatIsSupportedCircuitFormat("qasm3", supported);
-  ASSERT_FALSE(result.has_value());
-  // Permanent, and the submitter's input is at fault: the same format will be
-  // rejected on every retry.
-  EXPECT_EQ(result.error().kind, mqss::qrmci::Error::Kind::UnsupportedFormat);
-  EXPECT_FALSE(result.error().isRetryable());
-  EXPECT_NE(result.error().detail.find("qasm3"), std::string::npos);
-}
-
-TEST(ValidateInputFormatIsSupportedCircuitFormatTest,
-     KnownTypeTheCompilerDoesNotAcceptIsRejected) {
-  // "quake" maps to "cudaq-quake", which is absent from this compiler's
-  // supported input formats.
-  const std::array<std::string_view, 1> supported = {"catalyst-quantum"};
-  EXPECT_FALSE(validateInputFormatIsSupportedCircuitFormat("quake", supported)
-                   .has_value());
-}
-
-TEST(ValidateInputFormatIsSupportedCircuitFormatTest, EmptyInputIsRejected) {
-  const std::vector<std::string_view> supported =
-      mqss::mqssci::MQSSCompiler::getSupportedInputFormats();
-  EXPECT_FALSE(
-      validateInputFormatIsSupportedCircuitFormat("", supported).has_value());
+TEST(ToQrmciErrorTest, NamesEveryErrorCode) {
+  // Every enumerator gets a name, so no log line ever reads "Unknown: ..."
+  // for a code this build does know about.
+  using mqss::submitter::ErrorCode;
+  const auto codes = {ErrorCode::Fatal,           ErrorCode::OutOfMem,
+                      ErrorCode::NotImplemented,  ErrorCode::LibNotFound,
+                      ErrorCode::NotFound,        ErrorCode::OutOfRange,
+                      ErrorCode::InvalidArgument, ErrorCode::PermissionDenied,
+                      ErrorCode::NotSupported,    ErrorCode::BadState,
+                      ErrorCode::Timeout,         ErrorCode::WarnGeneral};
+  for (const auto code : codes) {
+    const auto mapped = toQrmciError(Error::Kind::DeviceError,
+                                     mqss::submitter::Error{code, "detail"});
+    EXPECT_EQ(mapped.detail.find("Unknown"), std::string::npos)
+        << "unnamed ErrorCode value " << static_cast<int>(code);
+  }
 }
 
 } // namespace mqss::qrmci::test

@@ -10,11 +10,10 @@
 // online, compatible backend when preferred_qpu doesn't match, so merely
 // misnaming preferred_qpu isn't enough to force this path against a live
 // deployment -- a task must be incompatible with every backend currently
-// online. A circuit_file_type that
-// mqss::qrmci::isCircuitTypeCompatibleWithFormats()
-// (include/qrmci/ConstantsMapping.h) knows no formats for
-// guarantees that deterministically, independent of which/how many backends
-// are registered, so this test works unmodified against apps/standalone or
+// online. A circuit_file_type that mqss::qrmci::canPrepareTaskForBackend()
+// (include/qrmci/CircuitFormatPolicy.h) accepts for no backend guarantees
+// that deterministically, independent of which/how many backends are
+// registered, so this test works unmodified against apps/standalone or
 // apps/distributed.
 
 #include "DaemonProcess.h"
