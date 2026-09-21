@@ -24,9 +24,10 @@ jobs:
         run: |
           IMAGE="ghcr.io/akshay9594/mqss-passes-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0-amd64"
           docker pull $IMAGE
-          CONTAINER_ID=$(docker create $IMAGE true)
-          docker cp $CONTAINER_ID:/opt/deps /opt/deps
-          docker rm $CONTAINER_ID
+          sudo docker create $IMAGE true
+          CONTAINER_ID=$(sudo docker create $IMAGE true)
+          sudo docker cp $CONTAINER_ID:/opt/deps /opt/deps
+          sudo docker rm $CONTAINER_ID
 
       - uses: actions/checkout@v3
       - name: Configure (docs only)

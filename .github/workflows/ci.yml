@@ -50,13 +50,13 @@ jobs:
         run: |
           IMAGE="ghcr.io/akshay9594/mqss-passes-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0-amd64"
           docker pull $IMAGE
-          CONTAINER_ID=$(docker create $IMAGE true)
-          docker cp $CONTAINER_ID:/opt/deps /opt/deps
-          docker rm $CONTAINER_ID
+          CONTAINER_ID=$(sudo docker create $IMAGE true)
+          sudo docker cp $CONTAINER_ID:/opt/deps /opt/deps
+          sudo docker rm $CONTAINER_ID
       - uses: actions/checkout@v4
       - name: Install clang-tidy
         run: |
-          apt-get update && apt-get install -y clang-tidy && rm -rf /var/lib/apt/lists/*
+          sudo apt-get update && sudo apt-get install -y clang-tidy && sudo rm -rf /var/lib/apt/lists/*
       - name: Configure with compile commands
         run: |
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
@@ -105,20 +105,20 @@ jobs:
         run: |
           IMAGE="ghcr.io/akshay9594/mqss-passes-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0-amd64"
           docker pull $IMAGE
-          CONTAINER_ID=$(docker create $IMAGE true)
-          docker cp $CONTAINER_ID:/opt/deps /opt/deps
-          docker rm $CONTAINER_ID
+          sudo CONTAINER_ID=$(sudo docker create $IMAGE true)
+          sudo docker cp $CONTAINER_ID:/opt/deps /opt/deps
+          sudo docker rm $CONTAINER_ID
 
       - uses: actions/checkout@v4
       - name: Install compiler (${{ matrix.compiler }} ${{ matrix.version }})
         run: |
-          apt-get update
+          sudo apt-get update
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
-            apt-get install -y gcc-${{ matrix.version }} g++-${{ matrix.version }}
+            sudo apt-get install -y gcc-${{ matrix.version }} g++-${{ matrix.version }}
           else
-            apt-get install -y clang-${{ matrix.version }}
+            sudo apt-get install -y clang-${{ matrix.version }}
           fi
-          rm -rf /var/lib/apt/lists/*
+          sudo rm -rf /var/lib/apt/lists/*
       - name: Configure
         run: |
           cmake -S . -B build \
