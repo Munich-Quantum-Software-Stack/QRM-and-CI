@@ -16,5 +16,6 @@ FetchContent_Declare(
   mqssci
   GIT_REPOSITORY
     https://github.com/Munich-Quantum-Software-Stack/MQSS-Quantum-Compilation-Suite.git
-  GIT_TAG ${QRMCI_MQSSCI_GIT_TAG})
+  GIT_TAG ${QRMCI_MQSSCI_GIT_TAG}
+  SYSTEM)
 FetchContent_MakeAvailable(mqssci)

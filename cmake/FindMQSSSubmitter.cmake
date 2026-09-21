@@ -23,6 +23,7 @@ set(MQSS_SUBMITTER_BUILD_TOOLS
 FetchContent_Declare(
   mqss_submitter
   GIT_REPOSITORY ${QRMCI_MQSS_SUBMITTER_REPOSITORY}
-  GIT_TAG ${QRMCI_MQSS_SUBMITTER_GIT_TAG})
+  GIT_TAG ${QRMCI_MQSS_SUBMITTER_GIT_TAG}
+  SYSTEM)
 
 FetchContent_MakeAvailable(mqss_submitter)

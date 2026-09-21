@@ -73,9 +73,9 @@ jobs:
       matrix:
         include:
           - compiler: gcc
-            version: "13"
-            cc: gcc-13
-            cxx: g++-13
+            version: "14"
+            cc: gcc-14
+            cxx: g++-14
           - compiler: gcc
             version: "15"
             cc: gcc-15
@@ -106,7 +106,6 @@ jobs:
             exit 1
           fi
       - uses: actions/checkout@v4
-      # GCC 15 is the image's default; GCC 13 is layered on for that leg.
       - name: Configure
         uses: ./.github/actions/dev
         with:

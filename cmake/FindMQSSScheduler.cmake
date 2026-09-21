@@ -10,6 +10,7 @@ include(FetchContent)
 FetchContent_Declare(
   mqss_scheduler
   GIT_REPOSITORY ${QRMCI_MQSS_SCHEDULER_REPOSITORY}
-  GIT_TAG ${QRMCI_MQSS_SCHEDULER_GIT_TAG})
+  GIT_TAG ${QRMCI_MQSS_SCHEDULER_GIT_TAG}
+  SYSTEM)
 
 FetchContent_MakeAvailable(mqss_scheduler)

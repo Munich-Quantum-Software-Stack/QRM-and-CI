@@ -49,10 +49,12 @@ protected:
   mqss::QuantumTask task;
 
   void SetUp() override {
-    auto result = client.openDevice(
-        std::filesystem::path{kDriverPath}, kDeviceName,
-        mqss::submitter::SessionConfig{.token = "example_token"},
-        mqss::submitter::DeviceConfig{});
+    mqss::submitter::SessionConfig session;
+    session.token = "example_token";
+
+    auto result =
+        client.openDevice(std::filesystem::path{kDriverPath}, kDeviceName,
+                          session, mqss::submitter::DeviceConfig{});
     ASSERT_TRUE(result.has_value()) << result.error().message();
     opened.emplace(std::move(*result));
 

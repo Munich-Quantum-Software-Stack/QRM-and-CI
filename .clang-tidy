@@ -2,6 +2,7 @@ FormatStyle: file
 # Prevent clang-tidy from analyzing third-party/system headers
 # Match only headers located in your src/ or include/ directories
 HeaderFilterRegex: ".*/(src|include)/.*"
+ExcludeHeaderFilterRegex: ".*/_deps/.*"
 
 Checks: |
   bugprone-*,

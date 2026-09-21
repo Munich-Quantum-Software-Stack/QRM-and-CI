@@ -55,7 +55,8 @@ if(QRMCI_BUILD_UNIT_TESTS AND NOT TARGET cxx-qdmi-device)
   FetchContent_Declare(
     qdmi
     GIT_REPOSITORY ${QDMI_REPOSITORY}
-    GIT_TAG ${QRMCI_QDMI_GIT_TAG})
+    GIT_TAG ${QRMCI_QDMI_GIT_TAG}
+    SYSTEM)
   FetchContent_MakeAvailable(qdmi)
 
   if(_qrmci_qdmi_had_shared_libs)
