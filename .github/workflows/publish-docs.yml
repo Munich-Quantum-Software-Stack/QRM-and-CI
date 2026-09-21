@@ -33,7 +33,7 @@ jobs:
       - name: Build documentation
         uses: ./.github/actions/dev
         with:
-          run: cmake --build build --target docs
+          run: cmake --build build --target docs --parallel
       - name: Check for Doxygen errors
         run: |
           if [ -f build/docs/doxygen_warnings.txt ]; then
