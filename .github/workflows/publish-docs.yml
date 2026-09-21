@@ -14,31 +14,26 @@ jobs:
     name: Build & Check Doxygen
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    env:
-      LLVM_DIR: "/opt/deps/llvm/lib/cmake/llvm"
-      MLIR_DIR: "/opt/deps/llvm/lib/cmake/mlir"
-      CUDAQ_INSTALL_PREFIX: "/opt/deps/cudaq"
-      CATALYST_INSTALL_PREFIX: "/opt/deps/catalyst"
     steps:
-      - name: Extract files from deps image without running it
+      # Before the image build, so a missing secret fails in seconds.
+      - name: Check for the MQSS read token
+        env:
+          MQSS_READ_TOKEN: ${{ secrets.MQSS_READ_TOKEN }}
         run: |
-          IMAGE="ghcr.io/akshay9594/mqss-passes-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0-amd64"
-          docker pull $IMAGE
-          sudo docker create $IMAGE true
-          CONTAINER_ID=$(sudo docker create $IMAGE true)
-          sudo docker cp $CONTAINER_ID:/opt/deps /opt/deps
-          sudo docker rm $CONTAINER_ID
-
-      - uses: actions/checkout@v3
+          if [ -z "$MQSS_READ_TOKEN" ]; then
+            echo "::error::secrets.MQSS_READ_TOKEN is empty. Configure clones the private MQSS-Submitter repository; see docs/development-guide.md."
+            exit 1
+          fi
+      - uses: actions/checkout@v4
       - name: Configure (docs only)
-        run: |
-          cmake -S . -B build \
-            -DQRMCI_BUILD_UNIT_TESTS=OFF \
-            -DQRMCI_BUILD_INTEGRATION_TESTS=OFF \
-            -DQRMCI_BUILD_APPS=OFF \
-            -DBUILD_QRMCI_DOCS=ON
+        uses: ./.github/actions/dev
+        with:
+          github-token: ${{ secrets.MQSS_READ_TOKEN }}
+          run: cmake -S . -B build -DQRMCI_BUILD_UNIT_TESTS=OFF -DQRMCI_BUILD_INTEGRATION_TESTS=OFF -DQRMCI_BUILD_APPS=OFF -DBUILD_QRMCI_DOCS=ON
       - name: Build documentation
-        run: cmake --build build --target docs
+        uses: ./.github/actions/dev
+        with:
+          run: cmake --build build --target docs
       - name: Check for Doxygen errors
         run: |
           if [ -f build/docs/doxygen_warnings.txt ]; then

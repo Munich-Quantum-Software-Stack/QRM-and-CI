@@ -1,0 +1,108 @@
+name: Run a command in the QRM&CI dev image
+description: >-
+  Runs a command inside the image from .devcontainer/Dockerfile: ubuntu:26.10
+  with the prebuilt LLVM/MLIR/CUDA-Q/Catalyst toolchains in /opt/deps. Working
+  there rather than on the runner keeps the compiler and those prebuilt
+  libraries on the glibc they were built against. The image is built on first
+  use in a job and reused by every step after it.
+
+inputs:
+  run:
+    description: Command to run inside the image.
+    required: true
+  extra-packages:
+    description: >-
+      Extra apt packages, space separated. Only applied while the image is
+      built, so pass them on the job's first use of this action.
+    required: false
+    default: ""
+  github-token:
+    description: >-
+      Token with read access to the private MQSS repositories. Only configure
+      steps need one, since that is what clones MQSS-Submitter.
+    required: false
+    default: ""
+  image:
+    description: Tag for the dev image.
+    required: false
+    default: qrmci-dev:ci
+
+runs:
+  using: composite
+  steps:
+    - name: Build the dev image
+      shell: bash
+      env:
+        QRMCI_DEV_EXTRA_PACKAGES: ${{ inputs.extra-packages }}
+      run: |
+        set -euo pipefail
+        image='${{ inputs.image }}'
+
+        if docker image inspect "$image" >/dev/null 2>&1; then
+          if [ -n "$QRMCI_DEV_EXTRA_PACKAGES" ]; then
+            echo "::warning::extra-packages arrived after $image was built, so it did nothing. Pass it on the job's first use of this action."
+          fi
+          exit 0
+        fi
+
+        # /opt/deps is several GiB and exists twice mid-build, so make room.
+        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                    /usr/local/share/boost /opt/hostedtoolcache/CodeQL || true
+
+        # buildx, not plain docker build: the Dockerfile picks its deps image
+        # with ${TARGETARCH}, which only BuildKit sets. CUDA-Q is x86_64 only.
+        docker buildx build \
+          --platform linux/amd64 \
+          --load \
+          --file .devcontainer/Dockerfile \
+          --tag "$image" \
+          .devcontainer
+
+        if [ -n "$QRMCI_DEV_EXTRA_PACKAGES" ]; then
+          docker buildx build --load --tag "$image" - <<DOCKERFILE
+        FROM $image
+        RUN apt-get update \
+          && apt-get install -y $QRMCI_DEV_EXTRA_PACKAGES \
+          && rm -rf /var/lib/apt/lists/*
+        DOCKERFILE
+        fi
+
+        df -h /
+
+    - name: Run the command
+      shell: bash
+      env:
+        # Passed as variables so the command keeps its quoting and the token
+        # stays out of the rendered step.
+        QRMCI_DEV_RUN: ${{ inputs.run }}
+        QRMCI_DEV_TOKEN: ${{ inputs.github-token }}
+      run: |
+        set -euo pipefail
+
+        # Kept to this one step, so the header never reaches $GITHUB_ENV,
+        # CMakeCache.txt, or a fetched repository's .git/config.
+        if [ -n "$QRMCI_DEV_TOKEN" ]; then
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0="http.https://github.com/.extraheader"
+          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$QRMCI_DEV_TOKEN" | base64 -w0)"
+        fi
+
+        # --network host: RabbitMQ publishes 5672 on the runner, and sharing
+        # its network namespace is how this container reaches it.
+        # --env NAME passes nothing when NAME is unset, so the credentials are
+        # simply absent outside a configure step.
+        # safe.directory: the checkout belongs to the runner user but this
+        # container is root, and git refuses to work in it otherwise.
+        docker run --rm \
+          --network host \
+          --volume "$PWD:/workspace" \
+          --workdir /workspace \
+          --env CC \
+          --env CXX \
+          --env QRMCI_AMQP_HOST \
+          --env GIT_CONFIG_COUNT \
+          --env GIT_CONFIG_KEY_0 \
+          --env GIT_CONFIG_VALUE_0 \
+          --env QRMCI_DEV_RUN \
+          '${{ inputs.image }}' \
+          bash -c 'git config --system --add safe.directory "*" >/dev/null 2>&1 || true; eval "$QRMCI_DEV_RUN"'

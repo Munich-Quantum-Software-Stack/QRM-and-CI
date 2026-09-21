@@ -185,8 +185,9 @@ Notes:
   injects for them (`QDMI_CONF`, `LD_LIBRARY_PATH`, and the driver path compile definition), so run
   them through CTest rather than by invoking the binaries directly
 - the integration binaries under `tests/integration/` still need a reachable RabbitMQ broker and the
-  real example QDMI driver/device; CI provisions both (a `rabbitmq` service container reachable at
-  the `rabbitmq` hostname) and runs them as their own step
+  real example QDMI driver/device; CI provisions both (a `rabbitmq` service container, reachable at
+  `localhost:5672` because the tests run in a container that shares the runner's network namespace)
+  and runs them as their own step
 
 ### Build options
 
