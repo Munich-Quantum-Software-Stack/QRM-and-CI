@@ -139,9 +139,14 @@ COPY --from=builder --chown=${USER_UID}:${USER_GID} \
     /workspace/build/_deps/mqssci-build/lib/Passes/Transforms/libMQSS* \
     /workspace/build/_deps/mqt-core-build/src/na/libmqt-core-na* \
     /workspace/build/_deps/mqt-core-build/src/ir/libmqt-core-ir* \
+    /workspace/build/_deps/mqt-core-build/src/dd/libmqt-core-dd* \
+    /workspace/build/_deps/mqt-core-build/src/zx/libmqt-core-zx* \
     /workspace/build/_deps/mqt-core-build/src/circuit_optimizer/libmqt-core-circuit-optimizer* \
+    /workspace/build/_deps/mqt-core-build/src/algorithms/libmqt-core-algorithms* \
     /workspace/build/_deps/mqt-qmap-build/src/sc/libmqt-qmap-sc* \
     /workspace/build/_deps/mqt-qmap-build/src/sc/heuristic/libmqt-qmap-sc-heuristic* \
+    /workspace/build/_deps/mqt-qcec-build/src/libmqt-* \
+    /workspace/build/_deps/mqssci-build/lib/Passes/Verification/libMQSS* \
     /workspace/build/_deps/mqssintegrationdeploymentframework-build/libmqss_*.so \
     /workspace/build/_deps/simple_amqp_client-build/libSimple* \
     /usr/local/lib/qrmci/

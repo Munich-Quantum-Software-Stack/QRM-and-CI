@@ -44,6 +44,13 @@ endforeach()
 
 target_include_directories(TestTaskSubmission PRIVATE ${PROJECT_SOURCE_DIR}/src)
 
+# The suites that compile or submit a real circuit read it from
+# tests/fixtures/circuits; qrmci_test_circuit_fixtures (tests/CMakeLists.txt)
+# supplies both the accessor header and the directory path.
+foreach(target IN ITEMS TestRunnersTaskCompilation TestDaemon)
+  target_link_libraries(${target} PRIVATE qrmci_test_circuit_fixtures)
+endforeach()
+
 # DaemonProcess.{h,cpp} (tests/integration) has no qrmci dependency of its own
 # -- it is a standalone posix_spawn/waitpid wrapper -- so its ownership contract
 # is exercised here as a plain process test against /bin/true and /bin/sleep,

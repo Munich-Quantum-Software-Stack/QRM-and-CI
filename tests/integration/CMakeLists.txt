@@ -30,7 +30,8 @@ add_library(qrmci_integration_test_support STATIC DaemonEnvironment.cpp
                                                   DaemonProcess.cpp)
 target_compile_features(qrmci_integration_test_support PRIVATE cxx_std_23)
 qrmci_enable_warnings(qrmci_integration_test_support)
-target_link_libraries(qrmci_integration_test_support PUBLIC qrmci GTest::GTest)
+target_link_libraries(qrmci_integration_test_support
+                      PUBLIC qrmci GTest::GTest qrmci_test_circuit_fixtures)
 
 foreach(target IN LISTS INTEGRATION_TEST_TARGETS)
   add_executable(${target} ${target}.cpp)

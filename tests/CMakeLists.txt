@@ -28,6 +28,20 @@ add_custom_command(
   COMMENT "Generating qdmi.conf for Testing")
 add_custom_target(qrmci_test_qdmi_conf DEPENDS "${QRMCI_TEST_QDMI_CONF}")
 
+# The sample circuits under fixtures/circuits are read from their source
+# directory at run time rather than copied next to the binaries: the path is
+# baked in as a compile definition so a test finds them whatever working
+# directory ctest gives it. Declared ahead of both add_subdirectory() calls
+# because the unit and integration suites share the same circuits.
+add_library(qrmci_test_circuit_fixtures INTERFACE)
+target_include_directories(qrmci_test_circuit_fixtures
+                           INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+target_compile_definitions(
+  qrmci_test_circuit_fixtures
+  INTERFACE
+    QRMCI_TEST_CIRCUIT_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/circuits"
+)
+
 if(QRMCI_BUILD_INTEGRATION_TESTS)
   if(QRMCI_BUILD_APPS)
     add_subdirectory(integration)
