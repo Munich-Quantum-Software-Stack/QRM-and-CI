@@ -104,6 +104,11 @@ compileQuantumTask(mqss::QuantumTask &task, const BackendWrapper &backendInfo);
 /// first submission failure short-circuits without waiting on or collecting
 /// any job already submitted for this task.
 ///
+/// Selects the first child in the driver's child order for every circuit,
+/// using a parent batch or standalone child submission without falling back
+/// to parent execution. If there are no children or discovery is unsupported,
+/// submits on the device itself. Other discovery errors fail submission.
+///
 /// Uninterruptible: unsuitable for a daemon work loop that must shut down
 /// promptly. Delegates to the three-argument overload with a flag that is
 /// never set.
