@@ -212,6 +212,10 @@ class CompileQuantumTaskMatrixTest
 
 TEST_P(CompileQuantumTaskMatrixTest, SampleCircuitCompilesToTargetFormat) {
   const auto &testCase = GetParam();
+  if (testCase.circuitFixture == "some-circuit.quake") {
+    GTEST_SKIP() << "Pending an upstream compiler repository fix";
+  }
+
   auto task = makeTask(readCircuitFixture(testCase.circuitFixture), 3, "quake");
   const auto backend =
       makeBackend("alpha", 5, mqss::BackendStatus::BACKEND_STATUS_IDLE,
