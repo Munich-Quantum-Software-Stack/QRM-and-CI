@@ -15,7 +15,7 @@ set(QRMCI_MQSS_SCHEDULER_REPOSITORY
     CACHE STRING "Upstream MQSS-Scheduler repository")
 # "v2.2.2"
 set(QRMCI_MQSSCI_GIT_TAG
-    "a31ffadc713e01d85203f326c0ff0dd3c4756ca1"
+    "v2.3.1"
     CACHE STRING "MQSS-Quantum-Compilation-Suite revision")
 set(QRMCI_MQSS_IDF_GIT_TAG
     "mnf/protobuf-json-fix"
