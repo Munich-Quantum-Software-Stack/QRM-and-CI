@@ -84,6 +84,10 @@ int main() {
           if (auto compiled = compileAndSchedule(task, availableBackends,
                                                  compiler, scheduler);
               !compiled) {
+            spdlog::info("Compilation successful!");
+            for (auto file : task.circuit_files()) {
+              spdlog::info(file);
+            }
             sendFailure(comms, task, compiled.error(),
                         "could not be scheduled.");
           }

@@ -8,7 +8,7 @@ __pycache__/
 .ccache/
 cmake-build-*/
 *install-dir/
-
+tests/input
 # Distribution / packaging
 .Python
 /build/
@@ -76,7 +76,7 @@ instance/
 # Sphinx documentation
 docs/_build/
 docs/api/
-
+tests/unit/customTest
 # PyBuilder
 .pybuilder/
 target/

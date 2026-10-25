@@ -107,7 +107,6 @@ compileQuantumTask(mqss::QuantumTask &task, const BackendWrapper &backendInfo,
   if (task.no_modify()) {
     return {};
   }
-
   const std::vector<std::string_view> supportedInputFormats =
       mqss::mqssci::MQSSCompiler::getSupportedInputFormats();
   if (auto validated = validateInputFormatIsSupportedCircuitFormat(

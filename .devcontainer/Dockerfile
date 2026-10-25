@@ -1,4 +1,4 @@
-ARG DEPS_IMAGE=ghcr.io/akshay9594/mqss-passes-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0
+ARG DEPS_IMAGE=ghcr.io/munich-quantum-software-stack/mqss-quantum-compilation-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0
 FROM ${DEPS_IMAGE}-${TARGETARCH} AS deps
 
 FROM ubuntu:26.10
@@ -29,6 +29,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   lsb-release \
   openssh-client \
   librabbitmq-dev \
+  libcurl4-openssl-dev \
   libspdlog-dev \
   nlohmann-json3-dev \
   libfmt-dev \

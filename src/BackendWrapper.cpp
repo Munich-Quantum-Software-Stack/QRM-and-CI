@@ -47,9 +47,13 @@ BackendWrapper::fromSubmitter(const mqss::submitter::Device &device,
   if (!instructions) {
     return std::unexpected(std::move(instructions.error()));
   }
-  auto connectivity = device.couplingMap().transform_error(asDeviceError);
-  if (!connectivity) {
-    return std::unexpected(std::move(connectivity.error()));
+  auto connectivity = device.couplingMap();
+  std::vector<std::pair<std::uint64_t, std::uint64_t>> couplingMap;
+  if (connectivity) {
+    couplingMap = std::move(*connectivity);
+  } else if (connectivity.error().code() !=
+             mqss::submitter::ErrorCode::NotSupported) {
+    return std::unexpected(asDeviceError(connectivity.error()));
   }
   auto formats =
       device.supportedPayloadFormats().transform_error(asDeviceError);
@@ -66,8 +70,8 @@ BackendWrapper::fromSubmitter(const mqss::submitter::Device &device,
   backend.queueName = std::string(dispatchQueue);
   backend.instructions = std::move(*instructions);
 
-  backend.qubitConnectivity.reserve(connectivity->size());
-  for (const auto &[firstQubit, secondQubit] : *connectivity) {
+  backend.qubitConnectivity.reserve(couplingMap.size());
+  for (const auto &[firstQubit, secondQubit] : couplingMap) {
     backend.qubitConnectivity.emplace_back(
         static_cast<std::uint32_t>(firstQubit),
         static_cast<std::uint32_t>(secondQubit));

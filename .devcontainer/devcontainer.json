@@ -29,6 +29,7 @@
         "twxs.cmake",
         "ms-vscode.cmake-tools",
         "ms-vscode.cpptools",
+        "llvm-vs-code-extensions.vscode-clangd",
         "cschlosser.doxdocgen",
         "psioniq.psi-header",
         "streetsidesoftware.code-spell-checker",
@@ -41,6 +42,11 @@
         "ritwickdey.liveserver"
       ],
       "settings": {
+        "clangd.path": "/usr/bin/clangd",
+        "clangd.arguments": [
+          "--compile-commands-dir=/workspaces/QRM-and-CI/build"
+        ],
+        "C_Cpp.intelliSenseEngine": "disabled",
         "dev.containers.useBuildKit": "always",
         "files.associations": {
           "CMakeLists.txt": "cmake",

@@ -13,9 +13,9 @@ set(QRMCI_MQSS_SCHEDULER_GIT_TAG
 set(QRMCI_MQSS_SCHEDULER_REPOSITORY
     "https://github.com/Munich-Quantum-Software-Stack/MQSS-Scheduler.git"
     CACHE STRING "Upstream MQSS-Scheduler repository")
-# "v2.2.2"
+
 set(QRMCI_MQSSCI_GIT_TAG
-    "v2.3.1"
+    "v2.3.2"
     CACHE STRING "MQSS-Quantum-Compilation-Suite revision")
 set(QRMCI_MQSS_IDF_GIT_TAG
     "mnf/protobuf-json-fix"
@@ -55,3 +55,11 @@ set(QRMCI_DOXYGEN_AWESOME_GIT_TAG
 set(QRMCI_TOMLPLUSPLUS_GIT_TAG
     "v3.4.0"
     CACHE STRING "toml++ revision")
+
+set(QRMCI_MQSS_DEVICES_GIT_TAG
+    "develop"
+    CACHE STRING "MQSS-Devices-Suite version (currently set to develop)")
+
+set(IQM_QDMI_DEVICE_GIT_TAG
+    "v1.4.0"
+    CACHE STRING "IQM QDMI Device (currently set to 1.5.0)")

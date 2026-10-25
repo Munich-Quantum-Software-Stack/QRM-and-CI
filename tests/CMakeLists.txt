@@ -10,6 +10,11 @@ find_package(GTest REQUIRED)
 option(QRMCI_BUILD_UNIT_TESTS "Build unit tests" ON)
 option(QRMCI_BUILD_INTEGRATION_TESTS "Build integration tests" ON)
 option(
+  QRMCI_BUILD_REAL_BACKEND_TESTS
+  "Build real-backend tests (connect to a live, real quantum backend; never registered with ctest)"
+  OFF)
+
+option(
   QRMCI_RUN_INTEGRATION_TESTS
   "Register integration tests for ctest (requires a live QRM&CI deployment)"
   OFF)
@@ -55,4 +60,15 @@ if(QRMCI_BUILD_INTEGRATION_TESTS)
 endif()
 if(QRMCI_BUILD_UNIT_TESTS)
   add_subdirectory(unit)
+endif()
+if(QRMCI_BUILD_REAL_BACKEND_TESTS)
+  if(QRMCI_BUILD_APPS)
+    add_subdirectory(real-backend)
+  else()
+    message(
+      WARNING
+        "QRMCI_BUILD_REAL_BACKEND_TESTS is ON but QRMCI_BUILD_APPS is OFF -- "
+        "skipping tests/real-backend, since its test spawns the daemon "
+        "binaries QRMCI_BUILD_APPS builds.")
+  endif()
 endif()

@@ -47,10 +47,11 @@ mqss::submitter::JobRequest makeJobRequest(const mqss::QuantumTask &task,
                                            int circuitIndex,
                                            mqss::CircuitFormat format) {
   const auto &circuit = task.circuit_files(circuitIndex);
-  std::vector<std::byte> payload(circuit.size());
+  std::vector<std::byte> payload(circuit.size() + 1);
   std::ranges::transform(circuit, payload.begin(), [](char value) {
     return static_cast<std::byte>(value);
   });
+  payload.back() = std::byte{0};
   return {.format = format,
           .payload = std::move(payload),
           .numShots = static_cast<std::uint64_t>(task.n_shots())};
