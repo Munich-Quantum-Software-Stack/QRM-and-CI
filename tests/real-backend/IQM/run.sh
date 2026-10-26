@@ -7,7 +7,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 BUILD_DIR="${BUILD_DIR:-${ROOT_DIR}/build}"
 
 # Fails loudly, before any build or daemon spawn, if a required credential
@@ -37,4 +37,4 @@ cmake --build "${BUILD_DIR}" --target TestIQMWorker
 # the daemon-facing config paths baked in via tests/real-backend/CMakeLists.txt.
 export QRMCI_CONFIG_FILE="${SCRIPT_DIR}/config/selector-test-config.toml"
 
-exec "${BUILD_DIR}/tests/real-backend/TestIQMWorker"
+exec "${BUILD_DIR}/tests/real-backend/IQM/TestIQMWorker"

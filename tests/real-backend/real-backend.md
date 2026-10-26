@@ -1,279 +1,191 @@
-# `tests/real-backend` — real IQM backend test
+# `tests/real-backend` — real-backend tests
 
-## What this is
+## Summary
 
-`TestIQMWorker` is the one test in this repository that talks to a **real,
-external quantum backend** — IQM's Resonance API — instead of the simulated
-QDMI example driver every `tests/integration` target uses. Which specific
-IQM device it targets is a runtime choice (see below); which API endpoint
-it talks to is not, since talking to IQM's Resonance API is what this test
-_is_.
+`tests/real-backend/` holds tests that talk to a **real, external quantum
+backend**, unlike `tests/integration`, which uses a simulated QDMI driver.
+Each provider gets its own subdirectory — currently just `IQM/`
+(`TestIQMWorker`, talking to IQM's Resonance API). `IQM_BASE_URL` is
+hardcoded (talking to IQM _is_ what this test is); which IQM _device_ it
+targets is a runtime choice.
 
-Because it depends on network reachability to that real service, and on
-real credentials, it is deliberately kept apart from the rest of the test
-suite:
+Kept apart from the rest of the suite:
 
-- `tests/real-backend/CMakeLists.txt` never calls `add_test()`. There is no
-  `ctest` label, `-R` filter, or `-L` selection that can ever schedule this
-  test — it simply does not exist as far as `ctest` is concerned.
-- The whole directory is only configured when `QRMCI_BUILD_REAL_BACKEND_TESTS`
-  is explicitly turned on (default `OFF`), mirroring how
-  `QRMCI_BUILD_INTEGRATION_TESTS` gates `tests/integration` in
-  `tests/CMakeLists.txt`.
-- It is built and run only through this directory's own `run.sh`.
-- Running it requires real RabbitMQ and IQM credentials, which `run.sh`
-  insists on getting from your own shell environment rather than ever
-  reading a committed default (see "Required environment variables" below).
+- `IQM/CMakeLists.txt` never calls `add_test()` — no `ctest` label/filter
+  can ever schedule it.
+- Only configured when `QRMCI_BUILD_REAL_BACKEND_TESTS=ON` (default `OFF`).
+- Built and run only via `tests/real-backend/IQM/run.sh`.
+- Requires real RabbitMQ/IQM credentials from your shell env, never a
+  committed default (see "Required environment variables").
+
+## Building and running
+
+```sh
+cmake -S . -B build -DQRMCI_BUILD_REAL_BACKEND_TESTS=ON   # one-time, from repo root
+
+# export the required credentials (see below), then:
+./tests/real-backend/IQM/run.sh
+```
+
+`run.sh`: validates required env vars → `cmake --build --target
+TestIQMWorker` → exports `QRMCI_CONFIG_FILE` for `TestIQMWorker` itself
+(runtime-only, no compile-time equivalent) → `exec`s the binary.
+
+`BUILD_DIR` defaults to `<repo-root>/build`, override with
+`BUILD_DIR=/other/path ./tests/real-backend/IQM/run.sh`.
+
+A future sibling provider must update `run.sh`'s own path math by hand:
+repo root is `${SCRIPT_DIR}/../../..`, the binary is at
+`${BUILD_DIR}/tests/real-backend/<provider>/<Target>`. Neither is derived
+from CMake, unlike everything in `CMakeLists.txt`.
 
 ## Directory contents
 
-| Path                                 | Purpose                                                                      |
-| ------------------------------------ | ---------------------------------------------------------------------------- |
-| `CMakeLists.txt`                     | Defines the `TestIQMWorker` executable target. No `add_test()`.              |
-| `TestIQMWorker.cpp`                  | The test itself (originally `tests/integration/TestTwoWorkerSimulator.cpp`). |
-| `run.sh`                             | Validates required credentials, builds, and runs `TestIQMWorker`.            |
-| `config/selector-test-config.toml`   | Config the spawned selector daemon loads.                                    |
-| `config/worker-iqm-test-config.toml` | Config the spawned worker-iqm daemon loads.                                  |
+```
+tests/real-backend/
+├── CMakeLists.txt          # add_subdirectory(IQM) -- nothing else
+├── real-backend.md         # this file
+└── IQM/
+    ├── CMakeLists.txt      # Defines the TestIQMWorker target. No add_test().
+    ├── TestIQMWorker.cpp   # The test itself
+    ├── run.sh              # Validates credentials, builds, runs TestIQMWorker
+    └── config/
+        ├── selector-test-config.toml    # Config the spawned selector loads
+        └── worker-iqm-test-config.toml  # Config the spawned worker-iqm loads
+```
 
-The two `config/*.toml` files are local copies kept inside this directory
-(rather than reused from `apps/distributed/config/`, which holds the
-equivalents the simulated/ctest-driven integration tests use), so this
-directory carries its own fixtures and doesn't reach outside itself for
-them. They still carry placeholder values for the fields covered by the
-required environment variables below — those placeholders are never used in
-practice, since an environment variable always wins over the file, and
-`run.sh` refuses to run at all if the real values aren't supplied.
+The two `IQM/config/*.toml` files are local copies (not shared with
+`apps/distributed/config/`), so `IQM/` is self-contained. Their credential
+fields are placeholders only — env vars always win, and `run.sh` refuses
+to run without the real values.
 
 ## Required environment variables
 
-`run.sh` fails immediately — before touching the build or spawning any
-daemon — if any of these aren't already exported in your shell:
+`run.sh` fails immediately, before any build or daemon spawn, if unset:
 
-| Variable                            | Why it's required, not defaulted                                                                                                    |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `QRMCI_AMQP_HOST`                   | Which RabbitMQ broker to use. No safe default — the committed TOML's value is a placeholder.                                        |
-| `QRMCI_AMQP_USER`                   | RabbitMQ credential.                                                                                                                |
-| `QRMCI_AMQP_PASSWORD`               | RabbitMQ credential.                                                                                                                |
-| `QRMCI_SUBMITTER_QDMI_CLIENT_TOKEN` | IQM API credential.                                                                                                                 |
-| `QRMCI_SUBMITTER_QDMI_DEVICE_NAME`  | Which IQM device to open.                                                                                                           |
-| `IQM_QC_ALIAS`                      | Which specific IQM device alias to request from the Resonance API — lets you target a different real device without editing source. |
+| Variable                            | Why required                                       |
+| ----------------------------------- | -------------------------------------------------- |
+| `QRMCI_AMQP_HOST`                   | RabbitMQ broker — no safe default.                 |
+| `QRMCI_AMQP_USER`                   | RabbitMQ credential.                               |
+| `QRMCI_AMQP_PASSWORD`               | RabbitMQ credential.                               |
+| `QRMCI_SUBMITTER_QDMI_CLIENT_TOKEN` | IQM API credential.                                |
+| `QRMCI_SUBMITTER_QDMI_DEVICE_NAME`  | Which IQM device to open (e.g. `garnet`).          |
+| `IQM_QC_ALIAS`                      | Which IQM device alias to request (e.g. `garnet`). |
 
-These are all fields the underlying `mqss::qrmci::Config` loader already
-supports as `defaults < TOML file < environment variable` overrides (see
-"Config files" below) — `run.sh` doesn't invent a new mechanism, it just
-refuses to proceed on the committed file's placeholder values for anything
-credential-shaped or deployment-specific.
-
-Export them before invoking the script, e.g.:
+These are ordinary `mqss::qrmci::Config` fields (`defaults < TOML file <
+env var`, see "Config files") — `run.sh` just refuses to fall back to the
+committed placeholders for anything credential-shaped.
 
 ```sh
 export QRMCI_AMQP_HOST=rabbitmq.example.internal
 export QRMCI_AMQP_USER=...
 export QRMCI_AMQP_PASSWORD=...
-export QRMCI_SUBMITTER_QDMI_CLIENT_TOKEN=...            # Token from IQM portal
-export QRMCI_SUBMITTER_QDMI_DEVICE_NAME=...             # (e.g. garnet)
-export IQM_QC_ALIAS=...                                 # (same as QRMCI_SUBMITTER_QDMI_DEVICE_NAME e.g. garnet)
+export QRMCI_SUBMITTER_QDMI_CLIENT_TOKEN=...   # from IQM portal
+export QRMCI_SUBMITTER_QDMI_DEVICE_NAME=...    # e.g. garnet
+export IQM_QC_ALIAS=...                        # same device, e.g. garnet
 
-./tests/real-backend/run.sh
+./tests/real-backend/IQM/run.sh
 ```
 
-Two related variables are deliberately **not** on this list:
-
-- `QRMCI_SUBMITTER_QDMI_DEVICE_ID` — optional, not required. It only has to
-  be internally consistent within one run of this test (see "Test
-  workflow" below for why), so it has a safe fallback rather than a
-  required export.
-- `IQM_BASE_URL` — hardcoded, not configurable at all. Talking to IQM's
-  Resonance API specifically is what `TestIQMWorker` tests; if you need a
-  different provider or API endpoint, that's a different test, not a flag
-  on this one.
-
-## Building and running
-
-```sh
-# One-time (or whenever you reconfigure): opt in to building this directory.
-cmake -S . -B build -DQRMCI_BUILD_REAL_BACKEND_TESTS=ON
-
-# Export the required credentials (see above), then build + run:
-./tests/real-backend/run.sh
-```
-
-`run.sh`:
-
-1. Validates every required environment variable is set (`require_env`),
-   exiting with a clear error naming the missing one if not.
-2. Runs `cmake --build "$BUILD_DIR" --target TestIQMWorker` — so it always
-   runs against freshly built sources, never a stale binary.
-3. `export`s `QRMCI_CONFIG_FILE` for the `TestIQMWorker` process itself
-   (see the environment-variable breakdown below for why this can't just be
-   baked into the CMake build like the daemon-facing paths are).
-4. `exec`s the built binary, so the script's exit code and any signals
-   (e.g. Ctrl-C) pass straight through.
-
-`BUILD_DIR` defaults to `<repo-root>/build` and can be overridden:
-`BUILD_DIR=/other/path ./tests/real-backend/run.sh`.
+Not required: `QRMCI_SUBMITTER_QDMI_DEVICE_ID` (optional — only needs to be
+internally consistent, see "Test workflow") and `IQM_BASE_URL` (hardcoded —
+it's part of what this test _is_, not a deployment knob).
 
 ## Test workflow
 
-`TestIQMWorker.cpp`'s `main()`:
+`IQM/TestIQMWorker.cpp`'s `main()`:
 
-1. Spawns two daemon subprocesses via `DaemonProcess` (reused from
-   `tests/integration/DaemonProcess.{h,cpp}` — a plain `posix_spawn`/`waitpid`
-   wrapper with no GTest or qrmci dependency of its own, so reusing it adds
-   no framework coupling):
-   - `qrmcid-distributed-selector`
-   - `qrmcid-distributed-worker` (configured here to act as the worker-iqm backend)
-2. Sleeps 60s to give both daemons time to come up and publish their
-   backend-status heartbeat to each other (the same readiness grace
-   `TestSubmitTaskDistributed.cpp` uses, doubled here since two workers are
-   each independently publishing on the same interval).
-3. Calls `test()`, which:
-   - Loads its own config via `mqss::qrmci::loadConfig()` (this is where the
-     `QRMCI_CONFIG_FILE` env var `run.sh` exports gets read).
-   - Builds one `QuantumTask`, restricted (`restricted_resource_names`) to
-     the worker's backend ID (see `workerDeviceId()` below), carrying the
-     `bell.quake` circuit fixture, 100 shots, optimisation level 1.
-   - Sends it to `config.common.qrmciQueue` — the selector's front door.
-   - Waits (30s budget, `kResultTimeout`) for a `QuantumResult` on the
-     task's own result queue.
-   - Asserts the result arrived, `execution_status()` is true, **and**
-     `executed_qpu()` matches that same backend ID. That last check is the
-     one that actually catches a wrong-worker delivery — a task picked up
-     and compiled by the wrong worker would still come back "successful",
-     just tagged with the wrong `executed_qpu`.
-4. Stops both daemons, in reverse start order.
+1. Spawns `qrmcid-distributed-selector` and `qrmcid-distributed-worker`
+   (as worker-iqm) via `DaemonProcess` (reused from
+   `tests/integration/DaemonProcess.{h,cpp}` — plain, no GTest/qrmci tie).
+2. Sleeps 60s for both to come up and publish their status heartbeat.
+3. `test()`: loads its own config (`QRMCI_CONFIG_FILE`) → sends one
+   `QuantumTask` restricted to the worker's backend ID, carrying
+   `bell.quake`, to `config.common.qrmciQueue` → waits (30s) for the
+   `QuantumResult` → asserts `execution_status()` _and_
+   `executed_qpu()` matches that backend ID (the check that actually
+   catches a wrong-worker delivery; `execution_status()` alone wouldn't).
+4. Stops both daemons, reverse order.
 
-### Why the worker's backend ID has its own helper function
-
-`workerDeviceId()` (`TestIQMWorker.cpp:42-45`) is a single source of truth
-for the worker-iqm backend's advertised ID, read once from
-`QRMCI_SUBMITTER_QDMI_DEVICE_ID` (falling back to `"worker-iqm"` if unset)
-and used in two places that must agree with each other:
-
-- the `EnvOverride` handed to the spawned worker daemon (`main()`, line 161)
-- the task's `restricted_resource_names` and `executed_qpu()` check
-  (`test()`, line 71)
-
-Before this helper existed, both call sites hardcoded the literal
-`"worker-iqm"` independently. That was fine as long as nothing overrode it,
-but it meant an env-var override on one side could silently stop matching
-the other — the daemon would advertise whatever `QRMCI_SUBMITTER_QDMI_DEVICE_ID`
-says, while `test()` kept checking against the old literal, failing with
-"Task was executed by the wrong worker" for reasons that have nothing to do
-with routing actually being broken. Routing both call sites through one
-function closes that gap. `iqmDeviceAlias()` (`TestIQMWorker.cpp:47-50`)
-reads `IQM_QC_ALIAS` the same way, but has no second call site to stay
-consistent with — it's required by `run.sh` precisely because there's no
-safe value to fall back to here (see "Required environment variables").
+**Why `workerDeviceId()` exists:** the worker's backend ID is used in two
+places that must agree — the daemon's `EnvOverride` and `test()`'s
+`restricted_resource_names`/`executed_qpu()` check. Both used to hardcode
+`"worker-iqm"` independently; an override on one side could silently stop
+matching the other. One shared helper (reads `QRMCI_SUBMITTER_QDMI_DEVICE_ID`,
+falls back to `"worker-iqm"`) closes that gap. `iqmDeviceAlias()` reads
+`IQM_QC_ALIAS` the same way, but has no second call site — it's required
+by `run.sh` instead, since there's no safe fallback for it.
 
 ## Environment variables
 
-Three separate processes are involved — `TestIQMWorker` itself, plus the
-selector and worker-iqm daemons it spawns as children — and each only ever
-sees its own environment. Nothing below is redundant with anything else;
-each entry answers the same kind of question ("which config file?", "which
-backend?", "which credential?") for a different process.
+Three processes, each seeing only its own environment:
 
-### 1. Exported by the caller, validated by `run.sh` before anything else runs
+1. **Caller-exported, validated by `run.sh`** — see "Required environment
+   variables". Since `run.sh` doesn't rebuild its own environment before
+   `exec`, these reach `TestIQMWorker` and (via environ-inheritance in
+   `DaemonProcess::start()`) both spawned daemons, with nothing forwarding
+   them explicitly.
+2. **Set by `run.sh`, for `TestIQMWorker` itself:**
 
-See "Required environment variables" above for the full list and why each
-one has no safe default. Because `run.sh` doesn't rebuild its own process
-environment before `exec`-ing the binary, whatever you exported is exactly
-what `TestIQMWorker` inherits — and, via `DaemonProcess::start()`'s
-environ-inheritance (below), what both spawned daemons inherit too, without
-`run.sh` or `TestIQMWorker.cpp` needing to forward any of them explicitly.
+   | Variable            | Value                                  | Why                                                                                     |
+   | ------------------- | -------------------------------------- | --------------------------------------------------------------------------------------- |
+   | `QRMCI_CONFIG_FILE` | `IQM/config/selector-test-config.toml` | `loadConfig()` reads this from the process env at runtime — no compile-time equivalent. |
 
-### 2. Set by `run.sh` itself, for the `TestIQMWorker` process
+3. **Baked into `IQM/CMakeLists.txt`** (compile-time constants; only
+   become env vars once forwarded via an `EnvOverride` in group 4):
 
-| Variable            | Value                              | Why                                                                                                                                                                                                                                                   |
-| ------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `QRMCI_CONFIG_FILE` | `config/selector-test-config.toml` | `src/Config.cpp`'s `loadConfig()` reads this directly from the process environment at runtime (`getEnvOr("QRMCI_CONFIG_FILE", "config/qrmci.toml")`) — there is no compile-time equivalent, so it has to be set here rather than in `CMakeLists.txt`. |
+   | Macro                                | Value                                        | Forwarded to                              |
+   | ------------------------------------ | -------------------------------------------- | ----------------------------------------- |
+   | `QRMCI_DISTRIBUTED_SELECTOR_PATH`    | `$<TARGET_FILE:qrmcid-distributed-selector>` | Selector's executable path                |
+   | `QRMCI_DISTRIBUTED_WORKER_PATH`      | `$<TARGET_FILE:qrmcid-distributed-worker>`   | worker-iqm's executable path              |
+   | `QRMCI_DISTRIBUTED_SELECTOR_LOG_DIR` | `<build>/.../IQM/daemon-logs/selector`       | Selector's log dir                        |
+   | `QRMCI_DISTRIBUTED_WORKER_B_LOG_DIR` | `<build>/.../IQM/daemon-logs/worker-iqm`     | worker-iqm's log dir                      |
+   | `QRMCI_SELECTOR_TEST_CONFIG`         | `IQM/config/selector-test-config.toml`       | Selector's `QRMCI_CONFIG_FILE` override   |
+   | `QRMCI_WORKER_IQM_TEST_CONFIG`       | `IQM/config/worker-iqm-test-config.toml`     | worker-iqm's `QRMCI_CONFIG_FILE` override |
+   | `QRMCI_WORKER_IQM_QDMI_CONF`         | `tests/input/iqm_qdmi.conf`                  | worker-iqm's `QDMI_CONF` override         |
 
-### 3. Baked into `CMakeLists.txt` as compile definitions
+   These use `CMAKE_CURRENT_SOURCE_DIR`/`_BINARY_DIR`, so they auto-adjust
+   to nesting depth — unlike `run.sh` (see "Building and running"). Log
+   dirs are created at runtime by `DaemonProcess::start()`, not at build time.
 
-These are string constants `TestIQMWorker.cpp`'s own `main()` reads at
-compile time. On their own they don't set anything in any process's actual
-environment — they only become environment variables once `main()` hands
-them to a child via an `EnvOverride` (group 4, below).
+4. **Set by `main()`, only in the spawned child's env** (layered onto a
+   copy of the parent's own env by `DaemonProcess`):
 
-| Macro                                | Value                                                   | Forwarded to                                        |
-| ------------------------------------ | ------------------------------------------------------- | --------------------------------------------------- |
-| `QRMCI_DISTRIBUTED_SELECTOR_PATH`    | `$<TARGET_FILE:qrmcid-distributed-selector>`            | Selector `DaemonProcess`'s executable path          |
-| `QRMCI_DISTRIBUTED_WORKER_PATH`      | `$<TARGET_FILE:qrmcid-distributed-worker>`              | worker-iqm `DaemonProcess`'s executable path        |
-| `QRMCI_DISTRIBUTED_SELECTOR_LOG_DIR` | `<build>/tests/real-backend/daemon-logs/selector`       | Selector's log directory                            |
-| `QRMCI_DISTRIBUTED_WORKER_B_LOG_DIR` | `<build>/tests/real-backend/daemon-logs/worker-iqm`     | worker-iqm's log directory                          |
-| `QRMCI_SELECTOR_TEST_CONFIG`         | `tests/real-backend/config/selector-test-config.toml`   | Selector child's own `QRMCI_CONFIG_FILE` override   |
-| `QRMCI_WORKER_IQM_TEST_CONFIG`       | `tests/real-backend/config/worker-iqm-test-config.toml` | worker-iqm child's own `QRMCI_CONFIG_FILE` override |
-| `QRMCI_WORKER_IQM_QDMI_CONF`         | `tests/input/iqm_qdmi.conf`                             | worker-iqm child's own `QDMI_CONF` override         |
+   **Selector:**
 
-Log directories are created at **runtime**, by `DaemonProcess::start()`
-(`tests/integration/DaemonProcess.cpp`), not at configure or build time —
-they won't exist on disk until the test actually runs and spawns a daemon.
+   | Variable            | Value                        | Why                 |
+   | ------------------- | ---------------------------- | ------------------- |
+   | `QRMCI_CONFIG_FILE` | `QRMCI_SELECTOR_TEST_CONFIG` | Which TOML to load. |
 
-### 4. Set by `TestIQMWorker.cpp`'s `main()`, only in the spawned child's own environment
+   **worker-iqm:**
 
-Built as `EnvOverride`s passed to `DaemonProcess`, which layers them on top
-of a copy of the parent's own environment before handing the result to
-`posix_spawn()` (`tests/integration/DaemonProcess.cpp`) — so these only ever
-exist inside that one child process, never in `TestIQMWorker`'s own
-environment. (The parent's own exported credentials from group 1 still
-reach this child too, for whichever of these keys isn't itself overridden
-below — that's the same environ-inheritance mechanism.)
-
-**Selector child** (`TestIQMWorker.cpp:149-153`):
-
-| Variable            | Value                        | Why                                                  |
-| ------------------- | ---------------------------- | ---------------------------------------------------- |
-| `QRMCI_CONFIG_FILE` | `QRMCI_SELECTOR_TEST_CONFIG` | Tells the selector daemon which TOML config to load. |
-
-**worker-iqm child** (`TestIQMWorker.cpp:157-166`):
-
-| Variable                         | Value                                                                                                                    | Why                                                                                                                                                                                           |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `QRMCI_SUBMITTER_QDMI_DEVICE_ID` | `workerDeviceId()` — `QRMCI_SUBMITTER_QDMI_DEVICE_ID` from `TestIQMWorker`'s own environment, or `"worker-iqm"` if unset | The backend ID this worker advertises to the selector; must match the task's `restricted_resource_names`, which is why both read the same helper (see "Test workflow" above).                 |
-| `QRMCI_COMPILER_QUEUE`           | `compiler.worker-iqm`                                                                                                    | This worker's own dispatch queue, so a task the selector assigns to worker-iqm lands somewhere only worker-iqm listens, not a queue every worker would share.                                 |
-| `QDMI_CONF`                      | `QRMCI_WORKER_IQM_QDMI_CONF` (`tests/input/iqm_qdmi.conf`)                                                               | QDMI driver config this worker's QDMI client layer opens.                                                                                                                                     |
-| `QRMCI_CONFIG_FILE`              | `QRMCI_WORKER_IQM_TEST_CONFIG`                                                                                           | This worker's own qrmci TOML config.                                                                                                                                                          |
-| `IQM_BASE_URL`                   | `https://resonance.iqm.tech` (hardcoded literal)                                                                         | The real IQM Resonance API endpoint — part of what this test _is_, not a deployment knob. See "Required environment variables" for why this one stays hardcoded while `IQM_QC_ALIAS` doesn't. |
-| `IQM_QC_ALIAS`                   | `iqmDeviceAlias()` — `IQM_QC_ALIAS` from `TestIQMWorker`'s own environment (required by `run.sh`, so always set here)    | The specific IQM quantum computer requested from that API.                                                                                                                                    |
+   | Variable                         | Value                                    | Why                                                |
+   | -------------------------------- | ---------------------------------------- | -------------------------------------------------- |
+   | `QRMCI_SUBMITTER_QDMI_DEVICE_ID` | `workerDeviceId()`                       | Must match the task's `restricted_resource_names`. |
+   | `QRMCI_COMPILER_QUEUE`           | `compiler.worker-iqm`                    | worker-iqm's own dispatch queue.                   |
+   | `QDMI_CONF`                      | `QRMCI_WORKER_IQM_QDMI_CONF`             | QDMI driver config.                                |
+   | `QRMCI_CONFIG_FILE`              | `QRMCI_WORKER_IQM_TEST_CONFIG`           | This worker's qrmci config.                        |
+   | `IQM_BASE_URL`                   | `https://resonance.iqm.tech` (hardcoded) | Part of what this test _is_.                       |
+   | `IQM_QC_ALIAS`                   | `iqmDeviceAlias()`                       | Which IQM device to request.                       |
 
 ## Config files (`.toml`)
 
-`config/selector-test-config.toml` and `config/worker-iqm-test-config.toml`
-are plain qrmci TOML configs, same schema as everywhere else in this repo.
-Their committed values for RabbitMQ connection and QDMI credential fields
-are placeholders only — `run.sh`'s required environment variables always
-override them (`defaults < file < environment variable`), so the files
-never need to (and must not) carry real credentials. For the schema itself
-— every field, its default, and the full precedence rule — see, rather than
-duplicating it here:
-
-- [`docs/getting-started.md`](../../docs/getting-started.md), the
-  "Runtime configuration" section — the authoritative field-by-field and
-  env-var reference.
-- [`apps/qrmci.full-reference.example.toml`](../../apps/qrmci.full-reference.example.toml)
-  — a fully annotated example covering every section.
-- `apps/distributed/config/qrmci-distributed-selector.example.toml` /
-  `qrmci-distributed-worker.example.toml` — the shipped, maintained examples
-  for each daemon role that this directory's own configs were derived from.
+Same schema as the rest of the repo; credential fields are placeholders
+only (env vars always win). For the schema itself, see:
+[`docs/getting-started.md`](../../docs/getting-started.md)'s "Runtime
+configuration", [`apps/qrmci.full-reference.example.toml`](../../apps/qrmci.full-reference.example.toml),
+or `apps/distributed/config/qrmci-distributed-{selector,worker}.example.toml`
+(what `IQM/config/`'s files were derived from).
 
 ## Gotchas
 
-- **Missing credentials fail before any build happens.** `run.sh` checks
-  every required environment variable up front (`require_env`) and exits
-  with a named error rather than letting a placeholder value from the TOML
-  file silently reach a real daemon.
-- **Rebuild after editing `CMakeLists.txt`.** A compile-definition change
-  (e.g. a config path) has no effect on an already-built binary. `run.sh`
-  always rebuilds first; if you invoke the binary any other way, rebuild
-  manually first (`cmake --build build --target TestIQMWorker`).
-- **Log directories are a runtime side effect**, not something `cmake
---build` creates — see the note under environment-variable group 3 above.
-- `TestIQMWorker.cpp` still `#include`s `RunWithDaemons.h` even though it
-  never calls `runWithDaemons()`/`RUN_ALL_TESTS()` — a leftover from this
-  file's `tests/integration/TestTwoWorkerSimulator.cpp` origin. Harmless
-  (nothing links against it since it's never instantiated), but a candidate
-  for cleanup if this test is to be made fully framework-free.
-- Never registered with `add_test()` anywhere — `ctest`, under any label or
-  filter, cannot run this test. Only `tests/real-backend/run.sh` (or
-  manually invoking the built binary with every required variable set) does.
+- Missing credentials fail before any build — `run.sh`'s `require_env`.
+- Rebuild after editing `IQM/CMakeLists.txt`: a compile-definition change
+  has no effect on an already-built binary.
+- Daemon log dirs are a runtime side effect, not a build artifact.
+- `TestIQMWorker.cpp` still `#include`s `RunWithDaemons.h` though it never
+  calls `runWithDaemons()`/`RUN_ALL_TESTS()` — harmless leftover, candidate
+  for cleanup.
+- No `add_test()` anywhere — only `run.sh` or a manual invocation runs this.
+- `run.sh`'s path math (`../../..`, `tests/real-backend/IQM/TestIQMWorker`)
+  is manual, not CMake-derived — won't auto-adjust if this directory moves.
