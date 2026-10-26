@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  packages: read
 
 jobs:
   documentation:
@@ -29,6 +30,7 @@ jobs:
         uses: ./.github/actions/dev
         with:
           github-token: ${{ secrets.MQSS_READ_TOKEN }}
+          registry-token: ${{ secrets.GITHUB_TOKEN }}
           run: cmake -S . -B build -DQRMCI_BUILD_UNIT_TESTS=OFF -DQRMCI_BUILD_INTEGRATION_TESTS=OFF -DQRMCI_BUILD_APPS=OFF -DBUILD_QRMCI_DOCS=ON
       - name: Build documentation
         uses: ./.github/actions/dev

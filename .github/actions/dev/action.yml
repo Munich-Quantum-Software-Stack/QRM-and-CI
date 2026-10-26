@@ -26,6 +26,13 @@ inputs:
     description: Tag for the dev image.
     required: false
     default: qrmci-dev:ci
+  registry-token:
+    description: >-
+      Token with read:packages access, used to pull the private
+      mqssci-deps base image from ghcr.io. Only needed on the job's first
+      use of this action, since that is the only call that builds the image.
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -34,6 +41,7 @@ runs:
       shell: bash
       env:
         QRMCI_DEV_EXTRA_PACKAGES: ${{ inputs.extra-packages }}
+        QRMCI_REGISTRY_TOKEN: ${{ inputs.registry-token }}
       run: |
         set -euo pipefail
         image='${{ inputs.image }}'
@@ -43,6 +51,12 @@ runs:
             echo "::warning::extra-packages arrived after $image was built, so it did nothing. Pass it on the job's first use of this action."
           fi
           exit 0
+        fi
+
+        # The base image in .devcontainer/Dockerfile is a private ghcr.io
+        # package; buildx otherwise pulls it anonymously and gets a 401.
+        if [ -n "$QRMCI_REGISTRY_TOKEN" ]; then
+          echo "$QRMCI_REGISTRY_TOKEN" | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
         fi
 
         # /opt/deps is several GiB and exists twice mid-build, so make room.

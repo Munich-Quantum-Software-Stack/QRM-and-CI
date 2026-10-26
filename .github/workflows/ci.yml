@@ -15,6 +15,7 @@ concurrency:
 
 permissions:
   contents: read
+  packages: read
 
 jobs:
   pre-commit:
@@ -56,6 +57,7 @@ jobs:
         with:
           extra-packages: clang-tidy
           github-token: ${{ secrets.MQSS_READ_TOKEN }}
+          registry-token: ${{ secrets.GITHUB_TOKEN }}
           run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
       - name: Generate the protocol headers clang-tidy needs to parse sources
         uses: ./.github/actions/dev
@@ -115,6 +117,7 @@ jobs:
         with:
           extra-packages: ${{ matrix.cc }} ${{ matrix.cxx }}
           github-token: ${{ secrets.MQSS_READ_TOKEN }}
+          registry-token: ${{ secrets.GITHUB_TOKEN }}
           run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DQRMCI_WARNINGS_AS_ERRORS=ON -DQRMCI_RUN_INTEGRATION_TESTS=ON
       - name: Build
         uses: ./.github/actions/dev
