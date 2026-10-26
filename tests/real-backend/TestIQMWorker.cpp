@@ -34,6 +34,21 @@
 
 namespace {
 
+// Single source of truth for the worker-iqm backend's advertised ID, shared
+// between the EnvOverride handed to the spawned worker daemon (main()) and
+// the task's own restricted_resource_names/executed_qpu check (test()) --
+// both must agree on this value, or a task would be sent to (and reported
+// as executed by) a different ID than the one test() checks for.
+std::string workerDeviceId() {
+  const char *env = std::getenv("QRMCI_SUBMITTER_QDMI_DEVICE_ID");
+  return (env != nullptr && *env != '\0') ? env : "worker-iqm";
+}
+
+std::string iqmDeviceAlias() {
+  const char *env = std::getenv("IQM_QC_ALIAS");
+  return (env != nullptr && *env != '\0') ? env : "";
+}
+
 mqss::QuantumTask makeTaskRestrictedTo(const std::string &workerId) {
   mqss::QuantumTask qtask;
   qtask.set_task_id(mqss::qrmci::test::uniqueTaskId());
@@ -53,7 +68,7 @@ static std::expected<int, mqss::qrmci::Error> test() {
   if (!loadedConfig)
     return std::unexpected(std::move(loadedConfig.error()));
 
-  const std::vector<std::string> workerIds = {"worker-iqm"};
+  const std::vector<std::string> workerIds = {workerDeviceId()};
   mqss::qrmci::Config config = *loadedConfig;
 
   std::unordered_map<std::string, mqss::QuantumTask> tasks;
@@ -143,12 +158,12 @@ int main() {
       "qrmcid-distributed-worker-iqm", QRMCI_DISTRIBUTED_WORKER_PATH,
       QRMCI_DISTRIBUTED_WORKER_B_LOG_DIR,
       std::vector<mqss::qrmci::test::EnvOverride>{
-          {.name = "QRMCI_SUBMITTER_QDMI_DEVICE_ID", .value = "worker-iqm"},
+          {.name = "QRMCI_SUBMITTER_QDMI_DEVICE_ID", .value = workerDeviceId()},
           {.name = "QRMCI_COMPILER_QUEUE", .value = "compiler.worker-iqm"},
           {.name = "QDMI_CONF", .value = QRMCI_WORKER_IQM_QDMI_CONF},
           {.name = "QRMCI_CONFIG_FILE", .value = QRMCI_WORKER_IQM_TEST_CONFIG},
           {.name = "IQM_BASE_URL", .value = "https://resonance.iqm.tech"},
-          {.name = "IQM_QC_ALIAS", .value = "garnet"}});
+          {.name = "IQM_QC_ALIAS", .value = iqmDeviceAlias()}});
 
   if (!startAll(daemons))
     return EXIT_FAILURE;

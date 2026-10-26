@@ -71,14 +71,14 @@ stagePollInterval = 100
 # always means the current container's own loopback, not a shared broker.
 # The Docker images' own compiled-in ENV default is "localhost" (same
 # loopback meaning);
-host = "rabbitmq"
+host = ""
 # RabbitMQ TCP port. Env: QRMCI_AMQP_PORT. Default: 5672.
 port = 5672
 # RabbitMQ user name. Env: QRMCI_AMQP_USER. Default: "guest".
-user = "myuser"
+user = ""
 # RabbitMQ password. Prefer QRMCI_AMQP_PASSWORD at deploy time over a
 # password in this file. Env: QRMCI_AMQP_PASSWORD. Default: "guest".
-password = "CTRL007rbmt!"
+password = ""
 # RabbitMQ virtual host. Env: QRMCI_AMQP_VHOST. Default: "/".
 vhost = "/"
 
@@ -124,14 +124,10 @@ logger = "mqss::Submitter"
 qdmiDriver = "/workspaces/QRM-and-CI/build/_deps/qdmi-build/examples/driver/libqdmi_example_driver.so"
 
 # QDMI device name. Env: QRMCI_SUBMITTER_QDMI_DEVICE_NAME.
-# Default: "C++ Device with 5 qubits".
-#qdmiDeviceName = "MQT Core DDSIM QDMI Device"
-qdmiDeviceName = "garnet"
+qdmiDeviceName = ""
 
 # QDMI device id. Env: QRMCI_SUBMITTER_QDMI_DEVICE_ID.
-# Default: "cxxdevice5q"
-# qdmiDeviceId = "MQT Core DDSIM QDMI Device"
-qdmiDeviceId = "garnet"
+qdmiDeviceId = ""
 
 # QDMI client token. Prefer QRMCI_SUBMITTER_QDMI_CLIENT_TOKEN at deploy
 # time over a token in this file. Env: QRMCI_SUBMITTER_QDMI_CLIENT_TOKEN.

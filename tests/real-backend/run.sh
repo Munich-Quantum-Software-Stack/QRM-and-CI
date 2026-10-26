@@ -10,6 +10,26 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 BUILD_DIR="${BUILD_DIR:-${ROOT_DIR}/build}"
 
+# Fails loudly, before any build or daemon spawn, if a required credential
+# wasn't exported by the caller. These must be `export`ed (or passed as
+# `VAR=value ./run.sh`) in the invoking shell -- this script only checks
+# for them, it never prompts or supplies its own values, since a real
+# IQM backend should never silently fall back to a placeholder credential.
+require_env() {
+  local var_name="$1"
+  if [[ -z "${!var_name:-}" ]]; then
+    echo "error: ${var_name} must be set -- see tests/real-backend/real-backend.md" >&2
+    exit 1
+  fi
+}
+
+require_env QRMCI_AMQP_HOST
+require_env QRMCI_AMQP_USER
+require_env QRMCI_AMQP_PASSWORD
+require_env QRMCI_SUBMITTER_QDMI_CLIENT_TOKEN
+require_env QRMCI_SUBMITTER_QDMI_DEVICE_NAME   # e.g. garnet
+require_env IQM_QC_ALIAS                       # same as QRMCI_SUBMITTER_QDMI_DEVICE_NAME (e.g. garnet)
+
 cmake --build "${BUILD_DIR}" --target TestIQMWorker
 
 # TestIQMWorker's own loadConfig() call reads this directly from the
