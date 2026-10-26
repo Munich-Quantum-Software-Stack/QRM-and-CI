@@ -24,7 +24,9 @@
 #include <expected>
 #include <limits>
 #include <mqss/submitter/Device.h>
+#include <mqss/submitter/Error.h>
 #include <mqss/submitter/Job.h>
+#include <mqss/submitter/Placement.h>
 #include <optional>
 #include <spdlog/spdlog.h>
 #include <string>
@@ -259,6 +261,18 @@ submitQuantumTask(const mqss::QuantumTask &task,
     return std::unexpected(std::move(format.error()));
   }
 
+  // Keep every circuit on the same explicit target. On(child) may use a
+  // parent batch to submit it, but never falls back to executing on the parent.
+  auto children = device.children();
+  if (!children &&
+      children.error().code() != mqss::submitter::ErrorCode::NotSupported) {
+    return std::unexpected(
+        toQrmciError(Error::Kind::SubmissionFailed, children.error()));
+  }
+  const auto placement = children && !children->empty()
+                             ? mqss::submitter::Placement::On(children->front())
+                             : mqss::submitter::Placement::Self();
+
   // A Job carries exactly one payload, so one job per circuit file, each run
   // for the task's own shot count.
   std::vector<mqss::submitter::Job> jobs;
@@ -279,8 +293,8 @@ submitQuantumTask(const mqss::QuantumTask &task,
                 "Shutdown requested during task submission."});
     }
 
-    auto job =
-        device.submitJob(detail::makeJobRequest(task, circuitIndex, *format));
+    auto job = device.submitJob(
+        detail::makeJobRequest(task, circuitIndex, *format), placement);
     if (!job) {
       // First failure wins: the jobs already submitted for this task are
       // dropped here, never waited on.

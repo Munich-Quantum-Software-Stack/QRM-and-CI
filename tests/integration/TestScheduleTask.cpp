@@ -73,7 +73,7 @@ TEST_F(ScheduleTaskTest, ReturnsEveryTaskExactlyOnce) {
     tasks.push_back(TaskSpec{mqss::qrmci::test::uniqueTaskId(), priority});
   }
 
-  std::unordered_map<int32_t, int32_t> priorityAssignment;
+  std::unordered_map<int64_t, int32_t> priorityAssignment;
   for (const auto &spec : tasks) {
     priorityAssignment[spec.taskId] = spec.priority;
   }
@@ -98,7 +98,7 @@ TEST_F(ScheduleTaskTest, ReturnsEveryTaskExactlyOnce) {
   }
 
   // Collect one result per submitted task, in whatever order they arrive.
-  std::vector<int32_t> arrivalOrder;
+  std::vector<int64_t> arrivalOrder;
   while (arrivalOrder.size() < tasks.size()) {
     auto received = communicationHandler.receive<mqss::QuantumResult>(
         ResultQueue, mqss::qrmci::test::kPolledResultTimeout);
@@ -116,12 +116,12 @@ TEST_F(ScheduleTaskTest, ReturnsEveryTaskExactlyOnce) {
 
   // Every submitted task must come back exactly once; this is the part of
   // the test that must always hold, independent of scheduling/timing.
-  std::vector<int32_t> expectedIds;
+  std::vector<int64_t> expectedIds;
   for (const auto &spec : tasks) {
     expectedIds.push_back(spec.taskId);
   }
-  std::vector<int32_t> sortedArrival = arrivalOrder;
-  std::vector<int32_t> sortedExpected = expectedIds;
+  std::vector<int64_t> sortedArrival = arrivalOrder;
+  std::vector<int64_t> sortedExpected = expectedIds;
   std::sort(sortedArrival.begin(), sortedArrival.end());
   std::sort(sortedExpected.begin(), sortedExpected.end());
   EXPECT_EQ(sortedArrival, sortedExpected)
@@ -130,9 +130,9 @@ TEST_F(ScheduleTaskTest, ReturnsEveryTaskExactlyOnce) {
   // Whether arrival order actually reflects priority is timing-dependent
   // (it only shows up if more than one task was genuinely queued at once
   // inside the daemon's scheduler), so this is reported, not asserted.
-  std::vector<int32_t> prioritySortedIds = expectedIds;
+  std::vector<int64_t> prioritySortedIds = expectedIds;
   std::sort(prioritySortedIds.begin(), prioritySortedIds.end(),
-            [&](int32_t a, int32_t b) {
+            [&](int64_t a, int64_t b) {
               return priorityAssignment[a] > priorityAssignment[b];
             });
   if (arrivalOrder == prioritySortedIds) {

@@ -1,0 +1,16 @@
+// Copyright (c) 2026 MQSS Maintainers
+// All rights reserved.
+//
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+// Deliberately NOT a CUDA-Q entrypoint: it carries neither "cudaq-entrypoint"
+// nor "cudaq-kernel". MQSSCompiler still reports success on this input while
+// emitting a degenerate program (an OpenQASM 2 header with no gates, and QIR
+// without the entry_point attribute or a qir_profiles tag). Kept so that
+// behaviour is pinned by a test rather than discovered in production.
+func.func @hadamard_circuit() {
+  %q0 = quake.alloca !quake.ref
+  quake.h %q0 : (!quake.ref) -> ()
+  %b0 = quake.mz %q0 : (!quake.ref) -> !quake.measure
+  return
+}

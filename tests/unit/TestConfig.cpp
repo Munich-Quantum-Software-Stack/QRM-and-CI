@@ -39,9 +39,7 @@ constexpr std::array<const char *, 18> kEnvVars = {
     "QRMCI_SUBMITTER_QDMI_DRIVER",
     "QRMCI_SUBMITTER_QDMI_DEVICE_NAME",
     "QRMCI_SUBMITTER_QDMI_DEVICE_ID",
-    "QRMCI_SUBMITTER_QDMI_CLIENT_TOKEN",
-    "QRMCI_SUBMITTER_QDMI_VERSION",
-};
+    "QRMCI_SUBMITTER_QDMI_CLIENT_TOKEN"};
 
 /// @brief A path that is guaranteed not to exist, for tests exercising the
 ///        "no config file present" path without touching the real

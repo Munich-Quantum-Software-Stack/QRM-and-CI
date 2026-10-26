@@ -13,8 +13,9 @@ set(QRMCI_MQSS_SCHEDULER_GIT_TAG
 set(QRMCI_MQSS_SCHEDULER_REPOSITORY
     "https://github.com/Munich-Quantum-Software-Stack/MQSS-Scheduler.git"
     CACHE STRING "Upstream MQSS-Scheduler repository")
+# "v2.2.2"
 set(QRMCI_MQSSCI_GIT_TAG
-    "v2.2.1"
+    "v2.3.1"
     CACHE STRING "MQSS-Quantum-Compilation-Suite revision")
 set(QRMCI_MQSS_IDF_GIT_TAG
     "mnf/protobuf-json-fix"

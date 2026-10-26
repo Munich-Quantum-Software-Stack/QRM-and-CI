@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
  */
 
+#include "CircuitFixtures.h"
 #include "RunnersTestHelpers.h"
 #include "mqss/Protocol.hpp"
 #include "qrmci/BackendRegistry.h"
@@ -40,18 +41,13 @@ namespace {
 constexpr const char *kDriverPath = QRMCI_TEST_QDMI_DRIVER_PATH;
 constexpr const char *kDeviceName = "C++ Device with 5 qubits";
 
-/// @brief A valid Quake circuit, the same shape TestRunnersTaskCompilation
+/// @brief A valid Quake circuit, the same sample TestRunnersTaskCompilation
 ///        compiles: the compiler only ever accepts quake/catalyst input.
-constexpr const char *kValidQuakeCircuit = R"(
-      module {
-      func.func @hadamard_circuit() {
-        %q0 = quake.alloca !quake.ref
-        quake.h %q0 : (!quake.ref) -> ()
-        %b0 = quake.mz %q0 : (!quake.ref) -> !quake.measure
-        return
-      }
-    }
-  )";
+/// @return The Bell-pair sample circuit source.
+const std::string &validQuakeCircuit() {
+  static const std::string circuit = readCircuitFixture("bell.quake");
+  return circuit;
+}
 
 /// @brief A connection to a port no AMQP broker listens on, so every send and
 ///        receive through it fails the way a broker outage would.
@@ -66,7 +62,7 @@ RabbitMqConnectionConfig unreachableBroker() {
 }
 
 mqss::QuantumTask makeCompilableTask(const std::string &backendName) {
-  auto task = makeTask(kValidQuakeCircuit, 2, "quake");
+  auto task = makeTask(validQuakeCircuit(), 2, "quake");
   task.set_task_id(7);
   task.set_result_destination("results-queue");
   task.set_scheduled_qpu(backendName);

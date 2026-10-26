@@ -12,6 +12,8 @@
 
 #pragma once
 
+#include "CircuitFixtures.h"
+
 #include <chrono>
 #include <cstdint>
 #include <random>
@@ -43,41 +45,11 @@ inline std::int32_t uniqueTaskId() {
   return dist(engine);
 }
 
-/// @brief A compilable/executable 2-qubit Quake circuit, identical to the one
-///        used by TestSubmitTask.cpp. Shared by the integration test client
-///        programs that need a circuit the "quake" input format and the
-///        example QDMI device both accept.
+/// @brief A compilable/executable 2-qubit Quake circuit, read from the
+///        sample circuits shared with the unit suites.
 /// @return The Quake circuit source.
 inline const std::string &sampleQuakeCircuit() {
-  static const std::string circuit = R"(
-  func.func @__nvqpp__mlirgen__testILm2EE() attributes {"cudaq-entrypoint", "cudaq-kernel"} {
-  %0 = quake.alloca !quake.veq<2>
-  %1 = quake.extract_ref %0[1] : (!quake.veq<2>) -> !quake.ref
-  quake.x %1 : (!quake.ref) -> ()
-  %2 = quake.extract_ref %0[0] : (!quake.veq<2>) -> !quake.ref
-  %3 = quake.extract_ref %0[1] : (!quake.veq<2>) -> !quake.ref
-  quake.x [%2] %3 : (!quake.ref, !quake.ref) -> ()
-  %4 = quake.extract_ref %0[0] : (!quake.veq<2>) -> !quake.ref
-  %5 = quake.extract_ref %0[1] : (!quake.veq<2>) -> !quake.ref
-  quake.x [%4] %5 : (!quake.ref, !quake.ref) -> ()
-  %6 = quake.extract_ref %0[0] : (!quake.veq<2>) -> !quake.ref
-  %7 = quake.extract_ref %0[1] : (!quake.veq<2>) -> !quake.ref
-  quake.x [%6] %7 : (!quake.ref, !quake.ref) -> ()
-  %8 = quake.extract_ref %0[0] : (!quake.veq<2>) -> !quake.ref
-  %9 = quake.extract_ref %0[1] : (!quake.veq<2>) -> !quake.ref
-  quake.x [%8] %9 : (!quake.ref, !quake.ref) -> ()
-  %10 = quake.extract_ref %0[0] : (!quake.veq<2>) -> !quake.ref
-  %11 = quake.extract_ref %0[1] : (!quake.veq<2>) -> !quake.ref
-  quake.x [%10] %11 : (!quake.ref, !quake.ref) -> ()
-  %12 = quake.extract_ref %0[1] : (!quake.veq<2>) -> !quake.ref
-  quake.x %12 : (!quake.ref) -> ()
-  %13 = quake.extract_ref %0[1] : (!quake.veq<2>) -> !quake.ref
-  %14 = quake.extract_ref %0[0] : (!quake.veq<2>) -> !quake.ref
-  quake.x [%13] %14 : (!quake.ref, !quake.ref) -> ()
-  %measOut = quake.mz %0 : (!quake.veq<2>) -> !cc.stdvec<!quake.measure>
-  return
-  }
-  )";
+  static const std::string circuit = readCircuitFixture("toggle-chain.quake");
   return circuit;
 }
 

@@ -15,6 +15,7 @@ set(TEST_TARGETS
     TestRunnersBackendSelection
     TestRunnersTaskCompilation
     TestRunnersTaskExecution
+    TestRunnersPlacement
     TestTaskSubmission
     TestCommunicationHandler
     TestBackendRegistry
@@ -43,6 +44,32 @@ foreach(target IN LISTS TEST_TARGETS)
 endforeach()
 
 target_include_directories(TestTaskSubmission PRIVATE ${PROJECT_SOURCE_DIR}/src)
+
+# Reuse Submitter's configurable driver fixture without enabling its full test
+# suite (which builds drivers for every supported QDMI version).
+add_library(qrmci_test_placement_driver MODULE
+            ${mqss_submitter_SOURCE_DIR}/tests/fixtures/InstrumentedDriver.cpp)
+target_compile_features(qrmci_test_placement_driver PRIVATE cxx_std_23)
+set_target_properties(qrmci_test_placement_driver
+                      PROPERTIES CXX_VISIBILITY_PRESET default)
+file(
+  GENERATE
+  OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/placement/generated/FixturePaths.h"
+  CONTENT
+    "#pragma once\nnamespace mqss::submitter::testing::fixtures {\ninline constexpr const char* kInstrumentedDriverPath = \"$<TARGET_FILE:qrmci_test_placement_driver>\";\n}\n"
+)
+target_include_directories(
+  TestRunnersPlacement PRIVATE ${mqss_submitter_SOURCE_DIR}/tests
+                               ${CMAKE_CURRENT_BINARY_DIR}/placement)
+target_link_libraries(TestRunnersPlacement PRIVATE ${CMAKE_DL_LIBS})
+add_dependencies(TestRunnersPlacement qrmci_test_placement_driver)
+
+# The suites that compile or submit a real circuit read it from
+# tests/fixtures/circuits; qrmci_test_circuit_fixtures (tests/CMakeLists.txt)
+# supplies both the accessor header and the directory path.
+foreach(target IN ITEMS TestRunnersTaskCompilation TestDaemon)
+  target_link_libraries(${target} PRIVATE qrmci_test_circuit_fixtures)
+endforeach()
 
 # DaemonProcess.{h,cpp} (tests/integration) has no qrmci dependency of its own
 # -- it is a standalone posix_spawn/waitpid wrapper -- so its ownership contract

@@ -1,0 +1,18 @@
+// Copyright (c) 2026 MQSS Maintainers
+// All rights reserved.
+//
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+// Single qubit in superposition, then measured: the smallest circuit that
+// still exercises a gate and a measurement on every compiler target.
+//
+// The qubit is allocated as a bare !quake.ref rather than a !quake.veq<1>.
+// MQSSCompiler aborts the process (a std::vector<bool> bounds assertion, not
+// a recoverable error) on any kernel that allocates a veq register without
+// also applying a two-qubit gate, which a one-qubit circuit can never do.
+func.func @__nvqpp__mlirgen__hadamard() attributes {"cudaq-entrypoint", "cudaq-kernel"} {
+  %q0 = quake.alloca !quake.ref
+  quake.h %q0 : (!quake.ref) -> ()
+  %m = quake.mz %q0 : (!quake.ref) -> !quake.measure
+  return
+}

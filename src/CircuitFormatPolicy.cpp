@@ -27,7 +27,9 @@ namespace {
 // returns textual bytes, so module variants of QIR are never selected here;
 // the order itself -- not a backend's own format list order -- decides which
 // target wins when several would work.
-constexpr std::array<CompilerTarget, 3> CompilerTargetPriority{{
+constexpr std::array<CompilerTarget, 4> CompilerTargetPriority{{
+    {mqss::mqssci::ResultFormat::IQMJSON,
+     mqss::CircuitFormat::CIRCUIT_FORMAT_IQMJSON, "iqmjson"},
     {mqss::mqssci::ResultFormat::OPENQASM2,
      mqss::CircuitFormat::CIRCUIT_FORMAT_QASM2, "qasm2"},
     {mqss::mqssci::ResultFormat::QIRBASE,
@@ -48,6 +50,9 @@ constexpr std::array<std::pair<std::string_view, std::string_view>, 2>
 
 mqss::CircuitFormat
 mapTaskCircuitTypeToCircuitFormat(const std::string &format) noexcept {
+  if (format == "iqmjson") {
+    return mqss::CircuitFormat::CIRCUIT_FORMAT_IQMJSON;
+  }
   if (format == "qasm" || format == "qasm2") {
     return mqss::CircuitFormat::CIRCUIT_FORMAT_QASM2;
   }
