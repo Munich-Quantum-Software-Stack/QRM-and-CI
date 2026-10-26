@@ -122,7 +122,10 @@ jobs:
       - name: Build
         uses: ./.github/actions/dev
         with:
-          run: cmake --build build --parallel
+          # Unbounded --parallel OOM-kills on ubuntu-latest (16GB/4 cores):
+          # mqt-core/mqt-qmap's heavy template TUs can exceed 4GB each at
+          # -O2, and four compiling at once exceeds the runner's memory.
+          run: cmake --build build --parallel 2
       - name: Run unit tests
         uses: ./.github/actions/dev
         with:
