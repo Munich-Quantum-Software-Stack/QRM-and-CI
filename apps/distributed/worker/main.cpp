@@ -81,13 +81,14 @@ int main() {
         comms, config.compiler.queue, config.compiler.taskReceiveTimeout,
         terminationRequested, [&](mqss::QuantumTask task) {
           spdlog::info("Received task: {}. Compiling task.", task.task_id());
-          if (auto compiled = compileAndSchedule(task, availableBackends,
-                                                 compiler, scheduler);
-              !compiled) {
+          auto compiled =
+              compileAndSchedule(task, availableBackends, compiler, scheduler);
+          if (compiled) {
             spdlog::info("Compilation successful!");
             for (auto file : task.circuit_files()) {
               spdlog::info(file);
             }
+          } else {
             sendFailure(comms, task, compiled.error(),
                         "could not be scheduled.");
           }

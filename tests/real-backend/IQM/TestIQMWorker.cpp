@@ -38,7 +38,7 @@ namespace {
 // both must agree on this value, or a task would be sent to (and reported
 // as executed by) a different ID than the one test() checks for.
 std::string workerDeviceId() {
-  const char *env = std::getenv("QRMCI_SUBMITTER_QDMI_DEVICE_ID");
+  const char *env = std::getenv("QRMCI_SUBMITTER_QDMI_DEVICE_NAME");
   return (env != nullptr && *env != '\0') ? env : "worker-iqm";
 }
 

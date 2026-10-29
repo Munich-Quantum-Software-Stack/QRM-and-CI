@@ -30,7 +30,7 @@ target_compile_definitions(
     "QRMCI_DISTRIBUTED_SELECTOR_PATH=\"$<TARGET_FILE:qrmcid-distributed-selector>\""
     "QRMCI_DISTRIBUTED_WORKER_PATH=\"$<TARGET_FILE:qrmcid-distributed-worker>\""
     "QRMCI_DISTRIBUTED_SELECTOR_LOG_DIR=\"${real_backend_daemon_log_root}/selector\""
-    "QRMCI_DISTRIBUTED_WORKER_B_LOG_DIR=\"${real_backend_daemon_log_root}/worker-b\""
+    "QRMCI_DISTRIBUTED_WORKER_B_LOG_DIR=\"${real_backend_daemon_log_root}/worker-iqm\""
     "QRMCI_SELECTOR_TEST_CONFIG=\"${CMAKE_CURRENT_SOURCE_DIR}/config/selector-test-config.toml\""
     "QRMCI_WORKER_IQM_TEST_CONFIG=\"${CMAKE_CURRENT_SOURCE_DIR}/config/worker-iqm-test-config.toml\""
     "QRMCI_WORKER_IQM_QDMI_CONF=\"${CMAKE_SOURCE_DIR}/tests/input/iqm_qdmi.conf\""

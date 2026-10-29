@@ -13,7 +13,7 @@ set(CPR_USE_SYSTEM_CURL
 
 FetchContent_Declare(
   iqm-qdmi
-  GIT_REPOSITORY https://github.com/iqm-finland/QDMI-on-IQM.git
+  GIT_REPOSITORY ${IQM_QDMI_REPOSITORY}
   GIT_TAG ${IQM_QDMI_DEVICE_GIT_TAG}
   SYSTEM)
 FetchContent_MakeAvailable(iqm-qdmi)

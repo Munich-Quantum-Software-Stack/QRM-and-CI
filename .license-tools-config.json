@@ -48,6 +48,7 @@
     "(^|/)LICENSE$",
     "patterns.txt",
     ".*\\.cmake",
+    ".*\\.conf",
     "Dockerfile",
     "Makefile"
   ]

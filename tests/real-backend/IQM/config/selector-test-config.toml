@@ -38,11 +38,11 @@ schedulerLogger = "mqss::Scheduler"
 stagePollInterval = 100
 
 [common.connection]
-host = "rabbitmq"
+host = ""
 port = 5672
-user = "myuser"
+user = ""
 # Prefer QRMCI_AMQP_PASSWORD at deploy time over a password in this file.
-password = "CTRL007rbmt!"
+password = ""
 vhost = "/"
 
 [selector]

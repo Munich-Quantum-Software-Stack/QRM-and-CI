@@ -95,7 +95,7 @@ find_package(MQSSSubmitter REQUIRED)
 option(QRMCI_BUILD_UNIT_TESTS "Build unit tests" ON)
 include(cmake/QdmiExampleDriver.cmake)
 
-# find_package(MQSSDevicesSuite REQUIRED)
+find_package(MQSSDevicesSuite REQUIRED)
 find_package(MQSSCI REQUIRED)
 find_package(MQSSScheduler REQUIRED)
 find_package(MQSSIntegrationDeploymentFramework REQUIRED)
