@@ -313,26 +313,19 @@ INSTANTIATE_TEST_SUITE_P(SampleCircuits, CompileQuantumTaskMatrixTest,
 
 TEST_F(CompileQuantumTaskTest,
        CircuitWithoutEntrypointCompilesToAProgramWithNoGates) {
-  // A Quake kernel missing the "cudaq-entrypoint"/"cudaq-kernel" attributes
-  // is not rejected: MQSSCompiler reports success while emitting only an
-  // OpenQASM 2 preamble, so compileQuantumTask hands back a circuit that has
-  // lost every gate. Pinned here because nothing in the error path reveals
-  // it -- if the compiler ever starts rejecting this input instead, this test
-  // is the one that should be updated to match.
+  // A Quake kernel missing the "cudaq-entrypoint"/"cudaq-kernel" attributes is
+  // rejected outright: MQSSCompiler reports "does not contain an entrypoint"
+  // rather than falling back to the old (pre-MQSSCI v2.3.2) behavior of
+  // silently emitting a gateless OpenQASM 2 preamble. Pinned here so a future
+  // compiler change that makes this input compile again doesn't go unnoticed.
+
   auto task = makeTask(readCircuitFixture("no-entrypoint.quake"), 1, "quake");
   useCircuitFormats({mqss::CircuitFormat::CIRCUIT_FORMAT_QASM2});
 
   const auto result = mqss::qrmci::compileQuantumTask(task, backend);
-  ASSERT_TRUE(result.has_value())
-      << "expected the compiler to still report success: "
+  ASSERT_FALSE(result.has_value())
+      << "Missing Entry point: "
       << (result ? std::string{} : result.error().detail);
-
-  const std::string &compiled = task.circuit_files(0);
-  EXPECT_NE(compiled.find("OPENQASM 2.0;"), std::string::npos);
-  EXPECT_EQ(compiled.find("qreg "), std::string::npos)
-      << "a register declaration means the gates survived after all, so this "
-         "circuit is no longer degenerate:\n"
-      << compiled;
 }
 
 } // namespace mqss::qrmci::test

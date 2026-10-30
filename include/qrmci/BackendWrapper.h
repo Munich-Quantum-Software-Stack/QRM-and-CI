@@ -174,6 +174,7 @@ private:
   friend class mqss::qrmci::test::BackendBuilder;
 
   std::string name;
+  std::string realdevicename;
   std::uint32_t numQubits{};
   mqss::BackendType type{};
   mqss::BackendStatus status{};

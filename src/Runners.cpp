@@ -107,7 +107,6 @@ compileQuantumTask(mqss::QuantumTask &task, const BackendWrapper &backendInfo,
   if (task.no_modify()) {
     return {};
   }
-
   const std::vector<std::string_view> supportedInputFormats =
       mqss::mqssci::MQSSCompiler::getSupportedInputFormats();
   if (auto validated = validateInputFormatIsSupportedCircuitFormat(
@@ -153,9 +152,9 @@ compileQuantumTask(mqss::QuantumTask &task, const BackendWrapper &backendInfo,
                                          ": circuit is empty."});
       }
 
-      auto compiled =
-          compiler.compileSource(circuitFile, "", backendInfo.getInstructions(),
-                                 backendInfo.getQubitConnectivity(), opts);
+      auto compiled = compiler.compileSource(
+          circuitFile, backendInfo.getName(), backendInfo.getInstructions(),
+          backendInfo.getQubitConnectivity(), opts);
       if (!compiled) {
         // MQSSCompiler::compileSource() builds and owns its MLIRContext
         // entirely internally (see MQSSCIInterfaces/MQSSCompiler.cpp), so the

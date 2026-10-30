@@ -41,6 +41,18 @@ set(ENABLE_IPO
     OFF
     CACHE BOOL "Disable IPO/LTO globally" FORCE)
 
+# nlohmann_json is pulled in transitively (built from source) by several
+# dependencies below (e.g. IQMqdmi, MQSSCI). Its own CMakeLists.txt defaults
+# JSON_Install to OFF whenever it isn't the top-level project, so its target
+# never gets added to an install export set. MQSS-Client (fetched by
+# FindMQSSDevicesSuite.cmake's lrz backend) PUBLIC-links against that same
+# in-tree nlohmann_json target and then fails to export itself with "target
+# 'nlohmann_json' is not in any export set". Force installs on so it's always
+# export-safe, regardless of fetch order.
+set(JSON_Install
+    ON
+    CACHE BOOL "Install nlohmann_json CMake targets" FORCE)
+
 include(cmake/DependenciesVersion.cmake)
 
 # Boost 1.89+ no longer ships a separate boost_system package config, but some
@@ -83,9 +95,11 @@ find_package(MQSSSubmitter REQUIRED)
 option(QRMCI_BUILD_UNIT_TESTS "Build unit tests" ON)
 include(cmake/QdmiExampleDriver.cmake)
 
+find_package(MQSSDevicesSuite REQUIRED)
 find_package(MQSSCI REQUIRED)
 find_package(MQSSScheduler REQUIRED)
 find_package(MQSSIntegrationDeploymentFramework REQUIRED)
+find_package(IQMqdmi REQUIRED)
 find_package(TomlPlusPlus REQUIRED)
 
 if(TARGET SimpleAmqpClient AND Rabbitmqc_LIBRARY)

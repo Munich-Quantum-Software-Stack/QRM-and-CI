@@ -2,7 +2,7 @@
 # ==========================================
 # STAGE 1: Builder (shared by both runtime images)
 # ==========================================
-ARG DEPS_IMAGE=ghcr.io/akshay9594/mqss-passes-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0
+ARG DEPS_IMAGE=ghcr.io/munich-quantum-software-stack/mqss-quantum-compilation-suite/mqssci-deps:llvm22.1.0-cudaq0.15.0-catalyst0.15.0
 FROM ${DEPS_IMAGE}-${TARGETARCH} AS deps
 
 FROM ubuntu:26.10 AS builder
@@ -27,6 +27,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     gnupg \
     lsb-release \
     librabbitmq-dev \
+    libcurl4-openssl-dev \
     libspdlog-dev \
     nlohmann-json3-dev \
     libfmt-dev \
@@ -91,6 +92,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libboost-chrono1.90.0 \
     libprotobuf32t64 \
     librabbitmq4 \
+    libcurl4t64 \
     libspdlog1.15 \
     libfmt10 \
     libssl4 \
@@ -161,6 +163,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libboost-chrono1.90.0 \
     libprotobuf32t64 \
     librabbitmq4 \
+    libcurl4t64 \
     libspdlog1.15 \
     libfmt10 \
     libssl4 \

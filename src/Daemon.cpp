@@ -23,6 +23,7 @@
 #include <mqss/submitter/Client.h>
 #include <mqss/submitter/Device.h>
 #include <optional>
+#include <spdlog/fmt/ranges.h> // fmt::join for ranges
 #include <spdlog/spdlog.h>
 #include <string>
 #include <string_view>
@@ -149,6 +150,12 @@ compileAndSchedule(mqss::QuantumTask &task, const BackendRegistry &backends,
                                            "process."});
   }
 
+  if (backendInfo->getInstructions().empty()) {
+    spdlog::info("Could not fetch the native-gate set of the device");
+  } else {
+    const auto &instructions = backendInfo->getInstructions();
+    spdlog::info("Device native gate set: [{}]", fmt::join(instructions, ", "));
+  }
   auto compiled = compileQuantumTask(task, *backendInfo, compiler);
   if (!compiled) {
     return std::unexpected(std::move(compiled.error()));

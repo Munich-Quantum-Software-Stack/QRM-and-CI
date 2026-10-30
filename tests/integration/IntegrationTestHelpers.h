@@ -27,6 +27,14 @@ namespace mqss::qrmci::test {
 ///        backstop if a broker or daemon problem makes this too short.
 inline constexpr std::chrono::seconds kResultTimeout{30};
 
+/// @brief Budget for a real-backend test's client waiting on exactly one
+///        result from an actual external quantum backend (tests/real-backend),
+///        not the simulated QDMI example driver -- unlike kResultTimeout,
+///        this has no 120s ctest TIMEOUT to stay under, since these targets
+///        are never registered with ctest at all. Real hardware queueing and
+///        execution can take noticeably longer than a local simulated run.
+inline constexpr std::chrono::seconds kRealBackendResultTimeout{300};
+
 /// @brief Per-receive budget for a client that polls the same queue
 ///        multiple times in one run (TestSubmitTaskConcurrent,
 ///        TestScheduleTask): sized so the worst case, every poll timing out,

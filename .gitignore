@@ -8,7 +8,6 @@ __pycache__/
 .ccache/
 cmake-build-*/
 *install-dir/
-
 # Distribution / packaging
 .Python
 /build/
@@ -29,7 +28,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-
+tests/fixtures/output
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
@@ -76,7 +75,7 @@ instance/
 # Sphinx documentation
 docs/_build/
 docs/api/
-
+tests/unit/customTest
 # PyBuilder
 .pybuilder/
 target/

@@ -31,7 +31,7 @@ inline mqss::qrmci::BackendWrapper makeBackend(
       .name(name)
       .numQubits(numQubits)
       .status(status)
-      .instructions({"rx", "cz", "measure"})
+      .instructions({"r", "cz", "measure"})
       .supportedCircuitFormats(formats)
       .build();
 }
