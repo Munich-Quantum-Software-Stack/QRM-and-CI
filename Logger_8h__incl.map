@@ -1,0 +1,19 @@
+<map id="Logger.h" name="Logger.h">
+<area shape="rect" id="Node000001" title="The console&#45;plus&#45;file logger every QRM&amp;CI daemon installs as its process&#45;wide default." alt="" coords="496,5,573,33"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,90,75,117"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="494,22,420,30,318,40,202,57,87,84,80,86,78,81,86,78,201,52,317,34,420,24,499,22"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="99,90,176,117"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="493,25,359,46,274,62,189,84,181,86,179,81,187,78,273,57,358,41,499,24"/>
+<area shape="rect" id="Node000004" title=" " alt="" coords="200,81,357,126"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="499,32,362,78,360,73,494,33"/>
+<area shape="rect" id="Node000005" title=" " alt="" coords="381,81,528,126"/>
+<area shape="poly" id="edge4_Node000001_Node000005" title=" " alt="" coords="524,33,488,72,485,67,519,35"/>
+<area shape="rect" id="Node000006" title=" " alt="" coords="553,90,676,117"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="549,31,594,79,589,78,546,36"/>
+<area shape="rect" id="Node000007" title=" " alt="" coords="700,90,758,117"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="571,31,689,79,694,83,688,82,687,83,570,36"/>
+<area shape="rect" id="Node000008" title=" " alt="" coords="782,90,879,117"/>
+<area shape="poly" id="edge7_Node000001_Node000008" title=" " alt="" coords="574,27,665,49,771,78,783,84,778,84,770,84,663,54,573,32"/>
+<area shape="rect" id="Node000009" title=" " alt="" coords="904,90,966,117"/>
+<area shape="poly" id="edge8_Node000001_Node000009" title=" " alt="" coords="573,21,715,39,804,55,891,78,900,84,894,83,890,84,803,60,714,44,573,26"/>
+</map>

@@ -1,0 +1,7 @@
+<map id="PublicationThrottle.h" name="PublicationThrottle.h">
+<area shape="rect" id="Node000001" title="Paces how often a device&#45;owning process re&#45;reads and publishes its own status, independently of how f..." alt="" coords="6,5,163,33"/>
+<area shape="rect" id="Node000002" title=" " alt="" coords="5,81,71,109"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="79,32,56,70,52,66,74,35"/>
+<area shape="rect" id="Node000003" title=" " alt="" coords="94,81,168,109"/>
+<area shape="poly" id="edge2_Node000001_Node000003" title=" " alt="" coords="94,31,118,68,112,68,92,36"/>
+</map>

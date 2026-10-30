@@ -1,0 +1,16 @@
+<map id="mqss::qrmci::Config" name="mqss::qrmci::Config">
+<area shape="rect" id="Node000001" title="A daemon&#39;s complete configuration, grouped by the pipeline responsibility each field belongs to." alt="" coords="747,100,897,128"/>
+<area shape="rect" id="Node000002" href="$structmqss_1_1qrmci_1_1CommonConfig.html" title="Settings shared by every pipeline stage: the RabbitMQ connection, logging, the queues common to more ..." alt="" coords="416,16,626,44"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="641,44,724,65,763,81,798,100,793,100,760,85,722,70,641,50"/>
+<area shape="rect" id="Node000003" href="$structmqss_1_1qrmci_1_1RabbitMqConnectionConfig.html" title="RabbitMQ connection settings, shared by every stage&#39;s messaging." alt="" coords="5,8,250,53"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="265,28,418,29,414,32,266,33"/>
+<area shape="rect" id="Node000004" href="$structmqss_1_1qrmci_1_1SelectorConfig.html" title="Backend&#45;selector stage configuration: the distributed selector&#39;s own queues, logging,..." alt="" coords="419,72,622,100"/>
+<area shape="poly" id="edge3_Node000001_Node000004" title=" " alt="" coords="638,95,749,107,744,108,638,100"/>
+<area shape="rect" id="Node000005" href="$structmqss_1_1qrmci_1_1BackendRegistryConfig.html" title="How long a BackendRegistry entry stays usable after its last refresh." alt="" coords="18,99,237,143"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="252,107,421,94,417,96,253,113"/>
+<area shape="rect" id="Node000007" href="$structmqss_1_1qrmci_1_1SubmitterConfig.html" title="Submitter&#45;specific configuration: its own queue/logging, QDMI credentials and device selection,..." alt="" coords="414,128,628,156"/>
+<area shape="poly" id="edge7_Node000007_Node000005" title=" " alt="" coords="252,136,274,138,416,144,411,145,274,143,252,141"/>
+<area shape="rect" id="Node000006" href="$structmqss_1_1qrmci_1_1CompilerConfig.html" title="Compiler&#45;stage configuration: the queue a worker receives already&#45;selected tasks from,..." alt="" coords="416,184,626,212"/>
+<area shape="poly" id="edge5_Node000001_Node000006" title=" " alt="" coords="641,188,682,180,722,169,765,149,799,130,804,128,767,154,724,174,683,185,641,193"/>
+<area shape="poly" id="edge6_Node000001_Node000007" title=" " alt="" coords="643,139,723,133,759,129,764,128,723,138,644,144"/>
+</map>

@@ -1,0 +1,21 @@
+<map id="ConstantsMapping.h" name="ConstantsMapping.h">
+<area shape="rect" id="Node000001" title="Pure translations between the submitter, mqss protocol and mqss&#45;ci enumerations: status,..." alt="" coords="260,5,414,33"/>
+<area shape="rect" id="Node000002" href="$BackendWrapper_8h.html" title="One backend&#39;s capabilities as the QRM&amp;CI pipeline sees them, read either from a live device or from a..." alt="" coords="213,81,355,109"/>
+<area shape="poly" id="edge1_Node000001_Node000002" title=" " alt="" coords="320,44,295,82,291,79,317,48"/>
+<area shape="rect" id="Node000008" href="$Runners_8h.html" title="The QRM&amp;CI pipeline stages as free functions: choosing a backend, compiling a task for it,..." alt="" coords="298,232,384,260"/>
+<area shape="poly" id="edge11_Node000001_Node000008" title=" " alt="" coords="354,44,369,80,373,124,368,167,349,233,344,230,363,166,368,124,364,82,352,49"/>
+<area shape="rect" id="Node000003" href="$BackendRegistry_8h.html" title="The set of backends a QRM&amp;CI process may schedule onto, and the time&#45;to&#45;live after which an entry nob..." alt="" coords="163,157,303,184"/>
+<area shape="poly" id="edge2_Node000002_Node000003" title=" " alt="" coords="268,120,244,158,240,155,264,124"/>
+<area shape="poly" id="edge10_Node000002_Node000008" title=" " alt="" coords="300,120,318,156,341,233,336,231,313,158,299,125"/>
+<area shape="rect" id="Node000004" href="$Config_8h.html" title="The runtime configuration model shared by every QRM&amp;CI daemon." alt="" coords="148,232,222,260"/>
+<area shape="poly" id="edge3_Node000003_Node000004" title=" " alt="" coords="218,195,196,234,192,230,215,199"/>
+<area shape="rect" id="Node000007" href="$Daemon_8h.html" title="The scaffolding every QRM&amp;CI daemon entrypoint shares: process bring&#45;up, opening the configured QDMI ..." alt="" coords="216,308,304,336"/>
+<area shape="poly" id="edge7_Node000003_Node000007" title=" " alt="" coords="240,197,260,308,255,307,236,201"/>
+<area shape="poly" id="edge8_Node000003_Node000008" title=" " alt="" coords="265,191,325,231,319,232,265,196"/>
+<area shape="rect" id="Node000005" href="$CommunicationHandler_8h.html" title="The RabbitMQ send/receive helpers that carry tasks, results and backend status between QRM&amp;CI stages." alt="" coords="5,308,192,336"/>
+<area shape="poly" id="edge4_Node000004_Node000005" title=" " alt="" coords="156,272,116,310,112,306,160,268"/>
+<area shape="poly" id="edge6_Node000004_Node000007" title=" " alt="" coords="210,269,249,308,244,308,209,274"/>
+<area shape="rect" id="Node000006" href="$DaemonMessaging_8h.html" title="The queue I/O every QRM&amp;CI daemon work loop shares: receiving and draining a queue,..." alt="" coords="141,384,299,411"/>
+<area shape="poly" id="edge5_Node000005_Node000006" title=" " alt="" coords="134,341,201,383,196,384,132,347"/>
+<area shape="poly" id="edge9_Node000008_Node000006" title=" " alt="" coords="340,273,333,307,318,337,287,366,253,386,251,381,284,362,314,334,328,305,336,277"/>
+</map>
