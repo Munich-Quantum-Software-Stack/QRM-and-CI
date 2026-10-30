@@ -158,6 +158,8 @@ int main() {
       std::vector<mqss::qrmci::test::EnvOverride>{
           {.name = "QRMCI_SUBMITTER_QDMI_DEVICE_ID", .value = workerDeviceId()},
           {.name = "QRMCI_COMPILER_QUEUE", .value = "compiler.worker-iqm"},
+          {.name = "QRMCI_SUBMITTER_QDMI_DRIVER",
+           .value = QRMCI_QDMI_EXAMPLE_DRIVER_PATH},
           {.name = "QDMI_CONF", .value = QRMCI_WORKER_IQM_QDMI_CONF},
           {.name = "QRMCI_CONFIG_FILE", .value = QRMCI_WORKER_IQM_TEST_CONFIG},
           {.name = "IQM_BASE_URL", .value = "https://resonance.iqm.tech"},

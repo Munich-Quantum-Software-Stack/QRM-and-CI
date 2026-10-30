@@ -27,7 +27,7 @@ require_env QRMCI_AMQP_HOST
 require_env QRMCI_AMQP_USER
 require_env QRMCI_AMQP_PASSWORD
 require_env QRMCI_SUBMITTER_QDMI_CLIENT_TOKEN
-require_env QRMCI_SUBMITTER_QDMI_DEVICE_NAME   # e.g. EQE1
+require_env QRMCI_SUBMITTER_QDMI_DEVICE_NAME   # e.g. LRZ
 require_env LRZ_QDMI_DEVICE_QPU               # e.g. EQE1
 
 cmake --build "${BUILD_DIR}" --target TestLRZWorker

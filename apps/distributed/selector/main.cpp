@@ -82,9 +82,9 @@ int main() {
           const auto *backend = availableBackends.find(*backendName);
           if (backend == nullptr) {
             sendFailure(comms, task,
-                        Error{Error::Kind::NoBackendAvailable,
-                              "Backend '" + *backendName +
-                                  "' is no longer registered."},
+                        Error{.kind = Error::Kind::NoBackendAvailable,
+                              .detail = "Backend '" + *backendName +
+                                        "' is no longer registered."},
                         "could not be assigned a backend.");
             return;
           }

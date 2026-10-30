@@ -121,7 +121,7 @@ logger = "mqss::Submitter"
 # detected from the driver itself and needs no declaration here.
 # Env: QRMCI_SUBMITTER_QDMI_DRIVER.
 # Default: "/usr/local/lib/qrmci/libqdmi_example_driver.so".
-qdmiDriver = "/workspaces/QRM-and-CI/build/_deps/qdmi-build/examples/driver/libqdmi_example_driver.so"
+qdmiDriver = ""
 
 # QDMI device name. Env: QRMCI_SUBMITTER_QDMI_DEVICE_NAME.
 qdmiDeviceName = ""

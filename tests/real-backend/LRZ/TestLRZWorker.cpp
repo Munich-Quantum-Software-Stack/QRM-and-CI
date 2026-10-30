@@ -153,6 +153,8 @@ int main() {
       QRMCI_DISTRIBUTED_WORKER_B_LOG_DIR,
       std::vector<mqss::qrmci::test::EnvOverride>{
           {.name = "QRMCI_SUBMITTER_QDMI_DEVICE_ID", .value = workerDeviceId()},
+          {.name = "QRMCI_SUBMITTER_QDMI_DRIVER",
+           .value = QRMCI_QDMI_EXAMPLE_DRIVER_PATH},
           {.name = "QRMCI_COMPILER_QUEUE", .value = "compiler.worker-lrz"},
           {.name = "QDMI_CONF", .value = QRMCI_WORKER_LRZ_QDMI_CONF},
           {.name = "QRMCI_CONFIG_FILE", .value = QRMCI_WORKER_LRZ_TEST_CONFIG},
