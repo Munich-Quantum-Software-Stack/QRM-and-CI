@@ -244,9 +244,9 @@ target_include_directories(
   my-qrm PUBLIC "${CMAKE_SOURCE_DIR}/include" "${CMAKE_BINARY_DIR}/generated")
 ```
 
-From the root `CMakeLists.txt`, `qrmci` already links `mqss`, `mqss-ci::mqss-ci`, `scheduler`,
-`mqss_submitter`, `tomlplusplus::tomlplusplus`, and the configured spdlog target, and it exports
-them, so a target that links `qrmci` gets all of them too.
+From the root `CMakeLists.txt`, `qrmci` already links `mqss`, `mqss-ci::mqss-ci`,
+`mqss-scheduler::mqss-scheduler`, `mqss_submitter`, `tomlplusplus::tomlplusplus`, and the configured
+spdlog target, and it exports them, so a target that links `qrmci` gets all of them too.
 
 ## Deploying what you built
 

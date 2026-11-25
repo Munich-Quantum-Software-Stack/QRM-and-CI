@@ -209,6 +209,12 @@ that QRM&CI is supported on non-Linux/non-GNU toolchains.
 
 Pinned dependency revisions live in `cmake/DependenciesVersion.cmake`.
 
+MQSS-Scheduler (the CMake target `mqss-scheduler::mqss-scheduler`) is fetched by
+`cmake/FindMQSSScheduler.cmake` at the release tag in `QRMCI_MQSS_SCHEDULER_GIT_TAG`. To build
+against a working copy, configure with `-DFETCHCONTENT_SOURCE_DIR_MQSS_SCHEDULER=<path>`. The tag is
+a cache variable, so an existing build directory keeps its old value until it is reconfigured with
+`-DQRMCI_MQSS_SCHEDULER_GIT_TAG=<tag>` or recreated.
+
 MQSSSubmitter (the CMake target `mqss_submitter`) lives in its own repository,
 [MQSS-Submitter](https://github.com/Munich-Quantum-Software-Stack/MQSS-Submitter), fetched by
 `cmake/FindMQSSSubmitter.cmake`. It is a plain `FetchContent` fetch: the library ships no

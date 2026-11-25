@@ -122,7 +122,7 @@ include(cmake/Warnings.cmake)
 qrmci_treat_as_system(mqss)
 qrmci_treat_as_system(MQSSCIInterfaces)
 qrmci_treat_as_system(MQSSCIPasses)
-qrmci_treat_as_system(mqss_scheduler)
+qrmci_treat_as_system(scheduler)
 
 configure_file(
   include/qrmci/ConfigDefaults.h.in
@@ -144,8 +144,8 @@ file(GLOB_RECURSE QRMCI_SOURCES CONFIGURE_DEPENDS "src/*.cpp")
 # option (e.g. `-opt-bisect-limit`).
 add_library(qrmci STATIC ${QRMCI_SOURCES})
 target_link_libraries(
-  qrmci PUBLIC mqss mqss-ci::mqss-ci scheduler mqss_submitter
-               ${QRMCI_SPDLOG_TARGET} tomlplusplus::tomlplusplus)
+  qrmci PUBLIC mqss mqss-ci::mqss-ci mqss-scheduler::mqss-scheduler
+               mqss_submitter ${QRMCI_SPDLOG_TARGET} tomlplusplus::tomlplusplus)
 target_include_directories(qrmci PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include/"
                                         "${CMAKE_CURRENT_BINARY_DIR}/generated")
 # TOML_EXCEPTIONS=0 selects toml++'s non-throwing parse API (parse_result with

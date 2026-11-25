@@ -8,8 +8,8 @@
 # (active co-development); the rest are pinned to reviewed tags.
 
 set(QRMCI_MQSS_SCHEDULER_GIT_TAG
-    "mc/sscheduler"
-    CACHE STRING "MQSS-Scheduler revision (tracks branch by design)")
+    "v0.1.0"
+    CACHE STRING "MQSS-Scheduler revision")
 set(QRMCI_MQSS_SCHEDULER_REPOSITORY
     "https://github.com/Munich-Quantum-Software-Stack/MQSS-Scheduler.git"
     CACHE STRING "Upstream MQSS-Scheduler repository")
