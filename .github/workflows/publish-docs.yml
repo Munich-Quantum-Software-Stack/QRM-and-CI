@@ -25,7 +25,9 @@ jobs:
             echo "::error::secrets.MQSS_READ_TOKEN is empty. Configure clones the private MQSS-Submitter repository; see docs/development-guide.md."
             exit 1
           fi
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: Configure (docs only)
         uses: ./.github/actions/dev
         with:
@@ -46,7 +48,7 @@ jobs:
             fi
           fi
       - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./build/docs/html

@@ -42,9 +42,11 @@ runs:
       env:
         QRMCI_DEV_EXTRA_PACKAGES: ${{ inputs.extra-packages }}
         QRMCI_REGISTRY_TOKEN: ${{ inputs.registry-token }}
+        QRMCI_DEV_IMAGE: ${{ inputs.image }}
+        QRMCI_ACTOR: ${{ github.actor }}
       run: |
         set -euo pipefail
-        image='${{ inputs.image }}'
+        image="$QRMCI_DEV_IMAGE"
 
         if docker image inspect "$image" >/dev/null 2>&1; then
           if [ -n "$QRMCI_DEV_EXTRA_PACKAGES" ]; then
@@ -56,7 +58,7 @@ runs:
         # The base image in .devcontainer/Dockerfile is a private ghcr.io
         # package; buildx otherwise pulls it anonymously and gets a 401.
         if [ -n "$QRMCI_REGISTRY_TOKEN" ]; then
-          echo "$QRMCI_REGISTRY_TOKEN" | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
+          echo "$QRMCI_REGISTRY_TOKEN" | docker login ghcr.io -u "$QRMCI_ACTOR" --password-stdin
         fi
 
         # /opt/deps is several GiB and exists twice mid-build, so make room.
@@ -90,6 +92,7 @@ runs:
         # stays out of the rendered step.
         QRMCI_DEV_RUN: ${{ inputs.run }}
         QRMCI_DEV_TOKEN: ${{ inputs.github-token }}
+        QRMCI_DEV_IMAGE: ${{ inputs.image }}
       run: |
         set -euo pipefail
 
@@ -118,5 +121,5 @@ runs:
           --env GIT_CONFIG_KEY_0 \
           --env GIT_CONFIG_VALUE_0 \
           --env QRMCI_DEV_RUN \
-          '${{ inputs.image }}' \
+          "$QRMCI_DEV_IMAGE" \
           bash -c 'git config --system --add safe.directory "*" >/dev/null 2>&1 || true; eval "$QRMCI_DEV_RUN"'
